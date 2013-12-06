@@ -414,6 +414,7 @@
   DraggableElement.prototype.removeClass = Element.prototype.removeClass;
 
   DraggableElement.prototype.setupDragging = function() {
+    this.el.addEventListener('click', this.click.bind(this));
     this.el.addEventListener('mousedown', this.mouseDown.bind(this));
 
     // These two events are actually on the document,
@@ -423,6 +424,13 @@
   };
 
   // --- Events
+
+  DraggableElement.prototype.click = function(evt) {
+    if(evt.target.href) {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  };
 
   DraggableElement.prototype.mouseDown = function(evt) {
     if(evt.button !== 0) return;
