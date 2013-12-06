@@ -450,6 +450,32 @@
   left: 15px;
 }
 
+.chrome-extension-multiple-select-help {
+  border-style: dashed;
+}
+
+.chrome-extension-aligning-box-one {
+  top: 4px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.chrome-extension-aligning-box-two {
+  bottom: 4px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.chrome-extension-aligning-pointer-icon {
+  bottom: -8px;
+  right: 4px;
+  font-size: 10px;
+}
+
 .chrome-extension-key-icon {
   display: inline-block;
   width: 25px;

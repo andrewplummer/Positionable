@@ -1788,7 +1788,7 @@
 
     this.buildHelpBox(keyboardHelp.el, 'shift', function(box, text) {
       new Element(box.el, 'div', 'key-icon shift-key-icon').html(StatusBar.SHIFT);
-      text.html('Shift: constrain when dragging or speed up when nudging.');
+      text.html('Shift: Constrain dragging / nudge multiplier / select multiple.');
     });
 
     this.buildHelpBox(keyboardHelp.el, 'ctrl', function(box, text) {
@@ -1851,6 +1851,14 @@
       new Element(box.el, 'div', 'icon help-icon snapping-help-icon').html(StatusBar.BG_IMAGE_ICON);
       new Element(box.el, 'div', 'icon help-icon snapping-nw-help-icon').html(StatusBar.UP_LEFT_ARROW_ICON);
       text.html('Double click to snap element dimensions to a background sprite.');
+    });
+
+    this.buildHelpBox(mouseHelp.el, 'aligning', function(box, text) {
+      new Element(box.el, 'div', 'help-element multiple-select-help');
+      new Element(box.el, 'div', 'icon help-icon aligning-pointer-icon').html(StatusBar.POINTER_ICON);
+      new Element(box.el, 'div', 'icon help-icon aligning-box-one');
+      new Element(box.el, 'div', 'icon help-icon aligning-box-two');
+      text.html('Drag to select multiple elements.');
     });
 
 
