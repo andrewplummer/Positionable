@@ -33,6 +33,10 @@
   opacity: 1;
 }
 
+.chrome-extension-positioned-parent-focused {
+  z-index: 100000;
+}
+
 .chrome-extension-icon {
   font-family: 'chrome-extension-icons';
 }

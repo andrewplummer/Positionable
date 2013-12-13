@@ -561,10 +561,11 @@
   RotationHandle.prototype = new Handle();
 
   RotationHandle.prototype.drag = function(evt) {
+    var dim = this.target.getAbsoluteDimensions();
     var w = this.target.dimensions.getWidth() / 2;
     var h = this.target.dimensions.getHeight() / 2;
-    var deltaX = (evt.clientX + window.scrollX) - (this.target.position.x + w);
-    var deltaY = (evt.clientY + window.scrollY) - (this.target.position.y + h);
+    var deltaX = (evt.clientX + window.scrollX) - (dim.left + w);
+    var deltaY = (evt.clientY + window.scrollY) - (dim.top + h);
     var deg    = new Point(deltaX, deltaY).getAngle() - new Point(w, h).getAngle();
     if(deg < 0) deg += 360;
     if(this.isConstrained(evt)) {
@@ -666,6 +667,7 @@
     this.setupElement(el);
     this.setupEvents();
     this.getAttributes();
+    this.getPositionedParents();
     this.createHandles();
   };
 
@@ -689,6 +691,17 @@
     this.setupDragging();
   };
 
+  PositionableElement.prototype.getPositionedParents = function() {
+    var el = this.el, style;
+    this.positionedParents = [];
+    while(el = el.offsetParent) {
+      style = window.getComputedStyle(el);
+      if(style.position !== 'static') {
+        this.positionedParents.push(new Element(el));
+      }
+    }
+  };
+
   PositionableElement.prototype.setupEvents = function() {
     this.el.addEventListener('dblclick', this.dblclick.bind(this));
     this.el.addEventListener('mouseover', this.mouseover.bind(this));
@@ -696,16 +709,16 @@
   };
 
   PositionableElement.prototype.getAttributes = function() {
-    var style = window.getComputedStyle(this.el);
-    this.getDimensions(style);
-    if(style.backgroundImage !== 'none') {
-      this.getBackgroundAttributes(style);
+    this.style = window.getComputedStyle(this.el);
+    this.getDimensions(this.style);
+    if(this.style.backgroundImage !== 'none') {
+      this.getBackgroundAttributes(this.style);
     }
   };
 
   PositionableElement.prototype.getDimensions = function(style) {
-    var left   = this.getDimension(style.left);
-    var top    = this.getDimension(style.top);
+    var left   = this.el.offsetLeft;
+    var top    = this.el.offsetTop;
     var width  = this.getDimension(style.width);
     var height = this.getDimension(style.height);
     this.position = new Point(left, top);
@@ -801,6 +814,7 @@
     if(!this.backgroundPosition) return;
     var point  = new Point(evt.clientX + window.scrollX, evt.clientY + window.scrollY);
     var coords = this.getElementCoordsForPoint(point).subtract(this.backgroundPosition);
+    var style = window.getComputedStyle(this.el);
     var sprite = this.recognizer.getSpriteBoundsForCoordinate(coords);
     if(sprite) {
       this.pushState();
@@ -830,6 +844,20 @@
 
   PositionableElement.prototype.isBackgroundDrag = function(evt) {
     return evt.ctrlKey;
+  };
+
+  PositionableElement.prototype.focus = function() {
+    this.addClass('positioned-element-focused');
+    this.positionedParents.forEach(function(el) {
+      el.addClass('positioned-parent-focused');
+    });
+  };
+
+  PositionableElement.prototype.unfocus = function() {
+    this.removeClass('positioned-element-focused');
+    this.positionedParents.forEach(function(el) {
+      el.removeClass('positioned-parent-focused');
+    });
   };
 
 
@@ -974,20 +1002,20 @@
   // --- Scrolling
 
   PositionableElement.prototype.checkScrollBounds = function() {
-    var boundary;
-    if(this.dimensions.top < window.scrollY) {
-      window.scrollTo(window.scrollX, this.dimensions.top);
+    var dim = this.getAbsoluteDimensions(), boundary;
+    if(dim.top < window.scrollY) {
+      window.scrollTo(window.scrollX, dim.top);
     }
-    if(this.dimensions.left < window.scrollX) {
-      window.scrollTo(this.dimensions.left, window.scrollY);
+    if(dim.left < window.scrollX) {
+      window.scrollTo(dim.left, window.scrollY);
     }
     boundary = window.scrollX + window.innerWidth;
-    if(this.dimensions.right > boundary) {
-      window.scrollTo(window.scrollX + (this.dimensions.right - boundary), window.scrollY);
+    if(dim.right > boundary) {
+      window.scrollTo(window.scrollX + (dim.right - boundary), window.scrollY);
     }
     boundary = window.scrollY + window.innerHeight;
-    if(this.dimensions.bottom > boundary) {
-      window.scrollTo(window.scrollX, window.scrollY + (this.dimensions.bottom - boundary));
+    if(dim.bottom > boundary) {
+      window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
     }
   };
 
@@ -1074,7 +1102,8 @@
   PositionableElement.prototype.getElementCoordsForPoint = function(point) {
     // Gets the coordinates relative to the element's
     // x/y internal coordinate system, which may be rotated.
-    var corner = new Point(this.dimensions.left, this.dimensions.top);
+    var dim = this.getAbsoluteDimensions();
+    var corner = new Point(dim.left, dim.top);
     if(this.dimensions.rotation) {
       corner = this.dimensions.getPositionForCoords(corner).add(this.getPositionOffset());
       return point.subtract(corner).rotate(-this.dimensions.rotation);
@@ -1110,6 +1139,22 @@
 
   PositionableElement.prototype.getCenter = function() {
     return this.dimensions.getCenter();
+  };
+
+  PositionableElement.prototype.getAbsoluteCenter = function() {
+    return this.getAbsoluteDimensions().getCenter();
+  };
+
+  PositionableElement.prototype.getAbsoluteDimensions = function() {
+    var el = this.el;
+    var dim = this.dimensions.clone();
+    while(el = el.offsetParent) {
+      dim.top += el.offsetTop;
+      dim.left += el.offsetLeft;
+    }
+    dim.bottom += dim.top - this.dimensions.top;
+    dim.right += dim.left - this.dimensions.left;
+    return dim;
   };
 
   PositionableElement.prototype.getEdgeValue = function(side) {
@@ -1192,8 +1237,13 @@
     var css = '';
     this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
     css += this.getSelector() + ' {\n';
-    css += this.getNewStyleLine('left', this.position.x);
-    css += this.getNewStyleLine('top', this.position.y);
+    if(this.isPositioned()) {
+      if(this.zIndex !== 0) {
+        css += this.getNewStyleLine('z-index', this.zIndex);
+      }
+      css += this.getNewStyleLine('left', this.position.x);
+      css += this.getNewStyleLine('top', this.position.y);
+    }
     css += this.getNewStyleLine('width', this.dimensions.getWidth());
     css += this.getNewStyleLine('height', this.dimensions.getHeight());
     if(this.backgroundPosition) {
@@ -1214,16 +1264,16 @@
        prop === 'height' ||
        prop === 'background-position') {
       isPx = true;
+      val1 = Math.round(val1);
     }
     css = this.tabCharacter + prop + ': ' + val1;
     if(isPx) {
       css += 'px';
     }
     if(val2 !== undefined) {
+      if(isPx) val2 = Math.round(val2);
       css += ' ' + val2;
-      if(isPx) {
-        css += 'px';
-      }
+      if(isPx) css += 'px';
     }
     css += ';\n'
     return css;
@@ -1254,6 +1304,10 @@
     return r;
   };
 
+  PositionableElement.prototype.isPositioned = function() {
+    return this.style.position !== 'static';
+  };
+
   PositionableElement.prototype.getData = function() {
     var text = '', rotation = this.getRoundedRotation();
     text += Math.round(this.position.x) + 'px, ' + Math.round(this.position.y) + 'px';
@@ -1275,6 +1329,9 @@
 
 
   function PositionableElementManager () {
+
+    this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
+    this.nxcludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
 
     this.getAllPositionedElements();
 
@@ -1322,14 +1379,14 @@
   // --- Setup
 
   PositionableElementManager.prototype.getAllPositionedElements = function() {
-    var include = settings.get(Settings.INCLUDE_ELEMENTS) || '*';
-    var exclude = settings.get(Settings.EXCLUDE_ELEMENTS);
-    var els = document.body.querySelectorAll(include), el, positioning;
+    var includeSelector = this.includeSelector || '*', els;
+
+    els = document.body.querySelectorAll(includeSelector);
+
     this.preInitElements = [];
-    for(var i = 0, len = els.length; i < len; i++) {
-      el = els[i];
-      positioning = window.getComputedStyle(el).position;
-      if((positioning === 'absolute' || positioning === 'fixed') && !this.elementIsExcluded(el, exclude)) {
+
+    for(var i = 0, el; el = els[i]; i++) {
+      if(this.elementIsIncluded(el)) {
         this.preInitElements.push(el);
       }
     }
@@ -1348,11 +1405,24 @@
     fn();
   };
 
-  PositionableElementManager.prototype.elementIsExcluded = function(el, exclude) {
-    if(exclude && el.webkitMatchesSelector(exclude)) {
+  PositionableElementManager.prototype.elementIsIncluded = function(el) {
+
+    if(this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
+      // Don't include elements that are explicitly excluded.
+      return false;
+    } else if(el.className.match(EXTENSION_CLASS_PREFIX)) {
+      // Don't include elements that are part of the extension itself.
+      return false;
+    } else if(el.style.background.match(/chrome-extension/)) {
+      // Don't include elements that are part of other chrome extensions.
+      return false;
+    } else if(this.includeSelector) {
+      // If there is an explicit selector active, then always include.
       return true;
     }
-    return el.className.match(EXTENSION_CLASS_PREFIX) || el.style.background.match(/chrome-extension/);
+
+    // Otherwise only include absolute or fixed position elements.
+    return this.style.position === 'absolute' || this.style.position === 'fixed';
   };
 
   PositionableElementManager.prototype.delegateToFocused = function(name, disallowWhenDragging) {
@@ -1390,7 +1460,7 @@
 
   PositionableElementManager.prototype.addFocused = function(element) {
     if(!this.elementIsFocused(element)) {
-      element.addClass('positioned-element-focused');
+      element.focus();
       this.focusedElements.push(element);
     }
     statusBar.update();
@@ -1398,7 +1468,7 @@
 
   PositionableElementManager.prototype.unfocusAll = function() {
     this.focusedElements.forEach(function(el) {
-      el.removeClass('positioned-element-focused');
+      el.unfocus();
     }, this);
     this.focusedElements = [];
   };
@@ -1529,8 +1599,15 @@
     return styles.join('\n\n');
   };
 
+  PositionableElementManager.prototype.getFocusedElementStyles = function() {
+    var styles = this.focusedElements.map(function(el) {
+      return el.getStyles();
+    });
+    return styles.join('\n\n');
+  };
+
   PositionableElementManager.prototype.copy = function(evt) {
-    var styles = this.getAllElementStyles();
+    var styles = this.getFocusedElementStyles();
     if(!styles) return;
     evt.preventDefault();
     evt.clipboardData.clearData();
@@ -1594,7 +1671,7 @@
 
   DragSelection.prototype.getFocused = function() {
     elementManager.setFocused(function(el) {
-      return this.contains(el.getCenter());
+      return this.contains(el.getAbsoluteCenter());
     }.bind(this));
   };
 
@@ -1602,8 +1679,8 @@
 
 
   DragSelection.prototype.calculateBox = function() {
-    this.min = new Point(Math.min(this.from.x, this.to.x), Math.min(this.from.y, this.to.y));
-    this.max = new Point(Math.max(this.from.x, this.to.x), Math.max(this.from.y, this.to.y));
+    this.min = new Point(Math.min(this.from.x, this.to.x) + window.scrollX, Math.min(this.from.y, this.to.y) + window.scrollY);
+    this.max = new Point(Math.max(this.from.x, this.to.x) + window.scrollX, Math.max(this.from.y, this.to.y) + window.scrollY);
   };
 
   DragSelection.prototype.contains = function(point) {
@@ -1614,10 +1691,14 @@
 
   DragSelection.prototype.render = function() {
     this.calculateBox();
-    this.el.style.left   = this.min.x + 'px';
-    this.el.style.top    = this.min.y + 'px';
-    this.el.style.right  = (window.innerWidth - this.max.x) + 'px';
-    this.el.style.bottom = (window.innerHeight - this.max.y) + 'px';
+    var xMin = this.min.x - window.scrollX;
+    var yMin = this.min.y - window.scrollY;
+    var xMax = this.max.x - window.scrollX;
+    var yMax = this.max.y - window.scrollY;
+    this.el.style.left   = xMin + 'px';
+    this.el.style.top    = yMin + 'px';
+    this.el.style.right  = (window.innerWidth - xMax) + 'px';
+    this.el.style.bottom = (window.innerHeight - yMax) + 'px';
   };
 
 
