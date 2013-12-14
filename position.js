@@ -1422,7 +1422,8 @@
     }
 
     // Otherwise only include absolute or fixed position elements.
-    return this.style.position === 'absolute' || this.style.position === 'fixed';
+    var style = window.getComputedStyle(el);
+    return style.position === 'absolute' || style.position === 'fixed';
   };
 
   PositionableElementManager.prototype.delegateToFocused = function(name, disallowWhenDragging) {

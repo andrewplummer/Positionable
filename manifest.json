@@ -14,7 +14,7 @@
   },
 
   "permissions": [
-    "tabs", "http://*/*"
+    "tabs", "*://*/*"
   ],
 
   "background": {
