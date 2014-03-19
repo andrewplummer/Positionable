@@ -186,6 +186,7 @@
   EventManager.SHIFT = 16;
   EventManager.CTRL  = 17;
   EventManager.ALT   = 18;
+  EventManager.ENTER = 13;
   EventManager.A     = 65;
   EventManager.B     = 66;
   EventManager.M     = 77;
@@ -362,6 +363,7 @@
 
 
   function Element (el, tag, className) {
+    this.listeners = [];
     if(!tag) {
       this.el = el;
     } else {
@@ -386,6 +388,20 @@
     return this;
   };
 
+  Element.prototype.addEventListener = function(type, handler) {
+    this.el.addEventListener(type, handler);
+    this.listeners.push({
+      type: type,
+      handler: handler
+    });
+  };
+
+  Element.prototype.removeAllListeners = function() {
+    this.listeners.forEach(function(l) {
+      this.el.removeEventListener(l.type, l.handler);
+    }, this);
+  };
+
   Element.prototype.show = function(on) {
     this.el.style.display = on === false ? '' : 'block';
   };
@@ -404,18 +420,29 @@
     return this;
   };
 
+  Element.prototype.remove = function(html) {
+    this.el.remove();
+  };
+
 
   /*-------------------------] DraggableElement [--------------------------*/
 
 
-  function DraggableElement () {};
+  function DraggableElement () {
+    this.listeners = [];
+  };
 
-  DraggableElement.prototype.addClass    = Element.prototype.addClass;
-  DraggableElement.prototype.removeClass = Element.prototype.removeClass;
+  DraggableElement.prototype.hide               = Element.prototype.hide;
+  DraggableElement.prototype.show               = Element.prototype.show;
+  DraggableElement.prototype.remove             = Element.prototype.remove;
+  DraggableElement.prototype.addClass           = Element.prototype.addClass;
+  DraggableElement.prototype.removeClass        = Element.prototype.removeClass;
+  DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
+  DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
 
   DraggableElement.prototype.setupDragging = function() {
-    this.el.addEventListener('click', this.click.bind(this));
-    this.el.addEventListener('mousedown', this.mouseDown.bind(this));
+    this.addEventListener('click', this.click.bind(this));
+    this.addEventListener('mousedown', this.mouseDown.bind(this));
 
     // These two events are actually on the document,
     // so being called in manually.
@@ -526,14 +553,14 @@
     elementManager.setFocused(this.target);
   };
 
-  Handle.prototype.setHover = function(el, type) {
-    el.addEventListener('mouseover', function(evt) {
+  Handle.prototype.setHover = function(type) {
+    this.addEventListener('mouseover', function(evt) {
       evt.stopPropagation();
       if(!this.target.draggingStarted) {
         statusBar.setState(type);
       }
     }.bind(this));
-    el.addEventListener('mouseout', function(evt) {
+    this.addEventListener('mouseout', function(evt) {
       evt.stopPropagation();
       if(!this.target.draggingStarted) {
         statusBar.setState(nudgeManager.mode);
@@ -545,13 +572,12 @@
     return evt.shiftKey;
   };
 
-
   /*-------------------------] RotationHandle [--------------------------*/
 
 
   function RotationHandle (target) {
     this.setup(target, 'rotate');
-    this.setHover(this.el, 'rotate');
+    this.setHover('rotate');
   };
 
   RotationHandle.SNAPPING = 22.5;
@@ -559,6 +585,11 @@
   // --- Inheritance
 
   RotationHandle.prototype = new Handle();
+
+  RotationHandle.prototype.dragStart = function(evt) {
+    Handle.prototype.dragStart.apply(this, arguments);
+    elementManager.pushState();
+  };
 
   RotationHandle.prototype.drag = function(evt) {
     var dim = this.target.getAbsoluteDimensions();
@@ -571,7 +602,7 @@
     if(this.isConstrained(evt)) {
       deg = Math.round(deg / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
     }
-    elementManager.setRotation(deg);
+    elementManager.setRotation(deg - this.target.getLastRotation());
     statusBar.update();
   };
 
@@ -580,9 +611,9 @@
 
   function SizingHandle (target, type, xProp, yProp) {
     this.setup(target, type);
-    this.setHover(this.el, 'resize');
+    this.setHover('resize');
     this.addClass('sizing-handle');
-    new Element(target.el, 'div', 'handle-border handle-' + this.type + '-border');
+    this.handle = new Element(target.el, 'div', 'handle-border handle-' + this.type + '-border');
     this.xProp = xProp;
     this.yProp = yProp;
   };
@@ -596,6 +627,11 @@
   SizingHandle.prototype.setAnchor = function(anchor) {
     this.anchor = anchor;
   };
+
+  SizingHandle.prototype.destroy = function() {
+    this.handle.remove();
+    this.remove();
+  }
 
   // --- Events
 
@@ -691,6 +727,21 @@
     this.setupDragging();
   };
 
+  PositionableElement.prototype.destroy = function() {
+    this.unfocus();
+    this.removeClass('positioned-element');
+    this.removeAllListeners();
+    this.rotate.remove();
+    this.nw.destroy();
+    this.ne.destroy();
+    this.se.destroy();
+    this.sw.destroy();
+    this.n.destroy();
+    this.e.destroy();
+    this.s.destroy();
+    this.w.destroy();
+  };
+
   PositionableElement.prototype.getPositionedParents = function() {
     var el = this.el, style;
     this.positionedParents = [];
@@ -703,9 +754,9 @@
   };
 
   PositionableElement.prototype.setupEvents = function() {
-    this.el.addEventListener('dblclick', this.dblclick.bind(this));
-    this.el.addEventListener('mouseover', this.mouseover.bind(this));
-    this.el.addEventListener('contextmenu', this.contextmenu.bind(this));
+    this.addEventListener('dblclick', this.dblclick.bind(this));
+    this.addEventListener('mouseover', this.mouseover.bind(this));
+    this.addEventListener('contextmenu', this.contextmenu.bind(this));
   };
 
   PositionableElement.prototype.getAttributes = function() {
@@ -925,8 +976,12 @@
   // --- Rotation
 
   PositionableElement.prototype.setRotation = function(deg) {
-    this.dimensions.rotation = deg;
+    this.dimensions.rotation = this.getLastRotation() + deg;
     this.updateRotation();
+  };
+
+  PositionableElement.prototype.getLastRotation = function() {
+    return this.getLastState().dimensions.rotation || 0;
   };
 
 
@@ -1330,12 +1385,8 @@
 
   function PositionableElementManager () {
 
-    this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
-    this.nxcludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
-
-    this.getAllPositionedElements();
-
     this.focusedElements = [];
+
     this.draggingElement = null;
 
     this.delegateToDragging('mouseDown', dragSelection);
@@ -1378,34 +1429,58 @@
 
   // --- Setup
 
-  PositionableElementManager.prototype.getAllPositionedElements = function() {
-    var includeSelector = this.includeSelector || '*', els;
+  PositionableElementManager.prototype.startBuild = function() {
+    loadingAnimation.animate('in', this.build.bind(this));
+  };
 
-    els = document.body.querySelectorAll(includeSelector);
+  PositionableElementManager.prototype.build = function(fn) {
+    this.elements = [];
 
-    this.preInitElements = [];
+    this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
+    this.excludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
+
+    var els = document.body.querySelectorAll(this.includeSelector || '*');
 
     for(var i = 0, el; el = els[i]; i++) {
       if(this.elementIsIncluded(el)) {
-        this.preInitElements.push(el);
+        try {
+          this.elements.push(new PositionableElement(el));
+        } catch(e) {
+          // Errors can often be thrown here due to cross-origin restrictions.
+        }
       }
+    }
+    loadingAnimation.animate('defer', this.finishBuild.bind(this));
+  };
+
+  PositionableElementManager.prototype.finishBuild = function() {
+    statusBar.activate();
+    this.active = true;
+  };
+
+  PositionableElementManager.prototype.refresh = function() {
+    this.destroyElements();
+    this.startBuild();
+  };
+
+  PositionableElementManager.prototype.destroyElements = function() {
+    this.elements.forEach(function(e) {
+      e.destroy();
+    }, this);
+  };
+
+  PositionableElementManager.prototype.toggleActive = function() {
+    if(this.active) {
+      this.destroyElements();
+      statusBar.deactivate();
+      this.active = false;
+    } else {
+      this.startBuild();
     }
   };
 
-  PositionableElementManager.prototype.initializeAll = function(fn) {
-    this.elements = this.preInitElements.map(function(el) {
-      var p;
-      try {
-        p = new PositionableElement(el);
-      } catch(e) {
-        // Errors can often be thrown here due to cross-origin restrictions.
-      }
-      return p;
-    });
-    fn();
-  };
-
   PositionableElementManager.prototype.elementIsIncluded = function(el) {
+    var style;
 
     if(this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
       // Don't include elements that are explicitly excluded.
@@ -1420,9 +1495,9 @@
       // If there is an explicit selector active, then always include.
       return true;
     }
-
     // Otherwise only include absolute or fixed position elements.
-    return this.style.position === 'absolute' || this.style.position === 'fixed';
+    style = window.getComputedStyle(el);
+    return style.position === 'absolute' || style.position === 'fixed';
   };
 
   PositionableElementManager.prototype.delegateToFocused = function(name, disallowWhenDragging) {
@@ -1656,9 +1731,10 @@
     this.render();
   };
 
-  DragSelection.prototype.dragStop = function(evt) {
+  DragSelection.prototype.mouseUp = function(evt) {
     this.box.removeClass('drag-selection-active');
     this.getFocused();
+    DraggableElement.prototype.mouseUp.call(this, evt);
   };
 
 
@@ -1684,6 +1760,9 @@
   };
 
   DragSelection.prototype.contains = function(point) {
+    if(!this.min || !this.max) {
+      return false;
+    }
     return point.x >= this.min.x && point.x <= this.max.x && point.y >= this.min.y && point.y <= this.max.y;
   };
 
@@ -1714,6 +1793,8 @@
   };
 
   // --- Constants
+
+  StatusBar.FADE_DELAY = 200;
 
   StatusBar.POSITION_ICON  = '&#xe001;';
   StatusBar.RESIZE_ICON    = '&#xe002;';
@@ -1778,7 +1859,7 @@
     this.createState('rotate', 'Rotate', StatusBar.ROTATE_ICON);
 
     this.buildButton(StatusBar.SETTINGS_ICON, this.settingsArea);
-    this.el.addEventListener('dblclick', this.resetPosition.bind(this));
+    this.addEventListener('dblclick', this.resetPosition.bind(this));
 
     this.defaultArea = this.getStartArea();
     this.resetArea();
@@ -1786,7 +1867,7 @@
 
   StatusBar.prototype.buildButton = function(icon, area) {
     var button = new Element(this.el, 'div', 'icon ' + area.name +'-button').html(icon);
-    button.el.addEventListener('click', this.toggleArea.bind(this, area));
+    button.addEventListener('click', this.toggleArea.bind(this, area));
   };
 
   StatusBar.prototype.buildArea = function(upper) {
@@ -1837,7 +1918,7 @@
     new Element(this.startArea.el, 'div', 'icon start-vertical-line');
 
     var hide = new Element(this.startArea.el, 'span', 'start-hide-link').html("Don't Show");
-    hide.el.addEventListener('click', this.skipStartArea.bind(this));
+    hide.addEventListener('click', this.skipStartArea.bind(this));
   };
 
   StatusBar.prototype.buildStartBlock = function(type, fn) {
@@ -2033,13 +2114,13 @@
     var method = type === 'horizontal' || type === 'vertical' ? 'alignMiddle' : 'alignFocused';
     var action = new Element(this.elementActions.el, 'span', 'icon element-action element-align-' + type).html(icon);
     action.el.title = title;
-    action.el.addEventListener('click', this.delegateElementAction(method, type));
+    action.addEventListener('click', this.delegateElementAction(method, type));
   };
 
   StatusBar.prototype.buildElementDistribute = function(type, icon, title) {
     var action = new Element(this.elementActions.el, 'span', 'icon element-action element-distribute-' + type).html(icon);
     action.el.title = title;
-    action.el.addEventListener('click', this.delegateElementAction('alignFocused', type, true));
+    action.addEventListener('click', this.delegateElementAction('alignFocused', type, true));
   };
 
   StatusBar.prototype.buildSettingsArea = function(area) {
@@ -2068,12 +2149,12 @@
     var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Clear All');
     var help  = new Element(this.settingsArea.el, 'help', 'settings-help-link').html('Help');
 
-    reset.el.addEventListener('click', this.clearSettings.bind(this));
-    save.el.addEventListener('click', this.resetArea.bind(this));
-    help.el.addEventListener('click', this.setArea.bind(this, this.helpArea));
+    reset.addEventListener('click', this.clearSettings.bind(this));
+    save.addEventListener('click', this.saveSettings.bind(this));
+    help.addEventListener('click', this.setArea.bind(this, this.helpArea));
 
-    area.el.addEventListener('mousedown', this.allowInput);
-    area.el.addEventListener('keydown', this.allowInput);
+    area.addEventListener('mousedown', this.getInput.bind(this));
+    area.addEventListener('keydown', this.getInput.bind(this));
   };
 
   StatusBar.prototype.buildTextField = function(area, name, label, placeholder) {
@@ -2120,7 +2201,7 @@
     input.id('setting-' + name);
     label.el.htmlFor = input.el.id;
     input.el.dataset.name = name;
-    input.el.addEventListener('change', this.inputChanged.bind(this));
+    input.addEventListener('keyup', this.inputChanged.bind(this));
   };
 
   StatusBar.prototype.createState = function(name, text, icon) {
@@ -2148,8 +2229,11 @@
     }
   };
 
-  StatusBar.prototype.allowInput = function(evt) {
+  StatusBar.prototype.getInput = function(evt) {
     evt.stopPropagation();
+    if(evt.keyCode === EventManager.ENTER) {
+      this.saveSettings();
+    }
   };
 
   // --- Actions
@@ -2201,6 +2285,19 @@
     }
   };
 
+  StatusBar.prototype.saveSettings = function() {
+    if(this.selectorsChanged()) {
+      window.currentElementManager.refresh();
+      settings.update(Settings.INCLUDE_ELEMENTS);
+      settings.update(Settings.EXCLUDE_ELEMENTS);
+    }
+    this.setArea(this.defaultArea);
+  };
+
+  StatusBar.prototype.selectorsChanged = function() {
+    return settings.hasChanged(Settings.INCLUDE_ELEMENTS) || settings.hasChanged(Settings.EXCLUDE_ELEMENTS);
+  };
+
   StatusBar.prototype.resetArea = function(area) {
     this.setArea(this.defaultArea);
   };
@@ -2238,8 +2335,18 @@
 
   StatusBar.prototype.activate = function() {
     if(this.active) return;
+    this.show();
     this.addClass('status-bar-active');
     this.active = true;
+  };
+
+  StatusBar.prototype.deactivate = function() {
+    if(!this.active) return;
+    this.active = false;
+    this.removeClass('status-bar-active');
+    setTimeout(function() {
+      this.hide();
+    }.bind(this), StatusBar.FADE_DELAY);
   };
 
   // --- Transform
@@ -2320,6 +2427,7 @@
   /*-------------------------] Settings [--------------------------*/
 
   function Settings () {
+    this.changed  = {};
     this.defaults = {};
     this.defaults[Settings.TABS]              = Settings.TABS_TWO_SPACES;
     this.defaults[Settings.SELECTOR]          = Settings.SELECTOR_AUTO;
@@ -2347,7 +2455,18 @@
   };
 
   Settings.prototype.set = function(name, value) {
+    if(value !== this.get(name)) {
+      this.changed[name] = true;
+    }
     localStorage[name] = value;
+  };
+
+  Settings.prototype.hasChanged = function(name) {
+    return !!this.changed[name];
+  };
+
+  Settings.prototype.update = function(name) {
+    this.changed[name] = false;
   };
 
   Settings.prototype.clear = function() {
@@ -2360,6 +2479,8 @@
   function LoadingAnimation () {
     this.build();
   };
+
+  LoadingAnimation.VISIBLE_DELAY = 250;
 
   // --- Setup
 
@@ -2380,6 +2501,12 @@
 
     // Love how complex this needs to be...
 
+    if(dir === 'defer') {
+      setTimeout(function() {
+        this.animate('out', fn);
+      }.bind(this), LoadingAnimation.VISIBLE_DELAY);
+      return;
+    }
     this.box.show();
     this.shade.show();
 
@@ -2392,7 +2519,7 @@
           this.shade.show(false);
         }
       }.bind(this);
-      this.box.el.addEventListener('webkitTransitionEnd', this.finished);
+      this.box.addEventListener('webkitTransitionEnd', this.finished);
       if(dir === 'in') {
         this.box.addClass('loading-active');
         this.shade.addClass('loading-shade-active');
@@ -2436,7 +2563,7 @@
         this.box.el.removeEventListener('webkitAnimationEnd', this.finished);
         this.reset();
       }.bind(this);
-      this.box.el.addEventListener('webkitAnimationEnd', this.finished);
+      this.box.addEventListener('webkitAnimationEnd', this.finished);
     }.bind(this));
   };
 
@@ -2675,6 +2802,10 @@
 
   /*-------------------------] Init [--------------------------*/
 
+  if(window.currentElementManager) {
+    window.currentElementManager.toggleActive();
+    return;
+  }
 
   var settings         = new Settings();
   var statusBar        = new StatusBar();
@@ -2686,15 +2817,8 @@
   var loadingAnimation = new LoadingAnimation();
 
 
-  loadingAnimation.animate('in', function() {
-    elementManager.initializeAll(function() {
-      setTimeout(function() {
-        loadingAnimation.animate('out', function() {
-          statusBar.activate();
-        });
-      }, 250);
-    });
-  });
+  elementManager.startBuild();
+  window.currentElementManager = elementManager;
 
 })();
 

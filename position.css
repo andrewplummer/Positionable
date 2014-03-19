@@ -1,6 +1,4 @@
 
-@import url(//fonts.googleapis.com/css?family=Open+Sans);
-
 @font-face {
   font-family: 'chrome-extension-icons';
   src:url('chrome-extension://__MSG_@@extension_id__/fonts/icons.eot');
@@ -27,6 +25,8 @@
 .chrome-extension-positioned-element {
   cursor: move;
   -webkit-transform: translateZ(0px);
+  -webkit-animation: none !important;
+  -webkit-transition: none !important;
 }
 
 .chrome-extension-positioned-element-focused {
