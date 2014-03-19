@@ -1480,8 +1480,6 @@
   };
 
   PositionableElementManager.prototype.elementIsIncluded = function(el) {
-    var style;
-
     if(this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
       // Don't include elements that are explicitly excluded.
       return false;
@@ -1496,7 +1494,7 @@
       return true;
     }
     // Otherwise only include absolute or fixed position elements.
-    style = window.getComputedStyle(el);
+    var style = window.getComputedStyle(el);
     return style.position === 'absolute' || style.position === 'fixed';
   };
 
