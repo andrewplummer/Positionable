@@ -1712,6 +1712,10 @@
 
   DragSelection.prototype.build = function() {
     this.box = new Element(document.body, 'div', 'drag-selection');
+    this.boxTop = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-top');
+    this.boxBottom = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-bottom');
+    this.boxLeft = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-left');
+    this.boxRight = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-right');
     this.el = this.box.el;
   };
 
@@ -1733,6 +1737,7 @@
     this.box.removeClass('drag-selection-active');
     this.getFocused();
     DraggableElement.prototype.mouseUp.call(this, evt);
+    this.min = this.max = null;
   };
 
 
@@ -2151,8 +2156,9 @@
     save.addEventListener('click', this.saveSettings.bind(this));
     help.addEventListener('click', this.setArea.bind(this, this.helpArea));
 
-    area.addEventListener('mousedown', this.getInput.bind(this));
-    area.addEventListener('keydown', this.getInput.bind(this));
+    area.addEventListener('mousedown', this.filterClicks.bind(this));
+    area.addEventListener('mouseup', this.filterClicks.bind(this));
+    area.addEventListener('keydown', this.filterKeyboardInput.bind(this));
   };
 
   StatusBar.prototype.buildTextField = function(area, name, label, placeholder) {
@@ -2227,7 +2233,11 @@
     }
   };
 
-  StatusBar.prototype.getInput = function(evt) {
+  StatusBar.prototype.filterClicks = function(evt) {
+    evt.stopPropagation();
+  };
+
+  StatusBar.prototype.filterKeyboardInput = function(evt) {
     evt.stopPropagation();
     if(evt.keyCode === EventManager.ENTER) {
       this.saveSettings();
@@ -2283,13 +2293,25 @@
     }
   };
 
+  StatusBar.prototype.clearSettings = function() {
+    if(confirm('Really clear all settings?')) {
+      settings.clear();
+      this.setArea(this.defaultArea);
+      this.checkSelectorUpdate();
+    }
+  };
+
   StatusBar.prototype.saveSettings = function() {
+    this.setArea(this.defaultArea);
+    this.checkSelectorUpdate();
+  };
+
+  StatusBar.prototype.checkSelectorUpdate = function() {
     if(this.selectorsChanged()) {
       window.currentElementManager.refresh();
       settings.update(Settings.INCLUDE_ELEMENTS);
       settings.update(Settings.EXCLUDE_ELEMENTS);
     }
-    this.setArea(this.defaultArea);
   };
 
   StatusBar.prototype.selectorsChanged = function() {
@@ -2310,12 +2332,6 @@
 
   StatusBar.prototype.showElementArea = function() {
     this.setArea(this.elementArea);
-  };
-
-  StatusBar.prototype.clearSettings = function() {
-    if(confirm('Really clear all settings?')) {
-      settings.clear();
-    }
   };
 
   StatusBar.prototype.skipStartArea = function() {
@@ -2468,6 +2484,11 @@
   };
 
   Settings.prototype.clear = function() {
+    for (key in localStorage) {
+      if(localStorage[key]) {
+        this.changed[key] = true;
+      }
+    }
     localStorage.clear();
   };
 
