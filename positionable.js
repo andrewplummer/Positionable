@@ -9,7 +9,7 @@
 (function() {
 
 
-  var EXTENSION_CLASS_PREFIX = 'chrome-extension-';
+  var EXTENSION_CLASS_PREFIX = 'positionable-extension-';
 
   /*-------------------------] NudgeManager [--------------------------*/
 
@@ -176,6 +176,8 @@
 
 
   function EventManager () {
+    this.handledKeyCodes = [];
+    this.handledKeyNames = [];
     this.setupHandlers();
   };
 
@@ -185,6 +187,7 @@
   EventManager.DOWN  = 40;
   EventManager.SHIFT = 16;
   EventManager.CTRL  = 17;
+  EventManager.CMD   = 91;
   EventManager.ALT   = 18;
   EventManager.ENTER = 13;
   EventManager.A     = 65;
@@ -195,33 +198,31 @@
 
   EventManager.prototype.setupHandlers = function() {
 
-    this.delegateEvent('mouseDown');
-    this.delegateEvent('mouseMove');
-    this.delegateEvent('mouseUp');
-    this.delegateEvent('scroll', window);
-    this.delegateEvent('copy', window);
+    this.delegateEventToElementManager('mouseDown');
+    this.delegateEventToElementManager('mouseMove');
+    this.delegateEventToElementManager('mouseUp');
+    this.delegateEventToElementManager('scroll', window);
+    this.delegateEventToElementManager('copy', window);
 
-    this.handleKey('b');
-    this.handleKey('m');
-    this.handleKey('s');
-    this.handleKey('z');
-    this.handleKey('a');
+    this.setupHandler('keydown', this.handleKeyDown);
+    this.setupHandler('keyup', this.handleKeyUp);
 
-    this.handleKey('left');
-    this.handleKey('up');
-    this.handleKey('right');
-    this.handleKey('down');
+    this.setupKey('b');
+    this.setupKey('m');
+    this.setupKey('s');
+    this.setupKey('z');
+    this.setupKey('a');
 
-    this.handleKey('shift');
-    this.handleKey('ctrl');
-    this.handleKey('alt');
+    this.setupKey('left');
+    this.setupKey('up');
+    this.setupKey('right');
+    this.setupKey('down');
 
-  };
+    this.setupKey('shift');
+    this.setupKey('ctrl');
+    this.setupKey('cmd');
+    this.setupKey('alt');
 
-  EventManager.prototype.delegateEvent = function(name, target) {
-    this.setupHandler(name.toLowerCase(), function(evt) {
-      elementManager[name](evt);
-    }.bind(this), target);
   };
 
   EventManager.prototype.setupHandler = function(name, handler, target) {
@@ -230,34 +231,36 @@
     target.addEventListener(name, handler.bind(this));
   };
 
-  EventManager.prototype.handleKey = function(name) {
-    this.handleKeyDown(name);
-    this.handleKeyUp(name);
+  EventManager.prototype.delegateEventToElementManager = function(name, target) {
+    this.setupHandler(name.toLowerCase(), function(evt) {
+      elementManager[name](evt);
+    }.bind(this), target);
   };
 
-  EventManager.prototype.handleKeyDown = function(name) {
-    this.setupKeyHandler('KeyDown', name);
+  EventManager.prototype.setupKey = function(name) {
+    this.handledKeyNames.push(name);
+    this.handledKeyCodes.push(EventManager[name.toUpperCase()]);
   };
 
-  EventManager.prototype.handleKeyUp = function(name) {
-    this.setupKeyHandler('KeyUp', name);
+  EventManager.prototype.handleKeyDown = function(evt) {
+    this.checkKeyEvent('KeyDown', evt);
   };
 
-  EventManager.prototype.setupKeyHandler = function(type, name) {
-    var code = EventManager[name.toUpperCase()], handler;
-    if(this.isArrowKey(code)) {
-      name = 'arrow';
-    }
-    handler = this[name + type];
-    if(handler) {
-      this.setupHandler(type.toLowerCase(), function(evt) {
-        if(evt.keyCode === code) {
-          evt.preventDefault();
-          evt.stopPropagation();
-          evt.stopImmediatePropagation();
-          handler.call(this, evt);
-        }
-      });
+  EventManager.prototype.handleKeyUp = function(evt) {
+    this.checkKeyEvent('KeyUp', evt);
+  };
+
+  EventManager.prototype.checkKeyEvent = function(type, evt) {
+    var code = evt.keyCode, index = this.handledKeyCodes.indexOf(code), name, fn;
+    if(index !== -1) {
+      name = this.isArrowKey(code) ? 'arrow' : this.handledKeyNames[index];
+      fn = this[name + type];
+      if(fn) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        evt.stopImmediatePropagation();
+        this[name + type].call(this, evt);
+      }
     }
   };
 
@@ -297,6 +300,14 @@
     nudgeManager.setPositionMode();
     elementManager.dragReset();
     statusBar.update();
+  };
+
+  EventManager.prototype.cmdKeyDown = function() {
+    elementManager.temporarilyFocusDraggingElement();
+  };
+
+  EventManager.prototype.cmdKeyUp = function() {
+    elementManager.releasedFocusedDraggingElement();
   };
 
   EventManager.prototype.altKeyDown = function() {
@@ -1367,7 +1378,7 @@
     var text = '', rotation = this.getRoundedRotation();
     text += Math.round(this.position.x) + 'px, ' + Math.round(this.position.y) + 'px';
     if(this.zIndex !== 0) {
-      text += ', ' + this.zIndex;
+      text += ', ' + this.zIndex + 'z';
     }
     text += ' | ';
     text += Math.round(this.dimensions.getWidth()) + 'w, ' + Math.round(this.dimensions.getHeight()) + 'h';
@@ -1486,7 +1497,7 @@
     } else if(el.className.match(EXTENSION_CLASS_PREFIX)) {
       // Don't include elements that are part of the extension itself.
       return false;
-    } else if(el.style.background.match(/chrome-extension/)) {
+    } else if(el.style.background.match(/positionable-extension/)) {
       // Don't include elements that are part of other chrome extensions.
       return false;
     } else if(this.includeSelector) {
@@ -1661,6 +1672,25 @@
 
   PositionableElementManager.prototype.getFirstFocused = function() {
     return this.focusedElements[0];
+  };
+
+  PositionableElementManager.prototype.temporarilyFocusDraggingElement = function() {
+    if(!this.draggingElement) return;
+    this.previouslyFocusedElements = this.focusedElements;
+    this.focusedElements = [this.getDraggingElement()];
+  };
+
+  PositionableElementManager.prototype.releasedFocusedDraggingElement = function() {
+    if(!this.previouslyFocusedElements) return;
+    this.dragReset();
+    this.focusedElements = this.previouslyFocusedElements;
+    this.previouslyFocusedElements = null;
+  };
+
+  PositionableElementManager.prototype.getDraggingElement = function() {
+    // Currently dragging element may be a handle.
+    var el = this.draggingElement;
+    return el.target || el;
   };
 
   // --- Output
@@ -1846,6 +1876,7 @@
   StatusBar.prototype.build = function() {
     this.el = new Element(document.body, 'div', 'status-bar').el;
     this.areas = [];
+    this.inputs = [];
 
     this.buildArea('Help');
     this.buildArea('Start');
@@ -1964,6 +1995,11 @@
     this.buildHelpBox(keyboardHelp.el, 'alt', function(box, text) {
       new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.OPTION);
       text.html('Option/Alt: Peek at the background image when dragging.');
+    });
+
+    this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
+      new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.COMMAND);
+      text.html('Cmd: While dragging, temporarily move a single element.');
     });
 
     this.buildHelpBox(keyboardHelp.el, 'b', function(box, text) {
@@ -2167,6 +2203,7 @@
       input.el.type = 'text';
       input.el.placeholder = placeholder;
       input.el.value = settings.get(name);
+      this.inputs.push(input);
       return input;
     });
   };
@@ -2282,6 +2319,11 @@
     this.currentArea = area;
     if(area === this.elementArea) {
       this.defaultArea = this.elementArea;
+    }
+    if(area === this.settingsArea) {
+      this.inputs[0].el.focus();
+    } else {
+      document.activeElement.blur();
     }
   };
 
@@ -2611,7 +2653,12 @@
     }
   };
 
-  SpriteRecognizer.prototype.loadImage = function(url) {
+  SpriteRecognizer.prototype.loadImage = function(obj) {
+    if(obj.error) {
+      console.warn('Positionable: "' + obj.url + '" could not be loaded!');
+      return;
+    }
+    var url = obj;
     var img = new Image();
     img.addEventListener('load', this.handleImageLoaded.bind(this));
     img.src = url;

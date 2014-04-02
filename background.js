@@ -11,7 +11,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       try {
         data = canvas.toDataURL();
       } catch(e) {
-        sendResponse({ error: true });
+        sendResponse({ error: true, url: request.url });
         return;
       }
       sendResponse(data);
@@ -23,10 +23,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 chrome.browserAction.onClicked.addListener(function(tab) {
   chrome.tabs.insertCSS(null, {
-    file: 'position.css'
+    file: 'positionable.css'
   });
   chrome.tabs.executeScript(null, {
-    file: 'position.js'
+    file: 'positionable.js'
   });
 });
 

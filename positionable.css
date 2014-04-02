@@ -1,6 +1,6 @@
 
 @font-face {
-  font-family: 'chrome-extension-icons';
+  font-family: 'positionable-extension-icons';
   src:url('chrome-extension://__MSG_@@extension_id__/fonts/icons.eot');
   src:url('chrome-extension://__MSG_@@extension_id__/fonts/icons.eot?#iefix') format('embedded-opentype'),
   url('chrome-extension://__MSG_@@extension_id__/fonts/icons.woff') format('woff'),
@@ -22,29 +22,29 @@
   100% { opacity: 0; }
 }
 
-.chrome-extension-positioned-element {
+.positionable-extension-positioned-element {
   cursor: move;
   -webkit-transform: translateZ(0px);
   -webkit-animation: none !important;
   -webkit-transition: none !important;
 }
 
-.chrome-extension-positioned-element-focused {
+.positionable-extension-positioned-element-focused {
   opacity: 1;
 }
 
-.chrome-extension-positioned-parent-focused {
+.positionable-extension-positioned-parent-focused {
   z-index: 100000;
 }
 
-.chrome-extension-icon {
-  font-family: 'chrome-extension-icons';
+.positionable-extension-icon {
+  font-family: 'positionable-extension-icons';
 }
 
 /*---------------------------] Handles [-----------------------*/
 
 
-.chrome-extension-handle {
+.positionable-extension-handle {
   position: absolute;
   z-index: 2;
   cursor: pointer;
@@ -52,121 +52,125 @@
   width: 25%;
 }
 
-.chrome-extension-handle-n,
-.chrome-extension-handle-s {
+.positionable-extension-handle-n,
+.positionable-extension-handle-s {
   left: 25%;
   width: 50%;
 }
 
-.chrome-extension-handle-w,
-.chrome-extension-handle-e {
+.positionable-extension-handle-w,
+.positionable-extension-handle-e {
   top: 25%;
   height: 50%;
 }
 
-.chrome-extension-handle-n,
-.chrome-extension-handle-n-border {
+.positionable-extension-handle-n,
+.positionable-extension-handle-n-border {
   top: -2px;
 }
 
-.chrome-extension-handle-s,
-.chrome-extension-handle-s-border {
+.positionable-extension-handle-s,
+.positionable-extension-handle-s-border {
   bottom: -2px;
 }
 
-.chrome-extension-handle-e,
-.chrome-extension-handle-e-border {
+.positionable-extension-handle-e,
+.positionable-extension-handle-e-border {
   right: -2px;
 }
 
-.chrome-extension-handle-w,
-.chrome-extension-handle-w-border {
+.positionable-extension-handle-w,
+.positionable-extension-handle-w-border {
   left: -2px;
 }
 
-.chrome-extension-handle-nw,
-.chrome-extension-handle-nw-border {
+.positionable-extension-handle-nw,
+.positionable-extension-handle-nw-border {
   top: -2px;
   left: -2px;
 }
 
-.chrome-extension-handle-ne,
-.chrome-extension-handle-ne-border {
+.positionable-extension-handle-ne,
+.positionable-extension-handle-ne-border {
   top: -2px;
   right: -2px;
 }
 
-.chrome-extension-handle-sw,
-.chrome-extension-handle-sw-border {
+.positionable-extension-handle-sw,
+.positionable-extension-handle-sw-border {
   bottom: -2px;
   left: -2px;
 }
 
-.chrome-extension-handle-se,
-.chrome-extension-handle-se-border {
+.positionable-extension-handle-se,
+.positionable-extension-handle-se-border {
   bottom: -2px;
   right: -2px;
 }
 
-.chrome-extension-handle-border {
+.positionable-extension-handle-border {
   position: absolute;
   z-index: 1;
   width: 25%;
   height: 25%;
-  border-color: rgba(0,0,0,0.4);
+  border-color: rgba(0,0,0,0.3);
   border-style: solid;
   border-width: 0;
 }
 
-.chrome-extension-handle-n-border,
-.chrome-extension-handle-s-border {
+.positionable-extension-positioned-element-focused .positionable-extension-handle-border {
+  border-color: rgba(0,0,0,0.7);
+}
+
+.positionable-extension-handle-n-border,
+.positionable-extension-handle-s-border {
   left: 30%;
   width: 40%;
 }
 
-.chrome-extension-handle-w-border,
-.chrome-extension-handle-e-border {
+.positionable-extension-handle-w-border,
+.positionable-extension-handle-e-border {
   top: 30%;
   height: 40%;
 }
 
-.chrome-extension-handle-n-border {
+.positionable-extension-handle-n-border {
   border-top-width: 2px;
 }
 
-.chrome-extension-handle-s-border {
+.positionable-extension-handle-s-border {
   border-bottom-width: 2px;
 }
 
-.chrome-extension-handle-e-border {
+.positionable-extension-handle-e-border {
   border-right-width: 2px;
 }
 
-.chrome-extension-handle-w-border {
+.positionable-extension-handle-w-border {
   border-left-width: 2px;
 }
 
-.chrome-extension-handle-nw-border {
+.positionable-extension-handle-nw-border {
   border-top-width: 2px;
   border-left-width: 2px;
 }
 
-.chrome-extension-handle-ne-border {
+.positionable-extension-handle-ne-border {
   border-top-width: 2px;
   border-right-width: 2px;
 }
 
-.chrome-extension-handle-sw-border {
+.positionable-extension-handle-sw-border {
   border-bottom-width: 2px;
   border-left-width: 2px;
 }
 
-.chrome-extension-handle-se-border {
+.positionable-extension-handle-se-border {
   border-bottom-width: 2px;
   border-right-width: 2px;
 }
 
-.chrome-extension-handle-rotate {
+.positionable-extension-handle-rotate {
   height: 18px;
   width: 18px;
   bottom: -18px;
@@ -175,14 +179,14 @@
   border-radius: 18px;
 }
 
-.chrome-extension-resize-handles-hidden .chrome-extension-sizing-handle {
+.positionable-extension-resize-handles-hidden .positionable-extension-sizing-handle {
   display: none;
 }
 
 /*---------------------------] Status Bar [-----------------------*/
 
 
-.chrome-extension-status-bar {
+.positionable-extension-status-bar {
   position: fixed;
   z-index: 100001;
   bottom: 20px;
@@ -198,11 +202,11 @@
   -webkit-transition: height 200ms ease-in-out, width 200ms ease-in-out, opacity 100ms linear;
 }
 
-.chrome-extension-status-bar-active {
+.positionable-extension-status-bar-active {
   opacity: 1;
 }
 
-.chrome-extension-area {
+.positionable-extension-area {
   position: absolute;
   z-index: 1;
   top: 20px;
@@ -214,7 +218,7 @@
   text-align: left;
 }
 
-.chrome-extension-active-area {
+.positionable-extension-active-area {
   z-index: 2;
   opacity: 1;
 }
@@ -222,32 +226,32 @@
 /*---------------------------] Status Bar Start Area [-----------------------*/
 
 
-.chrome-extension-status-bar-start-active {
+.positionable-extension-status-bar-start-active {
   width: 560px;
   height: 370px;
 }
 
-.chrome-extension-start-area {
+.positionable-extension-start-area {
   width: 500px;
   height: 285px;
 }
 
-.chrome-extension-start-help {
+.positionable-extension-start-help {
   position: relative;
   float: left;
   width: 210px;
   height: 120px;
-  padding: 10px 20px;
+  padding: 15px 20px;
   text-align: center;
 }
 
-.chrome-extension-start-icon {
+.positionable-extension-start-icon {
   font-size: 56px;
   color: rgba(0,0,0,0.7);
   margin-bottom: 10px;
 }
 
-.chrome-extension-start-pointer-icon {
+.positionable-extension-start-pointer-icon {
   position: absolute;
   top: 47px;
   left: 46%;
@@ -258,16 +262,16 @@
   font-size: 26px;
 }
 
-.chrome-extension-start-help-text {
+.positionable-extension-start-help-text {
   font-size: 12px;
 }
 
-.chrome-extension-start-help-text-left {
+.positionable-extension-start-help-text-left {
   text-align: left;
 }
 
 
-.chrome-extension-start-horizontal-line {
+.positionable-extension-start-horizontal-line {
   position: absolute;
   top: 50%;
   left: 0;
@@ -276,7 +280,7 @@
   background: -webkit-linear-gradient(left, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
 }
 
-.chrome-extension-start-vertical-line {
+.positionable-extension-start-vertical-line {
   position: absolute;
   top: 0;
   left: 50%;
@@ -285,7 +289,7 @@
   background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
 }
 
-.chrome-extension-start-hide-link {
+.positionable-extension-start-hide-link {
   position: absolute;
   bottom: -40px;
   right: 0;
@@ -294,7 +298,7 @@
   cursor: pointer;
 }
 
-.chrome-extension-start-hide-link:hover {
+.positionable-extension-start-hide-link:hover {
   color: rgba(20,130,240,0.8);
 }
 
@@ -302,18 +306,18 @@
 /*---------------------------] Status Bar Quick Start Area [-----------------------*/
 
 
-.chrome-extension-status-bar-quickstart-active {
+.positionable-extension-status-bar-quickstart-active {
   width: 150px;
   height: 80px;
 }
 
-.chrome-extension-quickstart-icon {
+.positionable-extension-quickstart-icon {
   font-size: 35px;
   text-align: center;
   margin-top: -10px;
 }
 
-.chrome-extension-quickstart-text {
+.positionable-extension-quickstart-text {
   font-size: 14px;
   text-align: center;
   margin: 0 -30px 0 -15px;
@@ -323,30 +327,30 @@
 /*---------------------------] Status Bar Help Area [-----------------------*/
 
 
-.chrome-extension-status-bar-help-active {
+.positionable-extension-status-bar-help-active {
   width: 600px;
   height: 430px;
 }
 
-.chrome-extension-help-block {
+.positionable-extension-help-block {
   margin: 0 40px 20px 0;
 }
 
-.chrome-extension-keys-help-block {
+.positionable-extension-keys-help-block {
   float: right;
   margin-right: 0px;
 }
 
-.chrome-extension-help-block-header {
+.positionable-extension-help-block-header {
   margin: 0 0 8px 0;
   font-weight: 300;
 }
 
-.chrome-extension-help {
+.positionable-extension-help {
   margin-bottom: 5px;
 }
 
-.chrome-extension-help-box {
+.positionable-extension-help-box {
   display: inline-block;
   vertical-align: middle;
   margin-right: 5px;
@@ -355,16 +359,16 @@
   height: 30px;
 }
 
-.chrome-extension-key-plus {
+.positionable-extension-key-plus {
   margin: 0 5px;
   color: rgba(0,0,0,0.4);
 }
 
-.chrome-extension-command-help-box {
+.positionable-extension-command-help-box {
   width: 80px;
 }
 
-.chrome-extension-help-text {
+.positionable-extension-help-text {
   width: 200px;
   display: inline-block;
   vertical-align: middle;
@@ -372,13 +376,13 @@
   line-height: 1.4;
 }
 
-.chrome-extension-help-icon {
+.positionable-extension-help-icon {
   position: absolute;
   font-size: 22px;
   color: rgba(0,0,0,0.5);
 }
 
-.chrome-extension-help-element {
+.positionable-extension-help-element {
   position: absolute;
   top: -1px;
   left: -1px;
@@ -387,44 +391,44 @@
   border: 1px solid rgba(0,0,0,0.5);
 }
 
-.chrome-extension-position-help-icon {
+.positionable-extension-position-help-icon {
   top: 2px;
   left: 3px;
   font-size: 24px;
 }
 
-.chrome-extension-resize-help-icon {
+.positionable-extension-resize-help-icon {
   font-size: 14px;
   line-height: 15px;
   height: 13px;
   width: 13px;
 }
 
-.chrome-extension-resize-nw-help-icon {
+.positionable-extension-resize-nw-help-icon {
   top: 0;
   left: -1px;
 }
 
-.chrome-extension-resize-ne-help-icon {
+.positionable-extension-resize-ne-help-icon {
   top: 0;
   left: 17px;
 }
 
-.chrome-extension-resize-se-help-icon {
+.positionable-extension-resize-se-help-icon {
   top: 17px;
   left: 17px;
 }
 
-.chrome-extension-resize-sw-help-icon {
+.positionable-extension-resize-sw-help-icon {
   bottom: 0;
   left: -1px;
 }
 
-.chrome-extension-rotate-help {
+.positionable-extension-rotate-help {
   margin-bottom: 13px;
 }
 
-.chrome-extension-rotate-handle {
+.positionable-extension-rotate-handle {
   position: absolute;
   width: 8px;
   height: 8px;
@@ -434,31 +438,31 @@
   border-radius: 30px;
 }
 
-.chrome-extension-background-help-icon {
+.positionable-extension-background-help-icon {
   top: 50%;
   left: 50%;
   font-size: 24px;
   margin: -14px 0 0 -13px;
 }
 
-.chrome-extension-snapping-help-icon {
+.positionable-extension-snapping-help-icon {
   font-size: 16px;
   line-height: 16px;
   top: 1px;
   left: 2px;
 }
 
-.chrome-extension-snapping-nw-help-icon {
+.positionable-extension-snapping-nw-help-icon {
   font-size: 14px;
   top: 15px;
   left: 15px;
 }
 
-.chrome-extension-multiple-select-help {
+.positionable-extension-multiple-select-help {
   border-style: dashed;
 }
 
-.chrome-extension-aligning-box-one {
+.positionable-extension-aligning-box-one {
   top: 4px;
   left: 4px;
   width: 6px;
@@ -466,7 +470,7 @@
   border: 1px solid rgba(0,0,0,0.3);
 }
 
-.chrome-extension-aligning-box-two {
+.positionable-extension-aligning-box-two {
   bottom: 4px;
   right: 14px;
   width: 10px;
@@ -474,13 +478,13 @@
   border: 1px solid rgba(0,0,0,0.3);
 }
 
-.chrome-extension-aligning-pointer-icon {
+.positionable-extension-aligning-pointer-icon {
   bottom: -8px;
   right: 4px;
   font-size: 10px;
 }
 
-.chrome-extension-key-icon {
+.positionable-extension-key-icon {
   display: inline-block;
   width: 25px;
   height: 25px;
@@ -493,12 +497,12 @@
   background-color: rgba(255,255,255,0.3);
 }
 
-.chrome-extension-letter-key-icon {
+.positionable-extension-letter-key-icon {
   line-height: 29px;
   text-indent: 6px;
 }
 
-.chrome-extension-inline-key-icon {
+.positionable-extension-inline-key-icon {
   width: 20px;
   height: 20px;
   line-height: 22px;
@@ -512,12 +516,12 @@
 /*---------------------------] Status Bar Element Area [-----------------------*/
 
 
-.chrome-extension-status-bar-element-active {
+.positionable-extension-status-bar-element-active {
   width: 420px;
   height: 100px;
 }
 
-.chrome-extension-single-header {
+.positionable-extension-single-header {
   margin: 0px;
   font-size: 28px;
   font-weight: 300;
@@ -529,18 +533,18 @@
   width: 320px;
 }
 
-.chrome-extension-single-data {
+.positionable-extension-single-data {
   font-size: 13px;
 }
 
-.chrome-extension-multiple-header {
+.positionable-extension-multiple-header {
   margin: 0px;
   font-size: 16px;
   font-weight: 300;
   margin-bottom: 5px;
 }
 
-.chrome-extension-element-action {
+.positionable-extension-element-action {
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -553,7 +557,7 @@
   cursor: pointer;
 }
 
-.chrome-extension-element-states {
+.positionable-extension-element-states {
   position: absolute;
   top: 0px;
   right: -15px;
@@ -561,7 +565,7 @@
   height: 60px;
 }
 
-.chrome-extension-element-state {
+.positionable-extension-element-state {
   position: absolute;
   top: 0px;
   left: 0px;
@@ -572,22 +576,22 @@
   opacity: 0;
 }
 
-.chrome-extension-element-active-state {
+.positionable-extension-element-active-state {
   opacity: 1;
 }
 
-.chrome-extension-element-state-icon {
+.positionable-extension-element-state-icon {
   font-size: 30px;
   line-height: 40px;
 }
 
-.chrome-extension-element-state-text {
+.positionable-extension-element-state-text {
   font-size: 14px;
   line-height: 24px;
   margin: 0;
 }
 
-.chrome-extension-background-position-state .chrome-extension-element-state-text {
+.positionable-extension-background-position-state .positionable-extension-element-state-text {
   font-size: 12px;
 }
 
@@ -596,20 +600,20 @@
 /*---------------------------] Status Bar Settings Area [-----------------------*/
 
 
-.chrome-extension-status-bar-settings-active {
+.positionable-extension-status-bar-settings-active {
   width: 620px;
   height: 400px;
 }
 
-.chrome-extension-settings-area {
+.positionable-extension-settings-area {
 }
 
-.chrome-extension-settings-header {
+.positionable-extension-settings-header {
   margin: 0 0 30px 0;
   font-weight: 300;
 }
 
-.chrome-extension-settings-button {
+.positionable-extension-settings-button {
   position: absolute;
   z-index: 3;
   bottom: 5px;
@@ -624,17 +628,17 @@
   text-align: center;
 }
 
-.chrome-extension-settings-button:hover {
+.positionable-extension-settings-button:hover {
   opacity: 0.5;
 }
 
-.chrome-extension-setting-field {
+.positionable-extension-setting-field {
   border: none;
   padding: 4px 0px;
   white-space: nowrap;
 }
 
-.chrome-extension-setting-label {
+.positionable-extension-setting-label {
   vertical-align: top;
   display: inline-block;
   text-align: right;
@@ -645,42 +649,42 @@
   color: rgba(0,0,0,0.7);
 }
 
-.chrome-extension-setting-block {
+.positionable-extension-setting-block {
   vertical-align: top;
   display: inline-block;
 }
 
-.chrome-extension-setting-input {
+.positionable-extension-setting-input {
   display: block;
   margin: 0;
   font-size: 14px;
 }
 
-.chrome-extension-setting-text-input {
+.positionable-extension-setting-text-input {
   padding: 1px 4px;
 }
 
-.chrome-extension-setting-text-input::-webkit-input-placeholder {
+.positionable-extension-setting-text-input::-webkit-input-placeholder {
   color: rgba(0,0,0,0.5);
 }
 
-.chrome-extension-setting-option {
+.positionable-extension-setting-option {
   font-size: 12px;
 }
 
-.chrome-extension-setting-description {
+.positionable-extension-setting-description {
   margin-top: .5em;
   font-size: 14px;
 }
 
-.chrome-extension-setting-example {
+.positionable-extension-setting-example {
   margin-top: .5em;
   font-family: Courier, monospace;
   font-size: 14px;
   color: rgba(0,0,0,0.6);
 }
 
-.chrome-extension-settings-help-link {
+.positionable-extension-settings-help-link {
   position: absolute;
   top: 0px;
   left: 70px;
@@ -692,14 +696,14 @@
   padding: 2px 12px;
 }
 
-.chrome-extension-settings-save {
+.positionable-extension-settings-save {
   position: absolute;
   right: 0px;
   bottom: 0px;
   cursor: pointer;
 }
 
-.chrome-extension-settings-reset {
+.positionable-extension-settings-reset {
   position: absolute;
   right: 50px;
   bottom: 0px;
@@ -710,7 +714,7 @@
 /*---------------------------] Drag Selection [-----------------------*/
 
 
-.chrome-extension-drag-selection {
+.positionable-extension-drag-selection {
   position: fixed;
   display: none;
   z-index: 100000;
@@ -718,43 +722,43 @@
   background: rgba(0,0,0,.1);
 }
 
-.chrome-extension-drag-selection-border {
+.positionable-extension-drag-selection-border {
   position: absolute;
-  background: url(images/selection.gif);
+  background: url('chrome-extension://__MSG_@@extension_id__/images/selection.gif');
   top: 0;
   right: 0;
   bottom: 0;
   left: 0;
 }
 
-.chrome-extension-drag-selection-top {
+.positionable-extension-drag-selection-top {
   bottom: auto;
   height: 1px;
 }
 
-.chrome-extension-drag-selection-bottom {
+.positionable-extension-drag-selection-bottom {
   top: auto;
   height: 1px;
 }
 
-.chrome-extension-drag-selection-left {
+.positionable-extension-drag-selection-left {
   right: auto;
   width: 1px;
 }
 
-.chrome-extension-drag-selection-right {
+.positionable-extension-drag-selection-right {
   left: auto;
   width: 1px;
 }
 
-.chrome-extension-drag-selection-active {
+.positionable-extension-drag-selection-active {
   display: block;
 }
 
 
 /*---------------------------] Loading Animation [-----------------------*/
 
-.chrome-extension-loading {
+.positionable-extension-loading {
   display: none;
   position: fixed;
   z-index: 100004;
@@ -770,7 +774,7 @@
   -webkit-transition: -webkit-transform 200ms ease-in-out, opacity 200ms linear;
 }
 
-.chrome-extension-loading-shade {
+.positionable-extension-loading-shade {
   display: none;
   position: fixed;
   z-index: 100003;
@@ -783,22 +787,22 @@
   -webkit-transition: opacity 200ms linear;
 }
 
-.chrome-extension-loading-shade-active {
+.positionable-extension-loading-shade-active {
   opacity: 1;
 }
 
-.chrome-extension-loading-active {
+.positionable-extension-loading-active {
   -webkit-transform: scale(1);
   opacity: 1;
 }
 
-.chrome-extension-loading-spin {
+.positionable-extension-loading-spin {
   -webkit-animation: spin 1s linear infinite;
   height: 100%;
   width: 100%;
 }
 
-.chrome-extension-loading-bar {
+.positionable-extension-loading-bar {
   position: absolute;
   left: 50%;
   top: 50%;
@@ -810,31 +814,31 @@
   -webkit-transform-origin: 2.5px 30px;
 }
 
-.chrome-extension-loading-bar-1  { -webkit-transform: rotateZ(0deg); }
-.chrome-extension-loading-bar-2  { -webkit-transform: rotateZ(30deg); }
-.chrome-extension-loading-bar-3  { -webkit-transform: rotateZ(60deg); }
-.chrome-extension-loading-bar-4  { -webkit-transform: rotateZ(90deg); }
-.chrome-extension-loading-bar-5  { -webkit-transform: rotateZ(120deg); }
-.chrome-extension-loading-bar-6  { -webkit-transform: rotateZ(150deg); }
-.chrome-extension-loading-bar-7  { -webkit-transform: rotateZ(180deg); }
-.chrome-extension-loading-bar-8  { -webkit-transform: rotateZ(210deg); }
-.chrome-extension-loading-bar-9  { -webkit-transform: rotateZ(240deg); }
-.chrome-extension-loading-bar-10 { -webkit-transform: rotateZ(270deg); }
-.chrome-extension-loading-bar-11 { -webkit-transform: rotateZ(300deg); }
-.chrome-extension-loading-bar-12 { -webkit-transform: rotateZ(330deg); }
+.positionable-extension-loading-bar-1  { -webkit-transform: rotateZ(0deg); }
+.positionable-extension-loading-bar-2  { -webkit-transform: rotateZ(30deg); }
+.positionable-extension-loading-bar-3  { -webkit-transform: rotateZ(60deg); }
+.positionable-extension-loading-bar-4  { -webkit-transform: rotateZ(90deg); }
+.positionable-extension-loading-bar-5  { -webkit-transform: rotateZ(120deg); }
+.positionable-extension-loading-bar-6  { -webkit-transform: rotateZ(150deg); }
+.positionable-extension-loading-bar-7  { -webkit-transform: rotateZ(180deg); }
+.positionable-extension-loading-bar-8  { -webkit-transform: rotateZ(210deg); }
+.positionable-extension-loading-bar-9  { -webkit-transform: rotateZ(240deg); }
+.positionable-extension-loading-bar-10 { -webkit-transform: rotateZ(270deg); }
+.positionable-extension-loading-bar-11 { -webkit-transform: rotateZ(300deg); }
+.positionable-extension-loading-bar-12 { -webkit-transform: rotateZ(330deg); }
 
-.chrome-extension-loading-bar-12 { background-color: rgba(255,255,255,0.8); }
-.chrome-extension-loading-bar-11 { background-color: rgba(255,255,255,0.7); }
-.chrome-extension-loading-bar-10 { background-color: rgba(255,255,255,0.6); }
-.chrome-extension-loading-bar-9  { background-color: rgba(255,255,255,0.5); }
-.chrome-extension-loading-bar-8  { background-color: rgba(255,255,255,0.4); }
-.chrome-extension-loading-bar-7  { background-color: rgba(255,255,255,0.3); }
+.positionable-extension-loading-bar-12 { background-color: rgba(255,255,255,0.8); }
+.positionable-extension-loading-bar-11 { background-color: rgba(255,255,255,0.7); }
+.positionable-extension-loading-bar-10 { background-color: rgba(255,255,255,0.6); }
+.positionable-extension-loading-bar-9  { background-color: rgba(255,255,255,0.5); }
+.positionable-extension-loading-bar-8  { background-color: rgba(255,255,255,0.4); }
+.positionable-extension-loading-bar-7  { background-color: rgba(255,255,255,0.3); }
 
 
 /*---------------------------] Copy Animation [-----------------------*/
 
 
-.chrome-extension-copy-animation {
+.positionable-extension-copy-animation {
   position: fixed;
   z-index: 100002;
   top: 50%;
@@ -854,11 +858,11 @@
 }
 
 
-.chrome-extension-copy-animation-in {
+.positionable-extension-copy-animation-in {
   -webkit-animation: opacity-in-out 1s linear;
 }
 
-.chrome-extension-copy-animation-text {
+.positionable-extension-copy-animation-text {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -867,7 +871,7 @@
   opacity: 1;
 }
 
-.chrome-extension-copy-animation-text-in {
+.positionable-extension-copy-animation-text-in {
   top: -50px;
   opacity: 0;
   -webkit-transition: top 500ms linear 400ms, opacity 500ms linear 400ms;
