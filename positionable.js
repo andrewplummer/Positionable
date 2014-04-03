@@ -187,8 +187,8 @@
   EventManager.DOWN  = 40;
   EventManager.SHIFT = 16;
   EventManager.CTRL  = 17;
-  EventManager.CMD   = 91;
   EventManager.ALT   = 18;
+  EventManager.CMD   = 91;
   EventManager.ENTER = 13;
   EventManager.A     = 65;
   EventManager.B     = 66;
@@ -1999,7 +1999,7 @@
 
     this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
       new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.COMMAND);
-      text.html('Cmd: While dragging, temporarily move a single element.');
+      text.html('Cmd/Win: While dragging, temporarily move a single element.');
     });
 
     this.buildHelpBox(keyboardHelp.el, 'b', function(box, text) {
