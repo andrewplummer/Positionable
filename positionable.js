@@ -1441,7 +1441,7 @@
   // --- Setup
 
   PositionableElementManager.prototype.startBuild = function() {
-    loadingAnimation.animate('in', this.build.bind(this));
+    loadingAnimation.show(this.build.bind(this));
   };
 
   PositionableElementManager.prototype.build = function(fn) {
@@ -1461,7 +1461,7 @@
         }
       }
     }
-    loadingAnimation.animate('defer', this.finishBuild.bind(this));
+    loadingAnimation.hide(this.finishBuild.bind(this));
   };
 
   PositionableElementManager.prototype.finishBuild = function() {
@@ -2535,13 +2535,29 @@
   };
 
 
+  /*-------------------------] Animation [--------------------------*/
+
+
+  function Animation() {};
+
+  Animation.prototype.defer = function(fn) {
+    setTimeout(fn.bind(this), 0);
+  };
+
   /*-------------------------] LoadingAnimation [--------------------------*/
 
   function LoadingAnimation () {
     this.build();
   };
 
+  // --- Inheritance
+
+  LoadingAnimation.prototype = new Animation();
+
+  // --- Constants
+
   LoadingAnimation.VISIBLE_DELAY = 250;
+
 
   // --- Setup
 
@@ -2558,45 +2574,45 @@
 
   // --- Actions
 
-  LoadingAnimation.prototype.animate = function(dir, fn) {
-
-    // Love how complex this needs to be...
-
-    if(dir === 'defer') {
-      setTimeout(function() {
-        this.animate('out', fn);
-      }.bind(this), LoadingAnimation.VISIBLE_DELAY);
-      return;
-    }
+  LoadingAnimation.prototype.show = function(fn) {
     this.box.show();
     this.shade.show();
-
-    webkitRequestAnimationFrame(function() {
+    this.defer(function() {
       this.finished = function() {
         this.box.el.removeEventListener('webkitTransitionEnd', this.finished);
         if(fn) fn();
-        if(dir === 'out') {
-          this.box.show(false);
-          this.shade.show(false);
-        }
       }.bind(this);
       this.box.addEventListener('webkitTransitionEnd', this.finished);
-      if(dir === 'in') {
-        this.box.addClass('loading-active');
-        this.shade.addClass('loading-shade-active');
-      } else {
-        this.box.removeClass('loading-active');
-        this.shade.removeClass('loading-shade-active');
-      }
-    }.bind(this));
+      this.box.addClass('loading-active');
+      this.shade.addClass('loading-shade-active');
+    });
   };
 
+  LoadingAnimation.prototype.hide = function(fn) {
+    this.defer(function() {
+      this.finished = function() {
+        this.box.el.removeEventListener('webkitTransitionEnd', this.finished);
+        this.box.hide();
+        this.shade.hide();
+        fn();
+      }.bind(this);
+      this.box.addEventListener('webkitTransitionEnd', this.finished);
+      this.box.removeClass('loading-active');
+      this.shade.removeClass('loading-shade-active');
+    });
+  };
 
   /*-------------------------] CopyAnimation [--------------------------*/
 
   function CopyAnimation () {
     this.build();
   };
+
+  // --- Inheritance
+
+  CopyAnimation.prototype = new Animation();
+
+  // --- Constants
 
   CopyAnimation.IN_CLASS = 'copy-animation-in';
   CopyAnimation.TEXT_IN_CLASS = 'copy-animation-text-in';
@@ -2615,7 +2631,7 @@
     this.reset();
     this.box.show();
 
-    webkitRequestAnimationFrame(function() {
+    this.defer(function() {
 
       this.box.addClass(CopyAnimation.IN_CLASS);
       this.text.addClass(CopyAnimation.TEXT_IN_CLASS);
@@ -2625,7 +2641,7 @@
         this.reset();
       }.bind(this);
       this.box.addEventListener('webkitAnimationEnd', this.finished);
-    }.bind(this));
+    });
   };
 
   CopyAnimation.prototype.reset = function() {
