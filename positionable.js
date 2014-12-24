@@ -1269,8 +1269,10 @@
     switch(type) {
       case Settings.SELECTOR_ID:      return '#' + this.el.id;
       case Settings.SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
+      case Settings.SELECTOR_TAG:     return this.getTagName(this.el);
       case Settings.SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
       case Settings.SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
+      case Settings.SELECTOR_INLINE:  return '';
     }
   };
 
@@ -1281,6 +1283,10 @@
   PositionableElement.prototype.getFirstClass = function(list) {
     var first = this.getFilteredClasses(list)[0];
     return first ? '.' + first : '[undefined element]';
+  };
+
+  PositionableElement.prototype.getTagName = function(el) {
+    return el.tagName.toLowerCase();
   };
 
   PositionableElement.prototype.getLongestClass = function(list) {
@@ -1301,8 +1307,11 @@
 
   PositionableElement.prototype.getStyles = function() {
     var css = '';
+    var selector = this.getSelector();
+    var openingBrace = selector ? ' {\n' : '';
+    var closingBrace = selector ? '}\n' : '';
     this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
-    css += this.getSelector() + ' {\n';
+    css += this.getSelector() + openingBrace;
     if(this.isPositioned()) {
       if(this.zIndex !== 0) {
         css += this.getNewStyleLine('z-index', this.zIndex);
@@ -1318,7 +1327,10 @@
     if(this.dimensions.rotation) {
       css += this.getRotationStyles();
     }
-    css += '}\n';
+    css += closingBrace;
+    if (!selector) {
+      css = css.replace(/\s/gm, '');
+    }
     return css;
   };
 
@@ -2176,12 +2188,14 @@
       [Settings.TABS_FOUR_SPACES, 'Four Spaces']
     ]);
 
-    this.buildSelect(area, Settings.SELECTOR, 'Output selector:', [
+    this.buildSelect(area, Settings.SELECTOR, 'Output:', [
       [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
       [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
       [Settings.SELECTOR_FIRST, 'First Class', 'First class name found will be used', '.first { ... }'],
       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
-      [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }']
+      [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
+      [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
+      [Settings.SELECTOR_INLINE, 'Inline', 'Only inline styles will be output.', 'width:200px;height:200px;...']
     ]);
 
     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
@@ -2242,7 +2256,7 @@
     input.id('setting-' + name);
     label.el.htmlFor = input.el.id;
     input.el.dataset.name = name;
-    input.addEventListener('keyup', this.inputChanged.bind(this));
+    input.addEventListener('change', this.inputChanged.bind(this));
   };
 
   StatusBar.prototype.createState = function(name, text, icon) {
@@ -2413,7 +2427,13 @@
   };
 
   StatusBar.prototype.setSelectorText = function(str) {
-    this.elementHeader.html(str);
+    var html;
+    if (!str) {
+      str = '[Inline Selector]';
+      var className = EXTENSION_CLASS_PREFIX + 'inline-selector';
+      html = '<span class="'+ className +'">' + str + '</span>';
+    }
+    this.elementHeader.html(html || str);
     this.elementHeader.el.title = str;
   };
 
@@ -2498,8 +2518,10 @@
 
   Settings.SELECTOR_ID      = 'id';
   Settings.SELECTOR_ALL     = 'all';
+  Settings.SELECTOR_TAG     = 'tag';
   Settings.SELECTOR_AUTO    = 'auto';
   Settings.SELECTOR_FIRST   = 'first';
+  Settings.SELECTOR_INLINE  = 'inline';
   Settings.SELECTOR_LONGEST = 'longest';
 
   Settings.TABS_TWO_SPACES  = 'two';

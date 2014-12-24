@@ -529,8 +529,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+  min-height: 1.2em;
   margin-bottom: 3px;
   width: 320px;
+}
+
+.positionable-extension-inline-selector {
+  color: #aaa;
+  font-style: italic;
 }
 
 .positionable-extension-single-data {
