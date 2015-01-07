@@ -8,8 +8,14 @@
 
 (function() {
 
-
   var EXTENSION_CLASS_PREFIX = 'positionable-extension-';
+
+  /*-------------------------] Utilities [--------------------------*/
+
+  function getClassName(el) {
+    // SVG className attributes are of type "SVGAnimatedString"
+    return typeof el.className.baseVal === 'string' ? el.className.baseVal : el.className;
+  }
 
   /*-------------------------] NudgeManager [--------------------------*/
 
@@ -1506,7 +1512,7 @@
     if(this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
       // Don't include elements that are explicitly excluded.
       return false;
-    } else if(el.className.match(EXTENSION_CLASS_PREFIX)) {
+    } else if(getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
       // Don't include elements that are part of the extension itself.
       return false;
     } else if(el.style.background.match(/positionable-extension/)) {
