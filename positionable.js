@@ -1273,12 +1273,12 @@
       type = this.el.id ? Settings.SELECTOR_ID : Settings.SELECTOR_FIRST;
     }
     switch(type) {
+      case Settings.SELECTOR_NONE:    return '';
       case Settings.SELECTOR_ID:      return '#' + this.el.id;
       case Settings.SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
       case Settings.SELECTOR_TAG:     return this.getTagName(this.el);
       case Settings.SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
       case Settings.SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
-      case Settings.SELECTOR_INLINE:  return '';
     }
   };
 
@@ -2194,15 +2194,18 @@
       [Settings.TABS_FOUR_SPACES, 'Four Spaces']
     ]);
 
-    this.buildSelect(area, Settings.SELECTOR, 'Output:', [
+    this.buildSelect(area, Settings.SELECTOR, 'Selector:', [
       [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
+      [Settings.SELECTOR_NONE, 'None', 'No selector used. Styles will be inline.', 'width: 200px; height: 200px;...'],
       [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
       [Settings.SELECTOR_FIRST, 'First Class', 'First class name found will be used', '.first { ... }'],
       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
       [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
-      [Settings.SELECTOR_INLINE, 'Inline', 'Only inline styles will be output.', 'width:200px;height:200px;...']
     ]);
+
+    this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output styles that have changed:');
+    this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
 
     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
     var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Clear All');
@@ -2223,6 +2226,16 @@
       input.el.type = 'text';
       input.el.placeholder = placeholder;
       input.el.value = settings.get(name);
+      this.inputs.push(input);
+      return input;
+    });
+  };
+
+  StatusBar.prototype.buildCheckboxField = function(area, name, label) {
+    this.buildFormControl(area, name, label, function(block) {
+      var input = new Element(block.el, 'input', 'setting-input setting-text-input');
+      input.el.type = 'checkbox';
+      input.el.checked = !!settings.get(name);
       this.inputs.push(input);
       return input;
     });
@@ -2260,10 +2273,21 @@
     var block = new Element(field.el, 'div', 'setting-block');
     var input = fn.call(this, block);
     input.id('setting-' + name);
+    input.el.name = name;
     label.el.htmlFor = input.el.id;
     input.el.dataset.name = name;
     input.addEventListener('change', this.inputChanged.bind(this));
   };
+
+  StatusBar.prototype.setFormControl = function(control) {
+    var el = control.el;
+    var value = settings.get(el.name);
+    if (el.type === 'checkbox') {
+      el.checked = value;
+    } else {
+      el.value = value;
+    }
+  }
 
   StatusBar.prototype.createState = function(name, text, icon) {
     var state = new Element(this.elementStates.el, 'div', 'element-state ' + name + '-state');
@@ -2358,6 +2382,7 @@
   StatusBar.prototype.clearSettings = function() {
     if(confirm('Really clear all settings?')) {
       settings.clear();
+      this.inputs.forEach(this.setFormControl, this);
       this.setArea(this.defaultArea);
       this.checkSelectorUpdate();
     }
@@ -2511,12 +2536,14 @@
   function Settings () {
     this.changed  = {};
     this.defaults = {};
-    this.defaults[Settings.TABS]              = Settings.TABS_TWO_SPACES;
-    this.defaults[Settings.SELECTOR]          = Settings.SELECTOR_AUTO;
+    this.defaults[Settings.TABS]     = Settings.TABS_TWO_SPACES;
+    this.defaults[Settings.SELECTOR] = Settings.SELECTOR_AUTO;
+    this.defaults[Settings.OUTPUT_UNIQUE] = true;
     this.defaults[Settings.DOWNLOAD_FILENAME] = 'styles.css';
   };
 
   Settings.TABS              = 'tabs';
+  Settings.OUTPUT            = 'output';
   Settings.SELECTOR          = 'selector';
   Settings.INCLUDE_ELEMENTS  = 'include-elements';
   Settings.EXCLUDE_ELEMENTS  = 'exclude-elements';
@@ -2527,8 +2554,11 @@
   Settings.SELECTOR_TAG     = 'tag';
   Settings.SELECTOR_AUTO    = 'auto';
   Settings.SELECTOR_FIRST   = 'first';
-  Settings.SELECTOR_INLINE  = 'inline';
+  Settings.SELECTOR_NONE    = 'inline';
   Settings.SELECTOR_LONGEST = 'longest';
+
+  Settings.OUTPUT_UNIQUE  = 'unique';
+  Settings.OUTPUT_CHANGED = 'changed';
 
   Settings.TABS_TWO_SPACES  = 'two';
   Settings.TABS_FOUR_SPACES = 'four';

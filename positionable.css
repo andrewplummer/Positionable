@@ -647,16 +647,16 @@
 .positionable-extension-setting-field {
   border: none;
   padding: 4px 0px;
-  margin: 0 0 .5em 0;
+  margin: 0 0 .3em 0;
   white-space: nowrap;
 }
 
 .positionable-extension-setting-label {
   display: inline-block;
-  vertical-align: middle;
+  vertical-align: top;
   text-align: right;
-  margin-right: 15px;
-  width: 200px;
+  margin: .4em 1em 0 0;
+  width: 240px;
   font-size: 12px;
   font-weight: bold;
   color: rgba(0,0,0,0.7);
