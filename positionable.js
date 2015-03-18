@@ -1335,7 +1335,7 @@
     }
     css += closingBrace;
     if (!selector) {
-      css = css.replace(/\s/gm, '');
+      css = css.replace(/[\r\n]\s*/gm, ' ');
     }
     return css;
   };
@@ -2182,7 +2182,7 @@
 
   StatusBar.prototype.buildSettingsArea = function(area) {
 
-    new Element(this.settingsArea.el, 'h4', 'settings-header').html('Settings');
+    var header = new Element(this.settingsArea.el, 'h4', 'settings-header').html('Settings');
 
     this.buildTextField(area, Settings.DOWNLOAD_FILENAME, 'Filename when saving:', 'filename');
     this.buildTextField(area, Settings.EXCLUDE_ELEMENTS, 'Exclude elements matching:', 'CSS Selector');
@@ -2206,7 +2206,7 @@
 
     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
     var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Clear All');
-    var help  = new Element(this.settingsArea.el, 'help', 'settings-help-link').html('Help');
+    var help  = new Element(header.el, 'span', 'settings-help-link').html('Help');
 
     reset.addEventListener('click', this.clearSettings.bind(this));
     save.addEventListener('click', this.saveSettings.bind(this));

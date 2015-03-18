@@ -329,7 +329,7 @@
 
 .positionable-extension-status-bar-help-active {
   width: 600px;
-  height: 430px;
+  height: 460px;
 }
 
 .positionable-extension-help-block {
@@ -342,7 +342,9 @@
 }
 
 .positionable-extension-help-block-header {
-  margin: 0 0 8px 0;
+  font-family: "Open Sans", sans-serif;
+  font-size: 16px;
+  margin: 0 0 1em 0;
   font-weight: 300;
 }
 
@@ -523,6 +525,7 @@
 
 .positionable-extension-single-header {
   margin: 0px;
+  font-family: "Open Sans", sans-serif;
   font-size: 28px;
   font-weight: 300;
   white-space: nowrap;
@@ -545,6 +548,7 @@
 
 .positionable-extension-multiple-header {
   margin: 0px;
+  font-family: "Open Sans", sans-serif;
   font-size: 16px;
   font-weight: 300;
   margin-bottom: 5px;
@@ -615,8 +619,10 @@
 }
 
 .positionable-extension-settings-header {
-  margin: 0 0 30px 0;
+  font-family: "Open Sans", sans-serif;
+  font-size: 18px;
   font-weight: 300;
+  margin: .5em 0 1em 0;
 }
 
 .positionable-extension-settings-button {
@@ -641,12 +647,13 @@
 .positionable-extension-setting-field {
   border: none;
   padding: 4px 0px;
+  margin: 0 0 .5em 0;
   white-space: nowrap;
 }
 
 .positionable-extension-setting-label {
-  vertical-align: top;
   display: inline-block;
+  vertical-align: middle;
   text-align: right;
   margin-right: 15px;
   width: 200px;
@@ -656,7 +663,7 @@
 }
 
 .positionable-extension-setting-block {
-  vertical-align: top;
+  vertical-align: middle;
   display: inline-block;
 }
 
@@ -691,15 +698,13 @@
 }
 
 .positionable-extension-settings-help-link {
-  position: absolute;
-  top: 0px;
-  left: 70px;
   font-size: 14px;
   font-weight: 200;
   color: rgba(20,130,240,0.8);
   cursor: pointer;
   border-left: 1px solid rgba(0,0,0,0.1);
   padding: 2px 12px;
+  margin: 0 0 0 1em;
 }
 
 .positionable-extension-settings-save {
