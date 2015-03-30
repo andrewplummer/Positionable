@@ -1052,6 +1052,7 @@
 
   PositionableElement.prototype.pushState = function() {
     this.states.push({
+      zIndex: this.zIndex,
       position: this.position.clone(),
       dimensions: this.dimensions.clone(),
       backgroundPosition: this.backgroundPosition ? this.backgroundPosition.clone() : null
@@ -1327,36 +1328,51 @@
   };
 
   PositionableElement.prototype.getStyles = function() {
-    var css = '';
-    var selector = this.getSelector();
-    var openingBrace = selector ? ' {\n' : '';
-    var closingBrace = selector ? '}\n' : '';
+    var lines = [];
+
+    function add(l) {
+      lines = lines.concat(l);
+    }
+
     this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
-    css += this.getSelector() + openingBrace;
+    this.selector = this.getSelector();
+
     if(this.isPositioned()) {
       if(this.zIndex !== 0) {
-        css += this.getNewStyleLine('z-index', this.zIndex);
+        add(this.getStyleLines('z-index', this.zIndex));
       }
-      css += this.getNewStyleLine('left', this.position.x);
-      css += this.getNewStyleLine('top', this.position.y);
+      add(this.getStyleLines('left', this.position.x));
+      add(this.getStyleLines('top', this.position.y));
     }
-    css += this.getNewStyleLine('width', this.dimensions.getWidth());
-    css += this.getNewStyleLine('height', this.dimensions.getHeight());
+    add(this.getStyleLines('width', this.dimensions.getWidth()));
+    add(this.getStyleLines('height', this.dimensions.getHeight()));
     if(this.backgroundPosition) {
-      css += this.getNewStyleLine('background-position', this.backgroundPosition.x, this.backgroundPosition.y);
+      add(this.getStyleLines('background-position', this.backgroundPosition.x, this.backgroundPosition.y));
     }
     if(this.dimensions.rotation) {
-      css += this.getRotationStyles();
+      add(this.getStyleLines('rotation', this.getRoundedRotation()));
     }
-    css += closingBrace;
-    if (!selector) {
-      css = css.replace(/[\r\n]\s*/gm, ' ');
+
+    if (this.selector && lines.length > 0) {
+      lines.unshift('\n' + this.selector + ' {');
+      return lines.join('\n' + this.tabCharacter) + '\n}';
+    } else {
+      return lines.join(' ');
     }
-    return css;
   };
 
-  PositionableElement.prototype.getNewStyleLine = function(prop, val1, val2) {
-    var isPx, css = '';
+  PositionableElement.prototype.getStyleLines = function(prop, val1, val2) {
+    var isPx, lines = [], str = '';
+    if (this.canIgnoreUnchangedStyle(prop, val1, val2)) {
+      return lines;
+    }
+    if (prop === 'rotation') {
+      lines.push(this.concatStyle('-webkit-transform', 'rotateZ(' + val1 + 'deg)'));
+      lines.push(this.concatStyle('-moz-transform', 'rotateZ(' + val1 + 'deg)'));
+      lines.push(this.concatStyle('-ms-transform', 'rotateZ(' + val1 + 'deg)'));
+      lines.push(this.concatStyle('transform', 'rotateZ(' + val1 + 'deg)'));
+      return lines;
+    }
     if(prop === 'left' ||
        prop === 'top' ||
        prop === 'width' ||
@@ -1365,26 +1381,50 @@
       isPx = true;
       val1 = Math.round(val1);
     }
-    css = this.tabCharacter + prop + ': ' + val1;
-    if(isPx) {
-      css += 'px';
+    str += val1;
+    if (isPx) {
+      str += 'px';
     }
     if(val2 !== undefined) {
       if(isPx) val2 = Math.round(val2);
-      css += ' ' + val2;
-      if(isPx) css += 'px';
+      str += ' ' + val2;
+      if(isPx) str += 'px';
     }
-    css += ';\n'
-    return css;
+    lines.push(this.concatStyle(prop, str));
+    return lines;
   };
 
-  PositionableElement.prototype.getRotationStyles = function() {
-    var css = '', deg = this.getRoundedRotation();
-    css += this.getNewStyleLine('-ms-transform', 'rotateZ(' + deg + 'deg)');
-    css += this.getNewStyleLine('-webkit-transform', 'rotateZ(' + deg + 'deg)');
-    css += this.getNewStyleLine('transform', 'rotateZ(' + deg + 'deg)');
-    return css;
-  };
+  PositionableElement.prototype.concatStyle = function(attr, value) {
+    return attr + ': ' + value + ';';
+  }
+
+  PositionableElement.prototype.canIgnoreUnchangedStyle = function(prop, val1, val2) {
+    if (!settings.get(Settings.OUTPUT_CHANGED)) {
+      return false;
+    }
+    var state = this.states[0];
+    if (!state) {
+      return true;
+    }
+    switch(prop) {
+      case 'z-index':
+        return val1 === state.zIndex;
+      case 'top':
+        return val1 === state.position.y;
+      case 'left':
+        return val1 === state.position.x;
+      case 'rotation':
+        return val1 === state.dimensions.rotation;
+      case 'width':
+        return val1 === state.dimensions.right - state.dimensions.left;
+      case 'height':
+        return val1 === state.dimensions.bottom - state.dimensions.top;
+      case 'background-position':
+        var bp = state.backgroundPosition;
+        return val1 === bp.x && val2 === bp.y;
+    }
+    return false;
+  }
 
   PositionableElement.prototype.getTabCharacter = function(name) {
     switch(name) {
@@ -1744,11 +1784,13 @@
 
   PositionableElementManager.prototype.copy = function(evt) {
     var styles = this.getFocusedElementStyles();
-    if(!styles) return;
-    evt.preventDefault();
-    evt.clipboardData.clearData();
-    evt.clipboardData.setData('text/plain', styles);
-    copyAnimation.animate();
+    var hasStyles = styles.replace(/^\s+$/, '').length > 0;
+    if (hasStyles) {
+      evt.preventDefault();
+      evt.clipboardData.clearData();
+      evt.clipboardData.setData('text/plain', styles);
+    }
+    copyAnimation.animate(hasStyles);
   };
 
   PositionableElementManager.prototype.save = function(evt) {
@@ -2679,6 +2721,9 @@
     this.build();
   };
 
+  CopyAnimation.COPIED_TEXT = 'Copied!';
+  CopyAnimation.NOT_COPIED_TEXT = 'No Styles';
+
   // --- Inheritance
 
   CopyAnimation.prototype = new Animation();
@@ -2692,13 +2737,18 @@
 
   CopyAnimation.prototype.build = function() {
     this.box  = new Element(document.body, 'div', 'copy-animation');
-    this.text = new Element(this.box.el, 'div', 'copy-animation-text').html('Copied!');
+    this.text = new Element(this.box.el, 'div', 'copy-animation-text');
   };
 
   // --- Actions
 
-  CopyAnimation.prototype.animate = function(dir) {
+  CopyAnimation.prototype.setText = function(text) {
+    this.text.html(text);
+  }
 
+  CopyAnimation.prototype.animate = function(copied) {
+
+    this.setText(copied ? CopyAnimation.COPIED_TEXT : CopyAnimation.NOT_COPIED_TEXT);
     this.reset();
     this.box.show();
 
@@ -2730,9 +2780,14 @@
   };
 
   SpriteRecognizer.ORIGIN_REG = new RegExp('^' + window.location.origin.replace(/([\/.])/g, '\\$1'));
+  SpriteRecognizer.EXTENSION_REG = /^chrome-extension:\/\//;
 
   SpriteRecognizer.prototype.loadPixelData = function(url) {
     var xDomain = !SpriteRecognizer.ORIGIN_REG.test(url);
+    var extension = SpriteRecognizer.EXTENSION_REG.test(url);
+    if (extension) {
+      return;
+    }
     if(xDomain) {
       this.loadXDomainImage(url);
     } else {
