@@ -49,7 +49,7 @@
   };
 
   NudgeManager.prototype.toggleBackgroundMode = function() {
-    if(this.mode === NudgeManager.BG_POSITION_MODE) {
+    if (this.mode === NudgeManager.BG_POSITION_MODE) {
       this.setPositionMode();
     } else {
       this.mode = NudgeManager.BG_POSITION_MODE;
@@ -57,7 +57,7 @@
   };
 
   NudgeManager.prototype.toggleZIndexMode = function(on) {
-    if(this.mode === NudgeManager.Z_INDEX_MODE) {
+    if (this.mode === NudgeManager.Z_INDEX_MODE) {
       this.setPositionMode();
     } else {
       this.mode = NudgeManager.Z_INDEX_MODE;
@@ -81,18 +81,18 @@
   NudgeManager.prototype.begin = function() {
     this.resizeOffset = new Point(0, 0);
     elementManager.pushState();
-    if(this.isResizeMode()) {
+    if (this.isResizeMode()) {
       elementManager.resizeStart(this.getSizingHandle());
     }
   };
 
   NudgeManager.prototype.dispatchNudge = function(vector) {
-    if(this.isBackgroundMode()) {
+    if (this.isBackgroundMode()) {
       elementManager.moveBackgroundPosition(vector);
-    } else if(this.isResizeMode()) {
+    } else if (this.isResizeMode()) {
       this.resizeOffset = this.resizeOffset.add(vector);
       elementManager.resize(this.resizeOffset, this.getSizingHandle());
-    } else if(this.isZIndexMode()) {
+    } else if (this.isZIndexMode()) {
       elementManager.moveZIndex(vector);
     } else {
       elementManager.movePosition(vector);
@@ -100,7 +100,7 @@
   };
 
   NudgeManager.prototype.addDirection = function(dir) {
-    if(!this.isNudging()) {
+    if (!this.isNudging()) {
       this.begin();
     }
     this[dir] = true;
@@ -109,22 +109,22 @@
 
   NudgeManager.prototype.removeDirection = function(dir) {
     this[dir] = false;
-    if(!this.isNudging()) {
+    if (!this.isNudging()) {
       this.reset();
     }
   };
 
   NudgeManager.prototype.next = function() {
-    if(this.timer) return;
+    if (this.timer) return;
     var nudgeX = 0, nudgeY = 0, mult = this.getMultiplier();
-    if(this.up) {
+    if (this.up) {
       nudgeY = -1;
-    } else if(this.down) {
+    } else if (this.down) {
       nudgeY = 1;
     }
-    if(this.left) {
+    if (this.left) {
       nudgeX = -1;
-    } else if(this.right) {
+    } else if (this.right) {
       nudgeX = 1;
     }
     this.dispatchNudge(new Point(nudgeX * mult, nudgeY * mult));
@@ -134,7 +134,7 @@
 
   NudgeManager.prototype.checkNextNudge = function() {
     this.timer = null;
-    if(this.isNudging()) {
+    if (this.isNudging()) {
       this.next();
     }
   };
@@ -145,11 +145,11 @@
   };
 
   NudgeManager.prototype.getDelay = function() {
-    if(this.count <= 1 && !this.multiplier) {
+    if (this.count <= 1 && !this.multiplier) {
       return NudgeManager.INITIAL_DELAY;
-    } else if(this.count > 200) {
+    } else if (this.count > 200) {
       return NudgeManager.FAST_REPEAT;
-    } else if(this.count > 50) {
+    } else if (this.count > 50) {
       return NudgeManager.MED_REPEAT;
     } else {
       return NudgeManager.SLOW_REPEAT;
@@ -232,7 +232,7 @@
   };
 
   EventManager.prototype.setupHandler = function(name, handler, target) {
-    if(!handler) return;
+    if (!handler) return;
     target = target || document.documentElement;
     target.addEventListener(name, handler.bind(this));
   };
@@ -258,10 +258,10 @@
 
   EventManager.prototype.checkKeyEvent = function(type, evt) {
     var code = evt.keyCode, index = this.handledKeyCodes.indexOf(code), name, fn;
-    if(index !== -1) {
+    if (index !== -1) {
       name = this.isArrowKey(code) ? 'arrow' : this.handledKeyNames[index];
       fn = this[name + type];
-      if(fn) {
+      if (fn) {
         evt.preventDefault();
         evt.stopPropagation();
         evt.stopImmediatePropagation();
@@ -279,7 +279,7 @@
 
   EventManager.prototype.withCommandKey = function(evt, prevent) {
     var usingCommandKey = evt.ctrlKey || evt.metaKey;
-    if(usingCommandKey && prevent) {
+    if (usingCommandKey && prevent) {
       evt.preventDefault();
     }
     return usingCommandKey;
@@ -335,7 +335,7 @@
   };
 
   EventManager.prototype.sKeyDown = function(evt) {
-    if(this.withCommandKey(evt, true)) {
+    if (this.withCommandKey(evt, true)) {
       elementManager.save(evt);
     } else {
       nudgeManager.toggleResizeMode();
@@ -344,7 +344,7 @@
   };
 
   EventManager.prototype.zKeyDown = function(evt) {
-    if(this.withCommandKey(evt, true)) {
+    if (this.withCommandKey(evt, true)) {
       elementManager.undo();
     } else {
       nudgeManager.toggleZIndexMode();
@@ -353,7 +353,7 @@
   };
 
   EventManager.prototype.aKeyDown = function(evt) {
-    if(this.withCommandKey(evt, true)) {
+    if (this.withCommandKey(evt, true)) {
       elementManager.focusAll();
     }
   };
@@ -381,12 +381,12 @@
 
   function Element (el, tag, className) {
     this.listeners = [];
-    if(!tag) {
+    if (!tag) {
       this.el = el;
     } else {
       var parent = el;
       this.el = document.createElement(tag);
-      if(className) {
+      if (className) {
         className.split(' ').forEach(function(n) {
           this.addClass(n);
         }, this);
@@ -485,15 +485,15 @@
   // --- Events
 
   DraggableElement.prototype.click = function(evt) {
-    if(evt.target.href) {
+    if (evt.target.href) {
       evt.preventDefault();
       evt.stopPropagation();
     }
   };
 
   DraggableElement.prototype.mouseDown = function(evt) {
-    if(evt.button !== 0) return;
-    if(this.draggingStarted) {
+    if (evt.button !== 0) return;
+    if (this.draggingStarted) {
       // There are certain areas (over the dev tools) that do not
       // trigger mouseup events so if the element is still in the
       // middle of draggin when another mousedown is detected, then
@@ -513,7 +513,7 @@
   };
 
   DraggableElement.prototype.mouseMove = function(evt) {
-    if(this.resetTarget) {
+    if (this.resetTarget) {
       // Setting the reset target flags this element for a
       // reset. In practice this means that a canceling key
       // (such as ctrl) has interrupted the flow and is telling
@@ -529,7 +529,7 @@
     var x = evt.clientX + window.scrollX;
     var y = evt.clientY + window.scrollY;
     evt.dragOffset = new Point(x - this.dragStartX, y - this.dragStartY);
-    if(!this.draggingStarted) {
+    if (!this.draggingStarted) {
       this.fireEvent('dragStart', evt);
       this.draggingStarted = true;
     }
@@ -539,7 +539,7 @@
   };
 
   DraggableElement.prototype.mouseUp = function(evt) {
-    if(!this.draggingStarted) {
+    if (!this.draggingStarted) {
       this.fireEvent('click', evt);
     } else {
       this.fireEvent('dragStop', evt);
@@ -556,7 +556,7 @@
   };
 
   DraggableElement.prototype.fireEvent = function(name, evt) {
-    if(elementManager[name]) {
+    if (elementManager[name]) {
       elementManager[name](evt);
     }
   };
@@ -588,13 +588,13 @@
   Handle.prototype.setHover = function(type) {
     this.addEventListener('mouseover', function(evt) {
       evt.stopPropagation();
-      if(!this.target.draggingStarted) {
+      if (!this.target.draggingStarted) {
         statusBar.setState(type);
       }
     }.bind(this));
     this.addEventListener('mouseout', function(evt) {
       evt.stopPropagation();
-      if(!this.target.draggingStarted) {
+      if (!this.target.draggingStarted) {
         statusBar.setState(nudgeManager.mode);
       }
     }.bind(this));
@@ -630,8 +630,8 @@
     var deltaX = (evt.clientX + window.scrollX) - (dim.left + w);
     var deltaY = (evt.clientY + window.scrollY) - (dim.top + h);
     var deg    = new Point(deltaX, deltaY).getAngle() - new Point(w, h).getAngle();
-    if(deg < 0) deg += 360;
-    if(this.isConstrained(evt)) {
+    if (deg < 0) deg += 360;
+    if (this.isConstrained(evt)) {
       deg = Math.round(deg / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
     }
     elementManager.setRotation(deg - this.target.getLastRotation());
@@ -698,10 +698,10 @@
     yMult = 1;
     type = this.type;
     min = Math.min(w, h);
-    if(type === 'nw' || type === 'sw') {
+    if (type === 'nw' || type === 'sw') {
       xMult = -1;
     }
-    if(type === 'nw' || type === 'ne') {
+    if (type === 'nw' || type === 'ne') {
       yMult = -1;
     }
     dimensions[this.xProp] = dimensions[this.anchor.xProp] + (min * xMult);
@@ -720,8 +720,8 @@
   };
 
   SizingHandle.prototype.offsetToCenter = function(x, y) {
-    if(this.xProp === 'right')  x *= -1;
-    if(this.yProp === 'bottom') y *= -1;
+    if (this.xProp === 'right')  x *= -1;
+    if (this.yProp === 'bottom') y *= -1;
     return new Point(x, y);
   };
 
@@ -779,7 +779,7 @@
     this.positionedParents = [];
     while(el = el.offsetParent) {
       style = window.getComputedStyle(el);
-      if(style.position !== 'static') {
+      if (style.position !== 'static') {
         this.positionedParents.push(new Element(el));
       }
     }
@@ -794,7 +794,7 @@
   PositionableElement.prototype.getAttributes = function() {
     this.style = window.getComputedStyle(this.el);
     this.getDimensions(this.style);
-    if(this.style.backgroundImage !== 'none') {
+    if (this.style.backgroundImage !== 'none') {
       this.getBackgroundAttributes(this.style);
     }
   };
@@ -824,7 +824,7 @@
     var matrix, match, a, b;
     matrix = style.webkitTransform || style.transform;
     match  = matrix.match(/[-.\d]+/g);
-    if(match) {
+    if (match) {
       a = parseFloat(match[0]);
       b = parseFloat(match[1]);
       return new Point(a, b).getAngle();
@@ -841,7 +841,7 @@
 
     // Get background position
     match = style.backgroundPosition.match(PositionableElement.BACKGROUND_POSITION_MATCH);
-    if(match) {
+    if (match) {
       this.backgroundPosition = new Point(parseInt(match[1]), parseInt(match[3]));
     } else {
       this.backgroundPosition = new Point(0, 0);
@@ -881,9 +881,9 @@
   };
 
   PositionableElement.prototype.mouseUp = function(evt) {
-    if(!this.draggingStarted && evt.shiftKey) {
+    if (!this.draggingStarted && evt.shiftKey) {
       elementManager.addFocused(this);
-    } else if(!this.draggingStarted) {
+    } else if (!this.draggingStarted) {
       elementManager.setFocused(this, true);
     }
     DraggableElement.prototype.mouseUp.call(this, evt);
@@ -894,12 +894,12 @@
   };
 
   PositionableElement.prototype.dblclick = function(evt) {
-    if(!this.backgroundPosition) return;
+    if (!this.backgroundPosition) return;
     var point  = new Point(evt.clientX + window.scrollX, evt.clientY + window.scrollY);
     var coords = this.getElementCoordsForPoint(point).subtract(this.backgroundPosition);
     var style = window.getComputedStyle(this.el);
     var sprite = this.recognizer.getSpriteBoundsForCoordinate(coords);
-    if(sprite) {
+    if (sprite) {
       this.pushState();
       this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
       this.dimensions.right  = this.dimensions.left + sprite.getWidth();
@@ -910,14 +910,14 @@
   };
 
   PositionableElement.prototype.contextmenu = function(evt) {
-    if(evt.ctrlKey) {
+    if (evt.ctrlKey) {
       this.handleCtrlDoubleClick(evt);
       evt.preventDefault();
     }
   };
 
   PositionableElement.prototype.handleCtrlDoubleClick = function(evt) {
-    if(this.dblClickTimer) {
+    if (this.dblClickTimer) {
       this.dblclick(evt)
     }
     this.dblClickTimer = setTimeout(function() {
@@ -953,7 +953,7 @@
   };
 
   PositionableElement.prototype.drag = function(evt) {
-    if(this.isBackgroundDrag(evt)) {
+    if (this.isBackgroundDrag(evt)) {
       elementManager.backgroundDrag(evt);
     } else {
       elementManager.positionDrag(evt);
@@ -976,17 +976,17 @@
     var dimensions = this.getLastState().dimensions.clone(), min;
     var lastAspectRatio = dimensions.getAspectRatio();
     var handle = this[handleType];
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
     dimensions.add(handle.xProp, vector.x);
     dimensions.add(handle.yProp, vector.y);
-    if(constrained) {
+    if (constrained) {
       handle.applyConstraint(dimensions, lastAspectRatio);
     }
     this.dimensions = dimensions;
 
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       this.position = this.getPositionFromRotatedHandle(handle.anchor);
     } else {
       this.position = new Point(this.dimensions.left, this.dimensions.top);
@@ -997,7 +997,7 @@
   };
 
   PositionableElement.prototype.toggleSizingHandles = function(on) {
-    if(on) {
+    if (on) {
       this.removeClass('resize-handles-hidden');
     } else {
       this.addClass('resize-handles-hidden');
@@ -1021,10 +1021,10 @@
 
   PositionableElement.prototype.backgroundDrag = function(evt) {
     var last = this.getLastState().backgroundPosition, rotation = this.dimensions.rotation, offset;
-    if(!last) return;
-    if(rotation) last = last.rotate(rotation);
+    if (!last) return;
+    if (rotation) last = last.rotate(rotation);
     offset = this.applyPositionDrag(evt, last);
-    if(rotation) offset = offset.rotate(-rotation);
+    if (rotation) offset = offset.rotate(-rotation);
     this.setBackgroundPosition(offset);
   };
 
@@ -1035,10 +1035,10 @@
 
   PositionableElement.prototype.applyPositionDrag = function(evt, point) {
     var delta  = evt.dragOffset, offset = point.add(delta), absX, absY;
-    if(this.isConstrained(evt)) {
+    if (this.isConstrained(evt)) {
       absX = Math.abs(delta.x);
       absY = Math.abs(delta.y);
-      if(absX < absY) {
+      if (absX < absY) {
         offset.x = point.x;
       } else {
         offset.y = point.y;
@@ -1065,7 +1065,7 @@
 
   PositionableElement.prototype.undo = function() {
     var state = this.states.pop();
-    if(!state) return;
+    if (!state) return;
     this.position = state.position;
     this.dimensions = state.dimensions;
     this.backgroundPosition = state.backgroundPosition;
@@ -1077,7 +1077,7 @@
   // --- Peeking
 
   PositionableElement.prototype.peek = function(on) {
-    if(on && this.backgroundPosition) {
+    if (on && this.backgroundPosition) {
       this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
       this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
     } else {
@@ -1091,18 +1091,18 @@
 
   PositionableElement.prototype.checkScrollBounds = function() {
     var dim = this.getAbsoluteDimensions(), boundary;
-    if(dim.top < window.scrollY) {
+    if (dim.top < window.scrollY) {
       window.scrollTo(window.scrollX, dim.top);
     }
-    if(dim.left < window.scrollX) {
+    if (dim.left < window.scrollX) {
       window.scrollTo(dim.left, window.scrollY);
     }
     boundary = window.scrollX + window.innerWidth;
-    if(dim.right > boundary) {
+    if (dim.right > boundary) {
       window.scrollTo(window.scrollX + (dim.right - boundary), window.scrollY);
     }
     boundary = window.scrollY + window.innerHeight;
-    if(dim.bottom > boundary) {
+    if (dim.bottom > boundary) {
       window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
     }
   };
@@ -1124,8 +1124,8 @@
   };
 
   PositionableElement.prototype.moveBackgroundPosition = function(vector) {
-    if(!this.backgroundPosition) return;
-    if(this.dimensions.rotation) {
+    if (!this.backgroundPosition) return;
+    if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
     this.setBackgroundPosition(this.backgroundPosition.add(vector));
@@ -1138,9 +1138,9 @@
 
   PositionableElement.prototype.moveZIndex = function(vector) {
     // Positive Y is actually down, so decrement here.
-    if(vector.x > 0 || vector.y < 0) {
+    if (vector.x > 0 || vector.y < 0) {
       this.zIndex++;
-    } else if(vector.x < 0 || vector.y > 0) {
+    } else if (vector.x < 0 || vector.y > 0) {
       this.zIndex--;
     }
     this.updateZIndex();
@@ -1174,7 +1174,7 @@
   };
 
   PositionableElement.prototype.updateBackgroundPosition = function() {
-    if(!this.backgroundPosition) return;
+    if (!this.backgroundPosition) return;
     var css = this.backgroundPosition.x + 'px ' + this.backgroundPosition.y + 'px'
     this.el.style.backgroundPosition = css;
   };
@@ -1192,7 +1192,7 @@
     // x/y internal coordinate system, which may be rotated.
     var dim = this.getAbsoluteDimensions();
     var corner = new Point(dim.left, dim.top);
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       corner = this.dimensions.getPositionForCoords(corner).add(this.getPositionOffset());
       return point.subtract(corner).rotate(-this.dimensions.rotation);
     } else {
@@ -1285,7 +1285,7 @@
 
   PositionableElement.prototype.getSelector = function() {
     var type = settings.get(Settings.SELECTOR), classes;
-    if(type === Settings.SELECTOR_AUTO) {
+    if (type === Settings.SELECTOR_AUTO) {
       type = this.el.id ? Settings.SELECTOR_ID : Settings.SELECTOR_FIRST;
     }
     switch(type) {
@@ -1320,7 +1320,7 @@
   PositionableElement.prototype.getFilteredClasses = function(list) {
     var filtered = [], i = 0;
     while(name = list[i++]) {
-      if(!name.match(EXTENSION_CLASS_PREFIX)) {
+      if (!name.match(EXTENSION_CLASS_PREFIX)) {
         filtered.push(name);
       }
     }
@@ -1337,8 +1337,8 @@
     this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
     this.selector = this.getSelector();
 
-    if(this.isPositioned()) {
-      if(this.zIndex !== 0) {
+    if (this.isPositioned()) {
+      if (this.zIndex !== 0) {
         add(this.getStyleLines('z-index', this.zIndex));
       }
       add(this.getStyleLines('left', this.position.x));
@@ -1346,10 +1346,10 @@
     }
     add(this.getStyleLines('width', this.dimensions.getWidth()));
     add(this.getStyleLines('height', this.dimensions.getHeight()));
-    if(this.backgroundPosition) {
+    if (this.backgroundPosition) {
       add(this.getStyleLines('background-position', this.backgroundPosition.x, this.backgroundPosition.y));
     }
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       add(this.getStyleLines('rotation', this.getRoundedRotation()));
     }
 
@@ -1373,7 +1373,7 @@
       lines.push(this.concatStyle('transform', 'rotateZ(' + val1 + 'deg)'));
       return lines;
     }
-    if(prop === 'left' ||
+    if (prop === 'left' ||
        prop === 'top' ||
        prop === 'width' ||
        prop === 'height' ||
@@ -1385,10 +1385,10 @@
     if (isPx) {
       str += 'px';
     }
-    if(val2 !== undefined) {
-      if(isPx) val2 = Math.round(val2);
+    if (val2 !== undefined) {
+      if (isPx) val2 = Math.round(val2);
       str += ' ' + val2;
-      if(isPx) str += 'px';
+      if (isPx) str += 'px';
     }
     lines.push(this.concatStyle(prop, str));
     return lines;
@@ -1436,10 +1436,10 @@
 
   PositionableElement.prototype.getRoundedRotation = function() {
     var r = this.dimensions.rotation;
-    if(r % 1 !== 0.5) {
+    if (r % 1 !== 0.5) {
       r = Math.round(r);
     }
-    if(r === 360) r = 0;
+    if (r === 360) r = 0;
     return r;
   };
 
@@ -1450,12 +1450,12 @@
   PositionableElement.prototype.getData = function() {
     var text = '', rotation = this.getRoundedRotation();
     text += Math.round(this.position.x) + 'px, ' + Math.round(this.position.y) + 'px';
-    if(this.zIndex !== 0) {
+    if (this.zIndex !== 0) {
       text += ', ' + this.zIndex + 'z';
     }
     text += ' | ';
     text += Math.round(this.dimensions.getWidth()) + 'w, ' + Math.round(this.dimensions.getHeight()) + 'h';
-    if(rotation) {
+    if (rotation) {
       text += ' | ';
       text += rotation + 'deg';
     }
@@ -1526,7 +1526,7 @@
     var els = document.body.querySelectorAll(this.includeSelector || '*');
 
     for(var i = 0, el; el = els[i]; i++) {
-      if(this.elementIsIncluded(el)) {
+      if (this.elementIsIncluded(el)) {
         try {
           this.elements.push(new PositionableElement(el));
         } catch(e) {
@@ -1554,7 +1554,7 @@
   };
 
   PositionableElementManager.prototype.toggleActive = function() {
-    if(this.active) {
+    if (this.active) {
       this.destroyElements();
       statusBar.deactivate();
       this.active = false;
@@ -1564,16 +1564,16 @@
   };
 
   PositionableElementManager.prototype.elementIsIncluded = function(el) {
-    if(this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
+    if (this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
       // Don't include elements that are explicitly excluded.
       return false;
-    } else if(getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
+    } else if (getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
       // Don't include elements that are part of the extension itself.
       return false;
-    } else if(el.style.background.match(/positionable-extension/)) {
+    } else if (el.style.background.match(/positionable-extension/)) {
       // Don't include elements that are part of other chrome extensions.
       return false;
-    } else if(this.includeSelector) {
+    } else if (this.includeSelector) {
       // If there is an explicit selector active, then always include.
       return true;
     }
@@ -1584,16 +1584,16 @@
 
   PositionableElementManager.prototype.delegateToFocused = function(name, disallowWhenDragging) {
     this[name] = function() {
-      if(disallowWhenDragging && this.draggingElement) return;
+      if (disallowWhenDragging && this.draggingElement) return;
       this.callOnEveryFocused(name, arguments);
     }.bind(this);
   };
 
   PositionableElementManager.prototype.delegateToDragging = function(name, alternate) {
     this[name] = function() {
-      if(this.draggingElement && this.draggingElement[name]) {
+      if (this.draggingElement && this.draggingElement[name]) {
         this.draggingElement[name].apply(this.draggingElement, arguments);
-      } else if(alternate) {
+      } else if (alternate) {
         alternate[name].apply(alternate, arguments);
       }
     }.bind(this);
@@ -1603,12 +1603,12 @@
 
   PositionableElementManager.prototype.setFocused = function(element, force) {
     var elements;
-    if(typeof element === 'function') {
+    if (typeof element === 'function') {
       elements = this.elements.filter(element);
-    } else if(force || !this.elementIsFocused(element)) {
+    } else if (force || !this.elementIsFocused(element)) {
       elements = [element];
     }
-    if(elements) {
+    if (elements) {
       this.unfocusAll();
       elements.forEach(this.addFocused, this);
     }
@@ -1616,7 +1616,7 @@
   };
 
   PositionableElementManager.prototype.addFocused = function(element) {
-    if(!this.elementIsFocused(element)) {
+    if (!this.elementIsFocused(element)) {
       element.focus();
       this.focusedElements.push(element);
     }
@@ -1655,12 +1655,12 @@
     alignmentLine = elementsLines[0].line;
     opposingLine  = elementsLines[elementsLines.length - 1].line;
 
-    if(isMax && !distribute) {
+    if (isMax && !distribute) {
       // If the line is on the bottom or right, then we actually need to get the opposing line.
       alignmentLine = opposingLine;
     }
 
-    if(distribute) {
+    if (distribute) {
 
       // THe distributed offset (amount to distribute each element evenly by) is equal
       // to the total span between the edges of the first and last element, divided by
@@ -1677,10 +1677,10 @@
 
     elementsLines.forEach(function(e, i) {
       var value = alignmentLine;
-      if(distribute) {
+      if (distribute) {
         value += (distributedOffset * i);
       }
-      if(isCenter) {
+      if (isCenter) {
         e.el.alignToCenter(line, value);
       } else {
         e.el.alignToSide(line, value);
@@ -1690,7 +1690,7 @@
 
   PositionableElementManager.prototype.alignMiddle = function(line) {
     var minLines, maxLines;
-    if(line === 'vertical') {
+    if (line === 'vertical') {
       minLines = this.getElementsLines('left', false);
       maxLines = this.getElementsLines('right', false);
     } else {
@@ -1748,13 +1748,13 @@
   };
 
   PositionableElementManager.prototype.temporarilyFocusDraggingElement = function() {
-    if(!this.draggingElement) return;
+    if (!this.draggingElement) return;
     this.previouslyFocusedElements = this.focusedElements;
     this.focusedElements = [this.getDraggingElement()];
   };
 
   PositionableElementManager.prototype.releasedFocusedDraggingElement = function() {
-    if(!this.previouslyFocusedElements) return;
+    if (!this.previouslyFocusedElements) return;
     this.dragReset();
     this.focusedElements = this.previouslyFocusedElements;
     this.previouslyFocusedElements = null;
@@ -1795,7 +1795,7 @@
 
   PositionableElementManager.prototype.save = function(evt) {
     var styles = this.getAllElementStyles();
-    if(!styles) return;
+    if (!styles) return;
     var link = document.createElement('a');
     link.href = 'data:text/css;base64,' + btoa(styles);
     link.download = settings.get(Settings.DOWNLOAD_FILENAME);
@@ -1847,7 +1847,7 @@
 
 
   DragSelection.prototype.mouseMove = function(evt) {
-    if(elementManager.draggingElement !== this) return;
+    if (elementManager.draggingElement !== this) return;
     DraggableElement.prototype.mouseMove.call(this, evt);
   };
 
@@ -1868,7 +1868,7 @@
   };
 
   DragSelection.prototype.contains = function(point) {
-    if(!this.min || !this.max) {
+    if (!this.min || !this.max) {
       return false;
     }
     return point.x >= this.min.x && point.x <= this.max.x && point.y >= this.min.y && point.y <= this.max.y;
@@ -2178,7 +2178,7 @@
 
   StatusBar.prototype.buildHelpBlock = function(name, header) {
     var block = new Element(this.helpArea.el, 'div', 'help-block '+ name +'-help-block');
-    if(header) {
+    if (header) {
       new Element(block.el, 'h4', 'help-block-header').html(header);
     }
     return block;
@@ -2302,7 +2302,7 @@
     var select;
     this.buildFormControl(area, name, label, function(block) {
       select = new Element(block.el, 'select', 'setting-input');
-      if(options[0].length > 2) {
+      if (options[0].length > 2) {
         // Associated descriptions exist so create the elements
         this[name + 'Description'] = new Element(block.el, 'div', 'setting-description');
         this[name + 'Example'] = new Element(block.el, 'div', 'setting-example');
@@ -2311,11 +2311,11 @@
         var option = new Element(select.el, 'option', 'setting-option');
         option.el.value = o[0];
         option.el.textContent = o[1];
-        if(o[2]) {
+        if (o[2]) {
           option.el.dataset.description = o[2];
           option.el.dataset.example = o[3];
         }
-        if(settings.get(name) === option.el.value) {
+        if (settings.get(name) === option.el.value) {
           option.el.selected = true;
         }
       });
@@ -2366,7 +2366,7 @@
   StatusBar.prototype.inputChanged = function(evt) {
     var target = evt.target;
     settings.set(target.dataset.name, target.value);
-    if(target.selectedIndex !== undefined) {
+    if (target.selectedIndex !== undefined) {
       this.checkLinkedDescription(target);
     }
   };
@@ -2377,7 +2377,7 @@
 
   StatusBar.prototype.filterKeyboardInput = function(evt) {
     evt.stopPropagation();
-    if(evt.keyCode === EventManager.ENTER) {
+    if (evt.keyCode === EventManager.ENTER) {
       this.saveSettings();
     }
   };
@@ -2386,7 +2386,7 @@
 
   StatusBar.prototype.setState = function(name) {
     this.stateIcons.forEach(function(i) {
-      if(i.name === name) {
+      if (i.name === name) {
         i.addClass('element-active-state');
       } else {
         i.removeClass('element-active-state');
@@ -2399,17 +2399,17 @@
     var option = select.options[select.selectedIndex];
     var description = this[name + 'Description'];
     var example = this[name + 'Example'];
-    if(description && example) {
+    if (description && example) {
       description.html(option.dataset.description);
       example.html(option.dataset.example);
     }
   };
 
   StatusBar.prototype.setArea = function(area) {
-    if(this.currentArea === area) return;
+    if (this.currentArea === area) return;
     this.areas.forEach(function(a) {
       var className = 'status-bar-' + a.name + '-active';
-      if(a === area) {
+      if (a === area) {
         this.addClass(className);
         a.addClass('active-area');
       } else {
@@ -2418,10 +2418,10 @@
       }
     }, this);
     this.currentArea = area;
-    if(area === this.elementArea) {
+    if (area === this.elementArea) {
       this.defaultArea = this.elementArea;
     }
-    if(area === this.settingsArea) {
+    if (area === this.settingsArea) {
       this.inputs[0].el.focus();
       // Forcing focus can make the scrolling go haywire,
       // so need to actively reset the scrolling here.
@@ -2432,7 +2432,7 @@
   };
 
   StatusBar.prototype.toggleArea = function(area) {
-    if(this.currentArea !== area) {
+    if (this.currentArea !== area) {
       this.setArea(area);
     } else {
       this.resetArea();
@@ -2440,7 +2440,7 @@
   };
 
   StatusBar.prototype.clearSettings = function() {
-    if(confirm('Really clear all settings?')) {
+    if (confirm('Really clear all settings?')) {
       settings.clear();
       this.inputs.forEach(this.setFormControl, this);
       this.setArea(this.defaultArea);
@@ -2454,7 +2454,7 @@
   };
 
   StatusBar.prototype.checkSelectorUpdate = function() {
-    if(this.selectorsChanged()) {
+    if (this.selectorsChanged()) {
       window.currentElementManager.refresh();
       settings.update(Settings.INCLUDE_ELEMENTS);
       settings.update(Settings.EXCLUDE_ELEMENTS);
@@ -2470,7 +2470,7 @@
   };
 
   StatusBar.prototype.getStartArea = function() {
-    if(settings.get(Settings.SHOW_QUICK_START)) {
+    if (settings.get(Settings.SHOW_QUICK_START)) {
       return this.quickStartArea;
     } else {
       return this.startArea;
@@ -2495,14 +2495,14 @@
   };
 
   StatusBar.prototype.activate = function() {
-    if(this.active) return;
+    if (this.active) return;
     this.show();
     this.addClass('status-bar-active');
     this.active = true;
   };
 
   StatusBar.prototype.deactivate = function() {
-    if(!this.active) return;
+    if (!this.active) return;
     this.active = false;
     this.removeClass('status-bar-active');
     setTimeout(function() {
@@ -2538,10 +2538,10 @@
 
   StatusBar.prototype.update = function() {
     var size = elementManager.getFocusedSize();
-    if(size === 0) {
+    if (size === 0) {
       this.setArea(this.quickStartArea);
       return;
-    } else if(size === 1) {
+    } else if (size === 1) {
       this.setSingle(elementManager.getFirstFocused());
     } else {
       this.setMultiple(elementManager.getAllFocused());
@@ -2629,7 +2629,7 @@
   };
 
   Settings.prototype.set = function(name, value) {
-    if(value !== this.get(name)) {
+    if (value !== this.get(name)) {
       this.changed[name] = true;
     }
     localStorage[name] = value;
@@ -2645,7 +2645,7 @@
 
   Settings.prototype.clear = function() {
     for (key in localStorage) {
-      if(localStorage[key]) {
+      if (localStorage[key]) {
         this.changed[key] = true;
       }
     }
@@ -2788,7 +2788,7 @@
     if (extension) {
       return;
     }
-    if(xDomain) {
+    if (xDomain) {
       this.loadXDomainImage(url);
     } else {
       this.loadImage(url);
@@ -2796,7 +2796,7 @@
   };
 
   SpriteRecognizer.prototype.loadImage = function(obj) {
-    if(obj.error) {
+    if (obj.error) {
       console.warn('Positionable: "' + obj.url + '" could not be loaded!');
       return;
     }
@@ -2829,11 +2829,11 @@
     pixel = pixel.round();
     var cached, alpha = this.getAlphaForPixel(pixel);
     // No sprite detected
-    if(!alpha) {
+    if (!alpha) {
       return;
     }
     cached = this.map[this.getKey(pixel)];
-    if(cached) {
+    if (cached) {
       return cached;
     }
     this.queue = [];
@@ -2853,9 +2853,9 @@
 
   SpriteRecognizer.prototype.testPixel = function(pixel) {
     var key = this.getKey(pixel);
-    if(this.map[key] === undefined) {
+    if (this.map[key] === undefined) {
       // If we have a pixel, then move on and test the adjacent ones.
-      if(this.getAlphaForPixel(pixel)) {
+      if (this.getAlphaForPixel(pixel)) {
         this.rect.top    = Math.min(this.rect.top, pixel.y);
         this.rect.left   = Math.min(this.rect.left, pixel.x);
         this.rect.right  = Math.max(this.rect.right, pixel.x);
@@ -2968,7 +2968,7 @@
   };
 
   Rectangle.prototype.add = function(prop, amount) {
-    if(!prop) return;
+    if (!prop) return;
     amount = this.constrainProperty(prop, this[prop] + amount);
     this[prop] = amount;
   };
@@ -2992,14 +2992,14 @@
 
   // The rotated position for a given un-rotated coordinate.
   Rectangle.prototype.getPositionForCoords = function(coord) {
-    if(!this.rotation) return coord;
+    if (!this.rotation) return coord;
     var center = this.getCenter();
     return coord.subtract(center).rotate(this.rotation).add(center);
   };
 
   // The un-rotated coords for a given rotated position.
   Rectangle.prototype.getCoordsForPosition = function(position) {
-    if(!this.rotation) return position;
+    if (!this.rotation) return position;
     var center = this.getCenter();
     return position.subtract(center).rotate(-this.rotation).add(center);
   };
@@ -3010,7 +3010,7 @@
 
   /*-------------------------] Init [--------------------------*/
 
-  if(window.currentElementManager) {
+  if (window.currentElementManager) {
     window.currentElementManager.toggleActive();
     return;
   }
