@@ -199,7 +199,7 @@
   font-weight: 400;
   line-height: 1;
   opacity: 0;
-  -webkit-transition: height 200ms ease-in-out, width 200ms ease-in-out, opacity 150ms linear;
+  -webkit-transition: height 300ms ease-in-out, width 300ms ease-in-out, opacity 300ms linear;
 }
 
 .positionable-extension-status-bar-active {
@@ -214,7 +214,7 @@
   left: 30px;
   right: 30px;
   opacity: 0;
-  -webkit-transition: opacity 200ms ease-in-out;
+  -webkit-transition: opacity 300ms ease-in-out;
   text-align: left;
 }
 

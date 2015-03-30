@@ -413,11 +413,25 @@
     });
   };
 
+  Element.prototype.afterTransition = function(fn) {
+    var self = this, el = this.el;
+    function finished() {
+      el.removeEventListener('webkitTransitionEnd', finished);
+      fn.call(self);
+    }
+    el.addEventListener('webkitTransitionEnd', finished);
+  }
+
   Element.prototype.removeAllListeners = function() {
     this.listeners.forEach(function(l) {
       this.el.removeEventListener(l.type, l.handler);
     }, this);
   };
+
+  Element.prototype.resetScroll = function() {
+    this.el.scrollTop = 0;
+    this.el.scrollLeft = 0;
+  }
 
   Element.prototype.show = function(on) {
     this.el.style.display = on === false ? '' : 'block';
@@ -454,6 +468,7 @@
   DraggableElement.prototype.remove             = Element.prototype.remove;
   DraggableElement.prototype.addClass           = Element.prototype.addClass;
   DraggableElement.prototype.removeClass        = Element.prototype.removeClass;
+  DraggableElement.prototype.resetScroll        = Element.prototype.resetScroll;
   DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
   DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
 
@@ -2366,6 +2381,9 @@
     }
     if(area === this.settingsArea) {
       this.inputs[0].el.focus();
+      // Forcing focus can make the scrolling go haywire,
+      // so need to actively reset the scrolling here.
+      this.resetScroll();
     } else {
       document.activeElement.blur();
     }
@@ -2636,11 +2654,7 @@
     this.box.show();
     this.shade.show();
     this.defer(function() {
-      this.finished = function() {
-        this.box.el.removeEventListener('webkitTransitionEnd', this.finished);
-        if(fn) fn();
-      }.bind(this);
-      this.box.addEventListener('webkitTransitionEnd', this.finished);
+      this.box.afterTransition(fn);
       this.box.addClass('loading-active');
       this.shade.addClass('loading-shade-active');
     });
@@ -2648,15 +2662,14 @@
 
   LoadingAnimation.prototype.hide = function(fn) {
     this.defer(function() {
-      this.finished = function() {
-        this.box.el.removeEventListener('webkitTransitionEnd', this.finished);
-        this.box.hide();
-        this.shade.hide();
+      var box = this.box, shade = this.shade;
+      box.afterTransition(function() {
+        box.hide();
+        shade.hide();
         fn();
-      }.bind(this);
-      this.box.addEventListener('webkitTransitionEnd', this.finished);
-      this.box.removeClass('loading-active');
-      this.shade.removeClass('loading-shade-active');
+      });
+      box.removeClass('loading-active');
+      shade.removeClass('loading-shade-active');
     });
   };
 
