@@ -2,7 +2,7 @@
  *  Chrome Extension
  *
  *  Freely distributable and licensed under the MIT-style license.
- *  Copyright (c) 2013 Andrew Plummer
+ *  Copyright (c) 2015 Andrew Plummer
  *
  * ---------------------------- */
 
