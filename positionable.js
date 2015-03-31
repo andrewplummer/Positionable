@@ -1483,8 +1483,8 @@
   PositionableElement.prototype.getExportedProperties = function() {
     return {
       'z-index': this.zIndex,
-      'top': this.position.y,
-      'left': this.position.x,
+      'top': round(this.position.y),
+      'left': round(this.position.x),
       'width': this.dimensions.getWidth(true),
       'height': this.dimensions.getHeight(true),
       'rotation': this.getRoundedRotation(),
