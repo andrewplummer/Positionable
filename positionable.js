@@ -17,6 +17,44 @@
     return typeof el.className.baseVal === 'string' ? el.className.baseVal : el.className;
   }
 
+  function round(n) {
+    return Math.round(n);
+  }
+
+  function getObjectSize(obj) {
+    var size = 0, key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+  }
+
+  function isObject(obj) {
+    return typeof obj === 'object';
+  }
+
+  function hashIntersect(obj1, obj2) {
+    var result = {}, prop, val1, val2, tmp;
+    if (isObject(obj1) && isObject(obj2)) {
+      for (prop in obj1) {
+        if (!obj1.hasOwnProperty(prop)) continue;
+        val1 = obj1[prop];
+        val2 = obj2[prop];
+        if (isObject(val1)) {
+           tmp = hashIntersect(val1, val2);
+           if (tmp) {
+             result[prop] = tmp;
+           }
+        } else if (val1 === val2) {
+          result[prop] = val1;
+        }
+      }
+    }
+    if (getObjectSize(result) > 0) {
+      return result;
+    }
+  }
+
   /*-------------------------] NudgeManager [--------------------------*/
 
 
@@ -1327,8 +1365,11 @@
     return filtered;
   };
 
-  PositionableElement.prototype.getStyles = function() {
+  PositionableElement.prototype.getStyles = function(exclude) {
     var lines = [];
+
+    // Set exclusion map;
+    this.exclude = exclude;
 
     function add(l) {
       lines = lines.concat(l);
@@ -1341,17 +1382,20 @@
       if (this.zIndex !== 0) {
         add(this.getStyleLines('z-index', this.zIndex));
       }
-      add(this.getStyleLines('left', this.position.x));
-      add(this.getStyleLines('top', this.position.y));
+      add(this.getStyleLines('left', round(this.position.x)));
+      add(this.getStyleLines('top', round(this.position.y)));
     }
-    add(this.getStyleLines('width', this.dimensions.getWidth()));
-    add(this.getStyleLines('height', this.dimensions.getHeight()));
+    add(this.getStyleLines('width', this.dimensions.getWidth(true)));
+    add(this.getStyleLines('height', this.dimensions.getHeight(true)));
     if (this.backgroundPosition) {
       add(this.getStyleLines('background-position', this.backgroundPosition.x, this.backgroundPosition.y));
     }
     if (this.dimensions.rotation) {
       add(this.getStyleLines('rotation', this.getRoundedRotation()));
     }
+
+    // Clean exclusion map.
+    this.exclude = null;
 
     if (this.selector && lines.length > 0) {
       lines.unshift('\n' + this.selector + ' {');
@@ -1363,7 +1407,7 @@
 
   PositionableElement.prototype.getStyleLines = function(prop, val1, val2) {
     var isPx, lines = [], str = '';
-    if (this.canIgnoreUnchangedStyle(prop, val1, val2)) {
+    if (this.canIgnoreStyle(prop, val1, val2)) {
       return lines;
     }
     if (prop === 'rotation') {
@@ -1379,14 +1423,12 @@
        prop === 'height' ||
        prop === 'background-position') {
       isPx = true;
-      val1 = Math.round(val1);
     }
     str += val1;
     if (isPx) {
       str += 'px';
     }
     if (val2 !== undefined) {
-      if (isPx) val2 = Math.round(val2);
       str += ' ' + val2;
       if (isPx) str += 'px';
     }
@@ -1398,10 +1440,22 @@
     return attr + ': ' + value + ';';
   }
 
-  PositionableElement.prototype.canIgnoreUnchangedStyle = function(prop, val1, val2) {
-    if (!settings.get(Settings.OUTPUT_CHANGED)) {
-      return false;
+  PositionableElement.prototype.canIgnoreStyle = function(prop, val1, val2) {
+    var excluded = this.exclude && this.exclude[prop];
+    if (settings.get(Settings.OUTPUT_CHANGED) && this.propertyIsUnchanged(prop, val1, val2)) {
+      return true;
     }
+    if (excluded !== undefined) {
+      if (excluded && prop === 'background-position') {
+        return excluded.x === val1 && excluded.y === val2;
+      } else {
+        return excluded === val1;
+      }
+    }
+    return false;
+  }
+
+  PositionableElement.prototype.propertyIsUnchanged = function(prop, val1, val2) {
     var state = this.states[0];
     if (!state) {
       return true;
@@ -1426,6 +1480,18 @@
     return false;
   }
 
+  PositionableElement.prototype.getExportedProperties = function() {
+    return {
+      'z-index': this.zIndex,
+      'top': this.position.y,
+      'left': this.position.x,
+      'width': this.dimensions.getWidth(true),
+      'height': this.dimensions.getHeight(true),
+      'rotation': this.getRoundedRotation(),
+      'background-position': this.backgroundPosition
+    }
+  }
+
   PositionableElement.prototype.getTabCharacter = function(name) {
     switch(name) {
       case Settings.TABS_TWO_SPACES:  return '  ';
@@ -1437,7 +1503,7 @@
   PositionableElement.prototype.getRoundedRotation = function() {
     var r = this.dimensions.rotation;
     if (r % 1 !== 0.5) {
-      r = Math.round(r);
+      r = round(r);
     }
     if (r === 360) r = 0;
     return r;
@@ -1454,7 +1520,7 @@
       text += ', ' + this.zIndex + 'z';
     }
     text += ' | ';
-    text += Math.round(this.dimensions.getWidth()) + 'w, ' + Math.round(this.dimensions.getHeight()) + 'h';
+    text += this.dimensions.getWidth(true) + 'w, ' + this.dimensions.getHeight(true) + 'h';
     if (rotation) {
       text += ' | ';
       text += rotation + 'deg';
@@ -1769,19 +1835,19 @@
   // --- Output
 
   PositionableElementManager.prototype.getFocusedElementStyles = function() {
-    return this.focusedElements.map(function(el) {
-      return el.getStyles();
-    }).join('\n\n');
+    var elements = this.focusedElements, exclude = this.getExclusionMap(elements);
+    var styles = elements.map(function(el) {
+      return el.getStyles(exclude);
+    });
+    return styles.join('\n\n');
   };
 
   PositionableElementManager.prototype.copy = function(evt) {
     var styles = this.getFocusedElementStyles();
     var hasStyles = styles.replace(/^\s+$/, '').length > 0;
-    if (hasStyles) {
-      evt.preventDefault();
-      evt.clipboardData.clearData();
-      evt.clipboardData.setData('text/plain', styles);
-    }
+    evt.preventDefault();
+    evt.clipboardData.clearData();
+    evt.clipboardData.setData('text/plain', styles);
     copyAnimation.animate(hasStyles);
   };
 
@@ -1793,6 +1859,16 @@
     link.click();
   };
 
+  PositionableElementManager.prototype.getExclusionMap = function(elements) {
+    if (elements.length < 2 || !settings.get(Settings.OUTPUT_UNIQUE)) {
+      return;
+    }
+    var map = elements[0].getExportedProperties();
+    elements.slice(1).forEach(function(el) {
+      map = hashIntersect(map, el.getExportedProperties());
+    }, this);
+    return map;
+  }
 
   /*-------------------------] StatusBar [--------------------------*/
 
@@ -2252,7 +2328,7 @@
       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
     ]);
 
-    this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output styles that have changed:');
+    this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
     this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
 
     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
@@ -2942,12 +3018,14 @@
     this.rotation = rotation || 0;
   };
 
-  Rectangle.prototype.getWidth = function() {
-    return this.right - this.left;
+  Rectangle.prototype.getWidth = function(r) {
+    var w = this.right - this.left;
+    return r ? round(w) : w;
   };
 
-  Rectangle.prototype.getHeight = function() {
-    return this.bottom - this.top;
+  Rectangle.prototype.getHeight = function(r) {
+    var h = this.bottom - this.top;
+    return r ? round(h) : h;
   };
 
   Rectangle.prototype.setPosition = function(point) {
