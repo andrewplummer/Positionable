@@ -838,10 +838,10 @@
   };
 
   PositionableElement.prototype.getDimensions = function(style) {
-    var left   = this.el.offsetLeft;
-    var top    = this.el.offsetTop;
-    var width  = this.getDimension(style.width);
-    var height = this.getDimension(style.height);
+    var left = this.getInitialPosition('Left', style);
+    var top = this.getInitialPosition('Top', style);
+    var width  = this.getNumericValue(style.width);
+    var height = this.getNumericValue(style.height);
     this.position = new Point(left, top);
     this.dimensions = new Rectangle(
       top,
@@ -853,7 +853,21 @@
     this.zIndex = parseInt(style.zIndex);
   };
 
-  PositionableElement.prototype.getDimension = function(val) {
+  PositionableElement.prototype.getInitialPosition = function(side, style) {
+    var computed = style[side.toLowerCase()];
+    if (computed !== 'auto') {
+      // If the element is already explictly positioned, then
+      // trust those values first as they are the ones that will
+      // be directly manipulated.
+      return this.getNumericValue(computed);
+    }
+    return this.el['offset' + side] -
+           this.getNumericValue(style['margin' + side]) -
+           this.getNumericValue(style['padding' + side]) -
+           this.getNumericValue(style['border' + side + 'Width']);
+  }
+
+  PositionableElement.prototype.getNumericValue = function(val) {
     val = parseFloat(val);
     return isNaN(val) ? 0 : val;
   };
@@ -1584,12 +1598,17 @@
   };
 
   PositionableElementManager.prototype.build = function(fn) {
+    var els = [];
     this.elements = [];
 
     this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
     this.excludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
 
-    var els = document.body.querySelectorAll(this.includeSelector || '*');
+    try {
+      els = document.body.querySelectorAll(this.includeSelector || '*');
+    } catch(e) {
+      console.error(e.message);
+    }
 
     for(var i = 0, el; el = els[i]; i++) {
       if (this.elementIsIncluded(el)) {
@@ -2864,7 +2883,7 @@
 
   SpriteRecognizer.prototype.loadImage = function(obj) {
     if (obj.error) {
-      console.warn('Positionable: "' + obj.url + '" could not be loaded!');
+      console.error('Positionable: "' + obj.url + '" could not be loaded!');
       return;
     }
     var url = obj;
