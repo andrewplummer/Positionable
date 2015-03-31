@@ -48,20 +48,22 @@
   position: absolute;
   z-index: 2;
   cursor: pointer;
-  height: 25%;
-  width: 25%;
+  width: 20%;
+  height: 20%;
+  min-width: 15px;
+  min-height: 15px;
 }
 
 .positionable-extension-handle-n,
 .positionable-extension-handle-s {
-  left: 25%;
-  width: 50%;
+  left: 20%;
+  width: 60%;
 }
 
 .positionable-extension-handle-w,
 .positionable-extension-handle-e {
-  top: 25%;
-  height: 50%;
+  top: 20%;
+  height: 60%;
 }
 
 .positionable-extension-handle-n,
@@ -111,8 +113,10 @@
 .positionable-extension-handle-border {
   position: absolute;
   z-index: 1;
-  width: 25%;
-  height: 25%;
+  width: 18.5%;
+  height: 18.5%;
+  min-width: 13px;
+  min-height: 13px;
   border-color: rgba(0,0,0,0.3);
   border-style: solid;
   border-width: 0;
@@ -124,14 +128,14 @@
 
 .positionable-extension-handle-n-border,
 .positionable-extension-handle-s-border {
-  left: 30%;
-  width: 40%;
+  left: 20%;
+  width: 60%;
 }
 
 .positionable-extension-handle-w-border,
 .positionable-extension-handle-e-border {
-  top: 30%;
-  height: 40%;
+  top: 20%;
+  height: 60%;
 }
 
 .positionable-extension-handle-n-border {
