@@ -1768,18 +1768,10 @@
 
   // --- Output
 
-  PositionableElementManager.prototype.getAllElementStyles = function() {
-    var styles = this.elements.map(function(el) {
-      return el.getStyles();
-    });
-    return styles.join('\n\n');
-  };
-
   PositionableElementManager.prototype.getFocusedElementStyles = function() {
-    var styles = this.focusedElements.map(function(el) {
+    return this.focusedElements.map(function(el) {
       return el.getStyles();
-    });
-    return styles.join('\n\n');
+    }).join('\n\n');
   };
 
   PositionableElementManager.prototype.copy = function(evt) {
@@ -1794,7 +1786,7 @@
   };
 
   PositionableElementManager.prototype.save = function(evt) {
-    var styles = this.getAllElementStyles();
+    var styles = this.getFocusedElementStyles();
     var link = document.createElement('a');
     link.href = 'data:text/css;base64,' + btoa(styles);
     link.download = settings.get(Settings.DOWNLOAD_FILENAME);
