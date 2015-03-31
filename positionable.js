@@ -1795,7 +1795,6 @@
 
   PositionableElementManager.prototype.save = function(evt) {
     var styles = this.getAllElementStyles();
-    if (!styles) return;
     var link = document.createElement('a');
     link.href = 'data:text/css;base64,' + btoa(styles);
     link.download = settings.get(Settings.DOWNLOAD_FILENAME);
