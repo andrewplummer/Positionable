@@ -2060,7 +2060,7 @@
 
     this.buildHelpBox(keyboardHelp.el, 'alt', function(box, text) {
       new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.OPTION);
-      text.html('Option/Alt: Peek at the background image when dragging.');
+      text.html('Option/Alt: Peek at the background image.');
     });
 
     this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
