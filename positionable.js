@@ -1655,7 +1655,7 @@
     } else if (getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
       // Don't include elements that are part of the extension itself.
       return false;
-    } else if (el.style.background.match(/positionable-extension/)) {
+    } else if (el.style && el.style.background.match(/positionable-extension/)) {
       // Don't include elements that are part of other chrome extensions.
       return false;
     } else if (this.includeSelector) {
