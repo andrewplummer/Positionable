@@ -1345,6 +1345,7 @@
       case Settings.SELECTOR_ID:      return '#' + this.el.id;
       case Settings.SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
       case Settings.SELECTOR_TAG:     return this.getTagName(this.el);
+      case Settings.SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(this.el);
       case Settings.SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
       case Settings.SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
     }
@@ -1361,6 +1362,17 @@
 
   PositionableElement.prototype.getTagName = function(el) {
     return el.tagName.toLowerCase();
+  };
+
+  PositionableElement.prototype.getTagNameWithNthIndex = function(el) {
+    var child = el, i = 1;
+    while ((child = child.previousSibling) != null ) {
+      // Count only element nodes.
+      if (child.nodeType == 1) {
+        i++;
+      }
+    }
+    return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
   };
 
   PositionableElement.prototype.getLongestClass = function(list) {
@@ -2345,6 +2357,7 @@
       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
       [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
+      [Settings.SELECTOR_TAG_NTH, 'Tag + nth-child()', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
     ]);
 
     this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
@@ -2698,6 +2711,7 @@
   Settings.SELECTOR_ID      = 'id';
   Settings.SELECTOR_ALL     = 'all';
   Settings.SELECTOR_TAG     = 'tag';
+  Settings.SELECTOR_TAG_NTH = 'tag-nth';
   Settings.SELECTOR_AUTO    = 'auto';
   Settings.SELECTOR_FIRST   = 'first';
   Settings.SELECTOR_NONE    = 'inline';
