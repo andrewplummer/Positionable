@@ -2349,7 +2349,7 @@
       [Settings.TABS_FOUR_SPACES, 'Four Spaces']
     ]);
 
-    this.buildSelect(area, Settings.SELECTOR, 'Selector:', [
+    this.buildSelect(area, Settings.SELECTOR, 'Output Selector:', [
       [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
       [Settings.SELECTOR_NONE, 'None', 'No selector used. Styles will be inline.', 'width: 200px; height: 200px;...'],
       [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
@@ -2357,7 +2357,7 @@
       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
       [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
-      [Settings.SELECTOR_TAG_NTH, 'Tag + nth-child()', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
+      [Settings.SELECTOR_TAG_NTH, 'Tag + nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
     ]);
 
     this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
