@@ -48,20 +48,34 @@
   position: absolute;
   z-index: 2;
   cursor: pointer;
-  height: 25%;
-  width: 25%;
+  height: 22%;
+  width: 22%;
 }
 
 .positionable-extension-handle-n,
 .positionable-extension-handle-s {
-  left: 25%;
-  width: 50%;
+  left: 22%;
+  width: 56%;
+  max-height: 50px;
+  cursor: ns-resize;
 }
 
 .positionable-extension-handle-w,
 .positionable-extension-handle-e {
-  top: 25%;
-  height: 50%;
+  top: 22%;
+  height: 56%;
+  max-width: 50px;
+  cursor: ew-resize;
+}
+
+.positionable-extension-handle-nw,
+.positionable-extension-handle-se {
+  cursor: nwse-resize;
+}
+
+.positionable-extension-handle-ne,
+.positionable-extension-handle-sw {
+  cursor: nesw-resize;
 }
 
 .positionable-extension-handle-n,
@@ -111,8 +125,8 @@
 .positionable-extension-handle-border {
   position: absolute;
   z-index: 1;
-  width: 25%;
-  height: 25%;
+  width: 22%;
+  height: 22%;
   border-color: rgba(0,0,0,0.3);
   border-style: solid;
   border-width: 0;
@@ -124,14 +138,14 @@
 
 .positionable-extension-handle-n-border,
 .positionable-extension-handle-s-border {
-  left: 30%;
-  width: 40%;
+  left: 25%;
+  width: 50%;
 }
 
 .positionable-extension-handle-w-border,
 .positionable-extension-handle-e-border {
-  top: 30%;
-  height: 40%;
+  top: 25%;
+  height: 50%;
 }
 
 .positionable-extension-handle-n-border {
