@@ -214,7 +214,8 @@
   font-weight: 400;
   line-height: 1;
   opacity: 0;
-  -webkit-transition: height 200ms ease-in-out, width 200ms ease-in-out, opacity 150ms linear;
+  -webkit-transition: height 300ms ease-in-out, width 300ms ease-in-out, opacity 300ms linear;
+  color: #222;
 }
 
 .positionable-extension-status-bar-active {
@@ -229,7 +230,7 @@
   left: 30px;
   right: 30px;
   opacity: 0;
-  -webkit-transition: opacity 200ms ease-in-out;
+  -webkit-transition: opacity 300ms ease-in-out;
   text-align: left;
 }
 
@@ -262,7 +263,6 @@
 
 .positionable-extension-start-icon {
   font-size: 56px;
-  color: rgba(0,0,0,0.7);
   margin-bottom: 10px;
 }
 
@@ -270,7 +270,6 @@
   position: absolute;
   top: 47px;
   left: 46%;
-  color: #111;
   -webkit-text-stroke-width: 1px;
   -webkit-text-stroke-color: rgba(255,255,255,0.8);
   text-shadow: 2px 2px 1px rgba(0,0,0,0.2);
@@ -638,6 +637,7 @@
   font-size: 18px;
   font-weight: 300;
   margin: .5em 0 1em 0;
+  color: rgba(0,0,0,0.7);
 }
 
 .positionable-extension-settings-button {

@@ -2,7 +2,7 @@
  *  Chrome Extension
  *
  *  Freely distributable and licensed under the MIT-style license.
- *  Copyright (c) 2013 Andrew Plummer
+ *  Copyright (c) 2015 Andrew Plummer
  *
  * ---------------------------- */
 
@@ -15,6 +15,44 @@
   function getClassName(el) {
     // SVG className attributes are of type "SVGAnimatedString"
     return typeof el.className.baseVal === 'string' ? el.className.baseVal : el.className;
+  }
+
+  function round(n) {
+    return Math.round(n);
+  }
+
+  function getObjectSize(obj) {
+    var size = 0, key;
+    for (key in obj) {
+      if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+  }
+
+  function isObject(obj) {
+    return typeof obj === 'object';
+  }
+
+  function hashIntersect(obj1, obj2) {
+    var result = {}, prop, val1, val2, tmp;
+    if (isObject(obj1) && isObject(obj2)) {
+      for (prop in obj1) {
+        if (!obj1.hasOwnProperty(prop)) continue;
+        val1 = obj1[prop];
+        val2 = obj2[prop];
+        if (isObject(val1)) {
+           tmp = hashIntersect(val1, val2);
+           if (tmp) {
+             result[prop] = tmp;
+           }
+        } else if (val1 === val2) {
+          result[prop] = val1;
+        }
+      }
+    }
+    if (getObjectSize(result) > 0) {
+      return result;
+    }
   }
 
   /*-------------------------] NudgeManager [--------------------------*/
@@ -49,7 +87,7 @@
   };
 
   NudgeManager.prototype.toggleBackgroundMode = function() {
-    if(this.mode === NudgeManager.BG_POSITION_MODE) {
+    if (this.mode === NudgeManager.BG_POSITION_MODE) {
       this.setPositionMode();
     } else {
       this.mode = NudgeManager.BG_POSITION_MODE;
@@ -57,7 +95,7 @@
   };
 
   NudgeManager.prototype.toggleZIndexMode = function(on) {
-    if(this.mode === NudgeManager.Z_INDEX_MODE) {
+    if (this.mode === NudgeManager.Z_INDEX_MODE) {
       this.setPositionMode();
     } else {
       this.mode = NudgeManager.Z_INDEX_MODE;
@@ -81,18 +119,18 @@
   NudgeManager.prototype.begin = function() {
     this.resizeOffset = new Point(0, 0);
     elementManager.pushState();
-    if(this.isResizeMode()) {
+    if (this.isResizeMode()) {
       elementManager.resizeStart(this.getSizingHandle());
     }
   };
 
   NudgeManager.prototype.dispatchNudge = function(vector) {
-    if(this.isBackgroundMode()) {
+    if (this.isBackgroundMode()) {
       elementManager.moveBackgroundPosition(vector);
-    } else if(this.isResizeMode()) {
+    } else if (this.isResizeMode()) {
       this.resizeOffset = this.resizeOffset.add(vector);
       elementManager.resize(this.resizeOffset, this.getSizingHandle());
-    } else if(this.isZIndexMode()) {
+    } else if (this.isZIndexMode()) {
       elementManager.moveZIndex(vector);
     } else {
       elementManager.movePosition(vector);
@@ -100,7 +138,7 @@
   };
 
   NudgeManager.prototype.addDirection = function(dir) {
-    if(!this.isNudging()) {
+    if (!this.isNudging()) {
       this.begin();
     }
     this[dir] = true;
@@ -109,22 +147,22 @@
 
   NudgeManager.prototype.removeDirection = function(dir) {
     this[dir] = false;
-    if(!this.isNudging()) {
+    if (!this.isNudging()) {
       this.reset();
     }
   };
 
   NudgeManager.prototype.next = function() {
-    if(this.timer) return;
+    if (this.timer) return;
     var nudgeX = 0, nudgeY = 0, mult = this.getMultiplier();
-    if(this.up) {
+    if (this.up) {
       nudgeY = -1;
-    } else if(this.down) {
+    } else if (this.down) {
       nudgeY = 1;
     }
-    if(this.left) {
+    if (this.left) {
       nudgeX = -1;
-    } else if(this.right) {
+    } else if (this.right) {
       nudgeX = 1;
     }
     this.dispatchNudge(new Point(nudgeX * mult, nudgeY * mult));
@@ -134,7 +172,7 @@
 
   NudgeManager.prototype.checkNextNudge = function() {
     this.timer = null;
-    if(this.isNudging()) {
+    if (this.isNudging()) {
       this.next();
     }
   };
@@ -145,11 +183,11 @@
   };
 
   NudgeManager.prototype.getDelay = function() {
-    if(this.count <= 1 && !this.multiplier) {
+    if (this.count <= 1 && !this.multiplier) {
       return NudgeManager.INITIAL_DELAY;
-    } else if(this.count > 200) {
+    } else if (this.count > 200) {
       return NudgeManager.FAST_REPEAT;
-    } else if(this.count > 50) {
+    } else if (this.count > 50) {
       return NudgeManager.MED_REPEAT;
     } else {
       return NudgeManager.SLOW_REPEAT;
@@ -232,7 +270,7 @@
   };
 
   EventManager.prototype.setupHandler = function(name, handler, target) {
-    if(!handler) return;
+    if (!handler) return;
     target = target || document.documentElement;
     target.addEventListener(name, handler.bind(this));
   };
@@ -258,10 +296,10 @@
 
   EventManager.prototype.checkKeyEvent = function(type, evt) {
     var code = evt.keyCode, index = this.handledKeyCodes.indexOf(code), name, fn;
-    if(index !== -1) {
+    if (index !== -1) {
       name = this.isArrowKey(code) ? 'arrow' : this.handledKeyNames[index];
       fn = this[name + type];
-      if(fn) {
+      if (fn) {
         evt.preventDefault();
         evt.stopPropagation();
         evt.stopImmediatePropagation();
@@ -279,7 +317,7 @@
 
   EventManager.prototype.withCommandKey = function(evt, prevent) {
     var usingCommandKey = evt.ctrlKey || evt.metaKey;
-    if(usingCommandKey && prevent) {
+    if (usingCommandKey && prevent) {
       evt.preventDefault();
     }
     return usingCommandKey;
@@ -335,7 +373,7 @@
   };
 
   EventManager.prototype.sKeyDown = function(evt) {
-    if(this.withCommandKey(evt, true)) {
+    if (this.withCommandKey(evt, true)) {
       elementManager.save(evt);
     } else {
       nudgeManager.toggleResizeMode();
@@ -344,7 +382,7 @@
   };
 
   EventManager.prototype.zKeyDown = function(evt) {
-    if(this.withCommandKey(evt, true)) {
+    if (this.withCommandKey(evt, true)) {
       elementManager.undo();
     } else {
       nudgeManager.toggleZIndexMode();
@@ -353,7 +391,7 @@
   };
 
   EventManager.prototype.aKeyDown = function(evt) {
-    if(this.withCommandKey(evt, true)) {
+    if (this.withCommandKey(evt, true)) {
       elementManager.focusAll();
     }
   };
@@ -381,12 +419,12 @@
 
   function Element (el, tag, className) {
     this.listeners = [];
-    if(!tag) {
+    if (!tag) {
       this.el = el;
     } else {
       var parent = el;
       this.el = document.createElement(tag);
-      if(className) {
+      if (className) {
         className.split(' ').forEach(function(n) {
           this.addClass(n);
         }, this);
@@ -413,11 +451,25 @@
     });
   };
 
+  Element.prototype.afterTransition = function(fn) {
+    var self = this, el = this.el;
+    function finished() {
+      el.removeEventListener('webkitTransitionEnd', finished);
+      fn.call(self);
+    }
+    el.addEventListener('webkitTransitionEnd', finished);
+  }
+
   Element.prototype.removeAllListeners = function() {
     this.listeners.forEach(function(l) {
       this.el.removeEventListener(l.type, l.handler);
     }, this);
   };
+
+  Element.prototype.resetScroll = function() {
+    this.el.scrollTop = 0;
+    this.el.scrollLeft = 0;
+  }
 
   Element.prototype.show = function(on) {
     this.el.style.display = on === false ? '' : 'block';
@@ -454,6 +506,7 @@
   DraggableElement.prototype.remove             = Element.prototype.remove;
   DraggableElement.prototype.addClass           = Element.prototype.addClass;
   DraggableElement.prototype.removeClass        = Element.prototype.removeClass;
+  DraggableElement.prototype.resetScroll        = Element.prototype.resetScroll;
   DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
   DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
 
@@ -470,15 +523,15 @@
   // --- Events
 
   DraggableElement.prototype.click = function(evt) {
-    if(evt.target.href) {
+    if (evt.target.href) {
       evt.preventDefault();
       evt.stopPropagation();
     }
   };
 
   DraggableElement.prototype.mouseDown = function(evt) {
-    if(evt.button !== 0) return;
-    if(this.draggingStarted) {
+    if (evt.button !== 0) return;
+    if (this.draggingStarted) {
       // There are certain areas (over the dev tools) that do not
       // trigger mouseup events so if the element is still in the
       // middle of draggin when another mousedown is detected, then
@@ -498,7 +551,7 @@
   };
 
   DraggableElement.prototype.mouseMove = function(evt) {
-    if(this.resetTarget) {
+    if (this.resetTarget) {
       // Setting the reset target flags this element for a
       // reset. In practice this means that a canceling key
       // (such as ctrl) has interrupted the flow and is telling
@@ -514,7 +567,7 @@
     var x = evt.clientX + window.scrollX;
     var y = evt.clientY + window.scrollY;
     evt.dragOffset = new Point(x - this.dragStartX, y - this.dragStartY);
-    if(!this.draggingStarted) {
+    if (!this.draggingStarted) {
       this.fireEvent('dragStart', evt);
       this.draggingStarted = true;
     }
@@ -524,7 +577,7 @@
   };
 
   DraggableElement.prototype.mouseUp = function(evt) {
-    if(!this.draggingStarted) {
+    if (!this.draggingStarted) {
       this.fireEvent('click', evt);
     } else {
       this.fireEvent('dragStop', evt);
@@ -541,7 +594,7 @@
   };
 
   DraggableElement.prototype.fireEvent = function(name, evt) {
-    if(elementManager[name]) {
+    if (elementManager[name]) {
       elementManager[name](evt);
     }
   };
@@ -573,13 +626,13 @@
   Handle.prototype.setHover = function(type) {
     this.addEventListener('mouseover', function(evt) {
       evt.stopPropagation();
-      if(!this.target.draggingStarted) {
+      if (!this.target.draggingStarted) {
         statusBar.setState(type);
       }
     }.bind(this));
     this.addEventListener('mouseout', function(evt) {
       evt.stopPropagation();
-      if(!this.target.draggingStarted) {
+      if (!this.target.draggingStarted) {
         statusBar.setState(nudgeManager.mode);
       }
     }.bind(this));
@@ -615,8 +668,8 @@
     var deltaX = (evt.clientX + window.scrollX) - (dim.left + w);
     var deltaY = (evt.clientY + window.scrollY) - (dim.top + h);
     var deg    = new Point(deltaX, deltaY).getAngle() - new Point(w, h).getAngle();
-    if(deg < 0) deg += 360;
-    if(this.isConstrained(evt)) {
+    if (deg < 0) deg += 360;
+    if (this.isConstrained(evt)) {
       deg = Math.round(deg / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
     }
     elementManager.setRotation(deg - this.target.getLastRotation());
@@ -683,10 +736,10 @@
     yMult = 1;
     type = this.type;
     min = Math.min(w, h);
-    if(type === 'nw' || type === 'sw') {
+    if (type === 'nw' || type === 'sw') {
       xMult = -1;
     }
-    if(type === 'nw' || type === 'ne') {
+    if (type === 'nw' || type === 'ne') {
       yMult = -1;
     }
     dimensions[this.xProp] = dimensions[this.anchor.xProp] + (min * xMult);
@@ -705,8 +758,8 @@
   };
 
   SizingHandle.prototype.offsetToCenter = function(x, y) {
-    if(this.xProp === 'right')  x *= -1;
-    if(this.yProp === 'bottom') y *= -1;
+    if (this.xProp === 'right')  x *= -1;
+    if (this.yProp === 'bottom') y *= -1;
     return new Point(x, y);
   };
 
@@ -764,7 +817,7 @@
     this.positionedParents = [];
     while(el = el.offsetParent) {
       style = window.getComputedStyle(el);
-      if(style.position !== 'static') {
+      if (style.position !== 'static') {
         this.positionedParents.push(new Element(el));
       }
     }
@@ -785,18 +838,17 @@
   PositionableElement.prototype.getAttributes = function() {
     this.style = window.getComputedStyle(this.el);
     this.ensurePositioned();
-    this.getDimensions();
-    if(this.style.backgroundImage !== 'none') {
-      this.getBackgroundPosition();
+    this.getDimensions(this.style);
+    if (this.style.backgroundImage !== 'none') {
+      this.getBackgroundAttributes(this.style);
     }
   };
 
-  PositionableElement.prototype.getDimensions = function() {
-    var style  = this.style;
-    var left   = this.el.offsetLeft;
-    var top    = this.el.offsetTop;
-    var width  = this.getDimension(style.width);
-    var height = this.getDimension(style.height);
+  PositionableElement.prototype.getDimensions = function(style) {
+    var left = this.getInitialPosition('Left', style);
+    var top = this.getInitialPosition('Top', style);
+    var width  = this.getNumericValue(style.width);
+    var height = this.getNumericValue(style.height);
     this.position = new Point(left, top);
     this.dimensions = new Rectangle(
       top,
@@ -808,7 +860,21 @@
     this.zIndex = style.zIndex === '' ? null : parseInt(style.zIndex);
   };
 
-  PositionableElement.prototype.getDimension = function(val) {
+  PositionableElement.prototype.getInitialPosition = function(side, style) {
+    var computed = style[side.toLowerCase()];
+    if (computed !== 'auto') {
+      // If the element is already explictly positioned, then
+      // trust those values first as they are the ones that will
+      // be directly manipulated.
+      return this.getNumericValue(computed);
+    }
+    return this.el['offset' + side] -
+           this.getNumericValue(style['margin' + side]) -
+           this.getNumericValue(style['padding' + side]) -
+           this.getNumericValue(style['border' + side + 'Width']);
+  }
+
+  PositionableElement.prototype.getNumericValue = function(val) {
     val = parseFloat(val);
     return isNaN(val) ? 0 : val;
   };
@@ -817,7 +883,7 @@
     var matrix, match, a, b;
     matrix = style.webkitTransform || style.transform;
     match  = matrix.match(/[-.\d]+/g);
-    if(match) {
+    if (match) {
       a = parseFloat(match[0]);
       b = parseFloat(match[1]);
       return new Point(a, b).getAngle();
@@ -834,7 +900,7 @@
 
     // Get background position
     match = style.backgroundPosition.match(PositionableElement.BACKGROUND_POSITION_MATCH);
-    if(match) {
+    if (match) {
       this.backgroundPosition = new Point(parseInt(match[1]), parseInt(match[3]));
     } else {
       this.backgroundPosition = new Point(0, 0);
@@ -874,9 +940,9 @@
   };
 
   PositionableElement.prototype.mouseUp = function(evt) {
-    if(!this.draggingStarted && evt.shiftKey) {
+    if (!this.draggingStarted && evt.shiftKey) {
       elementManager.addFocused(this);
-    } else if(!this.draggingStarted) {
+    } else if (!this.draggingStarted) {
       elementManager.setFocused(this, true);
     }
     DraggableElement.prototype.mouseUp.call(this, evt);
@@ -887,12 +953,12 @@
   };
 
   PositionableElement.prototype.dblclick = function(evt) {
-    if(!this.backgroundPosition) return;
+    if (!this.backgroundPosition) return;
     var point  = new Point(evt.clientX + window.scrollX, evt.clientY + window.scrollY);
     var coords = this.getElementCoordsForPoint(point).subtract(this.backgroundPosition);
     var style = window.getComputedStyle(this.el);
     var sprite = this.recognizer.getSpriteBoundsForCoordinate(coords);
-    if(sprite) {
+    if (sprite) {
       this.pushState();
       this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
       this.dimensions.right  = this.dimensions.left + sprite.getWidth();
@@ -903,14 +969,14 @@
   };
 
   PositionableElement.prototype.contextmenu = function(evt) {
-    if(evt.ctrlKey) {
+    if (evt.ctrlKey) {
       this.handleCtrlDoubleClick(evt);
       evt.preventDefault();
     }
   };
 
   PositionableElement.prototype.handleCtrlDoubleClick = function(evt) {
-    if(this.dblClickTimer) {
+    if (this.dblClickTimer) {
       this.dblclick(evt)
     }
     this.dblClickTimer = setTimeout(function() {
@@ -946,7 +1012,7 @@
   };
 
   PositionableElement.prototype.drag = function(evt) {
-    if(this.isBackgroundDrag(evt)) {
+    if (this.isBackgroundDrag(evt)) {
       elementManager.backgroundDrag(evt);
     } else {
       elementManager.positionDrag(evt);
@@ -969,17 +1035,17 @@
     var dimensions = this.getLastState().dimensions.clone(), min;
     var lastAspectRatio = dimensions.getAspectRatio();
     var handle = this[handleType];
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
     dimensions.add(handle.xProp, vector.x);
     dimensions.add(handle.yProp, vector.y);
-    if(constrained) {
+    if (constrained) {
       handle.applyConstraint(dimensions, lastAspectRatio);
     }
     this.dimensions = dimensions;
 
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       this.position = this.getPositionFromRotatedHandle(handle.anchor);
     } else {
       this.position = new Point(this.dimensions.left, this.dimensions.top);
@@ -990,7 +1056,7 @@
   };
 
   PositionableElement.prototype.toggleSizingHandles = function(on) {
-    if(on) {
+    if (on) {
       this.removeClass('resize-handles-hidden');
     } else {
       this.addClass('resize-handles-hidden');
@@ -1014,10 +1080,10 @@
 
   PositionableElement.prototype.backgroundDrag = function(evt) {
     var last = this.getLastState().backgroundPosition, rotation = this.dimensions.rotation, offset;
-    if(!last) return;
-    if(rotation) last = last.rotate(rotation);
+    if (!last) return;
+    if (rotation) last = last.rotate(rotation);
     offset = this.applyPositionDrag(evt, last);
-    if(rotation) offset = offset.rotate(-rotation);
+    if (rotation) offset = offset.rotate(-rotation);
     this.setBackgroundPosition(offset);
   };
 
@@ -1028,10 +1094,10 @@
 
   PositionableElement.prototype.applyPositionDrag = function(evt, point) {
     var delta  = evt.dragOffset, offset = point.add(delta), absX, absY;
-    if(this.isConstrained(evt)) {
+    if (this.isConstrained(evt)) {
       absX = Math.abs(delta.x);
       absY = Math.abs(delta.y);
-      if(absX < absY) {
+      if (absX < absY) {
         offset.x = point.x;
       } else {
         offset.y = point.y;
@@ -1045,6 +1111,7 @@
 
   PositionableElement.prototype.pushState = function() {
     this.states.push({
+      zIndex: this.zIndex,
       position: this.position.clone(),
       dimensions: this.dimensions.clone(),
       backgroundPosition: this.backgroundPosition ? this.backgroundPosition.clone() : null
@@ -1057,7 +1124,7 @@
 
   PositionableElement.prototype.undo = function() {
     var state = this.states.pop();
-    if(!state) return;
+    if (!state) return;
     this.position = state.position;
     this.dimensions = state.dimensions;
     this.backgroundPosition = state.backgroundPosition;
@@ -1069,7 +1136,7 @@
   // --- Peeking
 
   PositionableElement.prototype.peek = function(on) {
-    if(on && this.backgroundPosition) {
+    if (on && this.backgroundPosition) {
       this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
       this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
     } else {
@@ -1083,18 +1150,18 @@
 
   PositionableElement.prototype.checkScrollBounds = function() {
     var dim = this.getAbsoluteDimensions(), boundary;
-    if(dim.top < window.scrollY) {
+    if (dim.top < window.scrollY) {
       window.scrollTo(window.scrollX, dim.top);
     }
-    if(dim.left < window.scrollX) {
+    if (dim.left < window.scrollX) {
       window.scrollTo(dim.left, window.scrollY);
     }
     boundary = window.scrollX + window.innerWidth;
-    if(dim.right > boundary) {
+    if (dim.right > boundary) {
       window.scrollTo(window.scrollX + (dim.right - boundary), window.scrollY);
     }
     boundary = window.scrollY + window.innerHeight;
-    if(dim.bottom > boundary) {
+    if (dim.bottom > boundary) {
       window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
     }
   };
@@ -1116,8 +1183,8 @@
   };
 
   PositionableElement.prototype.moveBackgroundPosition = function(vector) {
-    if(!this.backgroundPosition) return;
-    if(this.dimensions.rotation) {
+    if (!this.backgroundPosition) return;
+    if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
     this.setBackgroundPosition(this.backgroundPosition.add(vector));
@@ -1130,9 +1197,9 @@
 
   PositionableElement.prototype.moveZIndex = function(vector) {
     // Positive Y is actually down, so decrement here.
-    if(vector.x > 0 || vector.y < 0) {
+    if (vector.x > 0 || vector.y < 0) {
       this.zIndex++;
-    } else if(vector.x < 0 || vector.y > 0) {
+    } else if (vector.x < 0 || vector.y > 0) {
       this.zIndex--;
     }
     this.updateZIndex();
@@ -1166,7 +1233,7 @@
   };
 
   PositionableElement.prototype.updateBackgroundPosition = function() {
-    if(!this.backgroundPosition) return;
+    if (!this.backgroundPosition) return;
     var css = this.backgroundPosition.x + 'px ' + this.backgroundPosition.y + 'px'
     this.el.style.backgroundPosition = css;
   };
@@ -1184,7 +1251,7 @@
     // x/y internal coordinate system, which may be rotated.
     var dim = this.getAbsoluteDimensions();
     var corner = new Point(dim.left, dim.top);
-    if(this.dimensions.rotation) {
+    if (this.dimensions.rotation) {
       corner = this.dimensions.getPositionForCoords(corner).add(this.getPositionOffset());
       return point.subtract(corner).rotate(-this.dimensions.rotation);
     } else {
@@ -1277,7 +1344,7 @@
 
   PositionableElement.prototype.getSelector = function() {
     var type = settings.get(Settings.SELECTOR), classes;
-    if(type === Settings.SELECTOR_AUTO) {
+    if (type === Settings.SELECTOR_AUTO) {
       type = this.el.id ? Settings.SELECTOR_ID : Settings.SELECTOR_FIRST;
     }
     switch(type) {
@@ -1285,6 +1352,7 @@
       case Settings.SELECTOR_ID:      return '#' + this.el.id;
       case Settings.SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
       case Settings.SELECTOR_TAG:     return this.getTagName(this.el);
+      case Settings.SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(this.el);
       case Settings.SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
       case Settings.SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
     }
@@ -1303,6 +1371,17 @@
     return el.tagName.toLowerCase();
   };
 
+  PositionableElement.prototype.getTagNameWithNthIndex = function(el) {
+    var child = el, i = 1;
+    while ((child = child.previousSibling) != null ) {
+      // Count only element nodes.
+      if (child.nodeType == 1) {
+        i++;
+      }
+    }
+    return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
+  };
+
   PositionableElement.prototype.getLongestClass = function(list) {
     return '.' + this.getFilteredClasses(list).reduce(function(a, b) {
       return a.length > b.length ? a : b;
@@ -1312,72 +1391,139 @@
   PositionableElement.prototype.getFilteredClasses = function(list) {
     var filtered = [], i = 0;
     while(name = list[i++]) {
-      if(!name.match(EXTENSION_CLASS_PREFIX)) {
+      if (!name.match(EXTENSION_CLASS_PREFIX)) {
         filtered.push(name);
       }
     }
     return filtered;
   };
 
-  PositionableElement.prototype.getStyles = function() {
-    var css = '';
-    var selector = this.getSelector();
-    var openingBrace = selector ? ' {\n' : '';
-    var closingBrace = selector ? '}\n' : '';
+  PositionableElement.prototype.getStyles = function(exclude) {
+    var lines = [];
+
+    // Set exclusion map;
+    this.exclude = exclude;
+
+    function add(l) {
+      lines = lines.concat(l);
+    }
+
     this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
-    css += this.getSelector() + openingBrace;
-    if(this.isPositioned()) {
-      if(this.zIndex !== null) {
-        css += this.getNewStyleLine('z-index', this.zIndex);
+    this.selector = this.getSelector();
+
+    if (this.isPositioned()) {
+      if (this.zIndex !== null) {
+        add(this.getStyleLines('z-index', this.zIndex));
       }
-      css += this.getNewStyleLine('left', this.position.x);
-      css += this.getNewStyleLine('top', this.position.y);
+      add(this.getStyleLines('left', round(this.position.x)));
+      add(this.getStyleLines('top', round(this.position.y)));
     }
-    css += this.getNewStyleLine('width', this.dimensions.getWidth());
-    css += this.getNewStyleLine('height', this.dimensions.getHeight());
-    if(this.backgroundPosition) {
-      css += this.getNewStyleLine('background-position', this.backgroundPosition.x, this.backgroundPosition.y);
+    add(this.getStyleLines('width', this.dimensions.getWidth(true)));
+    add(this.getStyleLines('height', this.dimensions.getHeight(true)));
+    if (this.backgroundPosition) {
+      add(this.getStyleLines('background-position', this.backgroundPosition.x, this.backgroundPosition.y));
     }
-    if(this.dimensions.rotation) {
-      css += this.getRotationStyles();
+    if (this.dimensions.rotation) {
+      add(this.getStyleLines('rotation', this.getRoundedRotation()));
     }
-    css += closingBrace;
-    if (!selector) {
-      css = css.replace(/[\r\n]\s*/gm, ' ');
+
+    // Clean exclusion map.
+    this.exclude = null;
+
+    if (this.selector && lines.length > 0) {
+      lines.unshift('\n' + this.selector + ' {');
+      return lines.join('\n' + this.tabCharacter) + '\n}';
+    } else {
+      return lines.join(' ');
     }
-    return css;
   };
 
-  PositionableElement.prototype.getNewStyleLine = function(prop, val1, val2) {
-    var isPx, css = '';
-    if(prop === 'left' ||
+  PositionableElement.prototype.getStyleLines = function(prop, val1, val2) {
+    var isPx, lines = [], str = '';
+    if (this.canIgnoreStyle(prop, val1, val2)) {
+      return lines;
+    }
+    if (prop === 'rotation') {
+      lines.push(this.concatStyle('-webkit-transform', 'rotateZ(' + val1 + 'deg)'));
+      lines.push(this.concatStyle('-moz-transform', 'rotateZ(' + val1 + 'deg)'));
+      lines.push(this.concatStyle('-ms-transform', 'rotateZ(' + val1 + 'deg)'));
+      lines.push(this.concatStyle('transform', 'rotateZ(' + val1 + 'deg)'));
+      return lines;
+    }
+    if (prop === 'left' ||
        prop === 'top' ||
        prop === 'width' ||
        prop === 'height' ||
        prop === 'background-position') {
       isPx = true;
-      val1 = Math.round(val1);
     }
-    css = this.tabCharacter + prop + ': ' + val1;
-    if(isPx) {
-      css += 'px';
+    str += val1;
+    if (isPx) {
+      str += 'px';
     }
-    if(val2 !== undefined) {
-      if(isPx) val2 = Math.round(val2);
-      css += ' ' + val2;
-      if(isPx) css += 'px';
+    if (val2 !== undefined) {
+      str += ' ' + val2;
+      if (isPx) str += 'px';
     }
-    css += ';\n'
-    return css;
+    lines.push(this.concatStyle(prop, str));
+    return lines;
   };
 
-  PositionableElement.prototype.getRotationStyles = function() {
-    var css = '', deg = this.getRoundedRotation();
-    css += this.getNewStyleLine('-ms-transform', 'rotateZ(' + deg + 'deg)');
-    css += this.getNewStyleLine('-webkit-transform', 'rotateZ(' + deg + 'deg)');
-    css += this.getNewStyleLine('transform', 'rotateZ(' + deg + 'deg)');
-    return css;
-  };
+  PositionableElement.prototype.concatStyle = function(attr, value) {
+    return attr + ': ' + value + ';';
+  }
+
+  PositionableElement.prototype.canIgnoreStyle = function(prop, val1, val2) {
+    var excluded = this.exclude && this.exclude[prop];
+    if (settings.get(Settings.OUTPUT_CHANGED) && this.propertyIsUnchanged(prop, val1, val2)) {
+      return true;
+    }
+    if (excluded !== undefined) {
+      if (excluded && prop === 'background-position') {
+        return excluded.x === val1 && excluded.y === val2;
+      } else {
+        return excluded === val1;
+      }
+    }
+    return false;
+  }
+
+  PositionableElement.prototype.propertyIsUnchanged = function(prop, val1, val2) {
+    var state = this.states[0];
+    if (!state) {
+      return true;
+    }
+    switch(prop) {
+      case 'z-index':
+        return val1 === state.zIndex;
+      case 'top':
+        return val1 === state.position.y;
+      case 'left':
+        return val1 === state.position.x;
+      case 'rotation':
+        return val1 === state.dimensions.rotation;
+      case 'width':
+        return val1 === state.dimensions.right - state.dimensions.left;
+      case 'height':
+        return val1 === state.dimensions.bottom - state.dimensions.top;
+      case 'background-position':
+        var bp = state.backgroundPosition;
+        return val1 === bp.x && val2 === bp.y;
+    }
+    return false;
+  }
+
+  PositionableElement.prototype.getExportedProperties = function() {
+    return {
+      'z-index': this.zIndex,
+      'top': round(this.position.y),
+      'left': round(this.position.x),
+      'width': this.dimensions.getWidth(true),
+      'height': this.dimensions.getHeight(true),
+      'rotation': this.getRoundedRotation(),
+      'background-position': this.backgroundPosition
+    }
+  }
 
   PositionableElement.prototype.getTabCharacter = function(name) {
     switch(name) {
@@ -1389,10 +1535,10 @@
 
   PositionableElement.prototype.getRoundedRotation = function() {
     var r = this.dimensions.rotation;
-    if(r % 1 !== 0.5) {
-      r = Math.round(r);
+    if (r % 1 !== 0.5) {
+      r = round(r);
     }
-    if(r === 360) r = 0;
+    if (r === 360) r = 0;
     return r;
   };
 
@@ -1407,8 +1553,8 @@
       text += ', ' + this.zIndex + 'z';
     }
     text += ' | ';
-    text += Math.round(this.dimensions.getWidth()) + 'w, ' + Math.round(this.dimensions.getHeight()) + 'h';
-    if(rotation) {
+    text += this.dimensions.getWidth(true) + 'w, ' + this.dimensions.getHeight(true) + 'h';
+    if (rotation) {
       text += ' | ';
       text += rotation + 'deg';
     }
@@ -1471,15 +1617,20 @@
   };
 
   PositionableElementManager.prototype.build = function(fn) {
+    var els = [];
     this.elements = [];
 
     this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
     this.excludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
 
-    var els = document.body.querySelectorAll(this.includeSelector || '*');
+    try {
+      els = document.body.querySelectorAll(this.includeSelector || '*');
+    } catch(e) {
+      console.error(e.message);
+    }
 
     for(var i = 0, el; el = els[i]; i++) {
-      if(this.elementIsIncluded(el)) {
+      if (this.elementIsIncluded(el)) {
         try {
           this.elements.push(new PositionableElement(el));
         } catch(e) {
@@ -1507,7 +1658,7 @@
   };
 
   PositionableElementManager.prototype.toggleActive = function() {
-    if(this.active) {
+    if (this.active) {
       this.destroyElements();
       statusBar.deactivate();
       this.active = false;
@@ -1517,16 +1668,16 @@
   };
 
   PositionableElementManager.prototype.elementIsIncluded = function(el) {
-    if(this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
+    if (this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
       // Don't include elements that are explicitly excluded.
       return false;
-    } else if(getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
+    } else if (getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
       // Don't include elements that are part of the extension itself.
       return false;
-    } else if(el.style.background.match(/positionable-extension/)) {
+    } else if (el.style && el.style.background.match(/positionable-extension/)) {
       // Don't include elements that are part of other chrome extensions.
       return false;
-    } else if(this.includeSelector) {
+    } else if (this.includeSelector) {
       // If there is an explicit selector active, then always include.
       return true;
     }
@@ -1537,16 +1688,16 @@
 
   PositionableElementManager.prototype.delegateToFocused = function(name, disallowWhenDragging) {
     this[name] = function() {
-      if(disallowWhenDragging && this.draggingElement) return;
+      if (disallowWhenDragging && this.draggingElement) return;
       this.callOnEveryFocused(name, arguments);
     }.bind(this);
   };
 
   PositionableElementManager.prototype.delegateToDragging = function(name, alternate) {
     this[name] = function() {
-      if(this.draggingElement && this.draggingElement[name]) {
+      if (this.draggingElement && this.draggingElement[name]) {
         this.draggingElement[name].apply(this.draggingElement, arguments);
-      } else if(alternate) {
+      } else if (alternate) {
         alternate[name].apply(alternate, arguments);
       }
     }.bind(this);
@@ -1556,12 +1707,12 @@
 
   PositionableElementManager.prototype.setFocused = function(element, force) {
     var elements;
-    if(typeof element === 'function') {
+    if (typeof element === 'function') {
       elements = this.elements.filter(element);
-    } else if(force || !this.elementIsFocused(element)) {
+    } else if (force || !this.elementIsFocused(element)) {
       elements = [element];
     }
-    if(elements) {
+    if (elements) {
       this.unfocusAll();
       elements.forEach(this.addFocused, this);
     }
@@ -1569,7 +1720,7 @@
   };
 
   PositionableElementManager.prototype.addFocused = function(element) {
-    if(!this.elementIsFocused(element)) {
+    if (!this.elementIsFocused(element)) {
       element.focus();
       this.focusedElements.push(element);
     }
@@ -1608,12 +1759,12 @@
     alignmentLine = elementsLines[0].line;
     opposingLine  = elementsLines[elementsLines.length - 1].line;
 
-    if(isMax && !distribute) {
+    if (isMax && !distribute) {
       // If the line is on the bottom or right, then we actually need to get the opposing line.
       alignmentLine = opposingLine;
     }
 
-    if(distribute) {
+    if (distribute) {
 
       // THe distributed offset (amount to distribute each element evenly by) is equal
       // to the total span between the edges of the first and last element, divided by
@@ -1630,10 +1781,10 @@
 
     elementsLines.forEach(function(e, i) {
       var value = alignmentLine;
-      if(distribute) {
+      if (distribute) {
         value += (distributedOffset * i);
       }
-      if(isCenter) {
+      if (isCenter) {
         e.el.alignToCenter(line, value);
       } else {
         e.el.alignToSide(line, value);
@@ -1643,7 +1794,7 @@
 
   PositionableElementManager.prototype.alignMiddle = function(line) {
     var minLines, maxLines;
-    if(line === 'vertical') {
+    if (line === 'vertical') {
       minLines = this.getElementsLines('left', false);
       maxLines = this.getElementsLines('right', false);
     } else {
@@ -1701,13 +1852,13 @@
   };
 
   PositionableElementManager.prototype.temporarilyFocusDraggingElement = function() {
-    if(!this.draggingElement) return;
+    if (!this.draggingElement) return;
     this.previouslyFocusedElements = this.focusedElements;
     this.focusedElements = [this.getDraggingElement()];
   };
 
   PositionableElementManager.prototype.releasedFocusedDraggingElement = function() {
-    if(!this.previouslyFocusedElements) return;
+    if (!this.previouslyFocusedElements) return;
     this.dragReset();
     this.focusedElements = this.previouslyFocusedElements;
     this.previouslyFocusedElements = null;
@@ -1721,35 +1872,41 @@
 
   // --- Output
 
-  PositionableElementManager.prototype.getElementStyles = function(elements) {
+  PositionableElementManager.prototype.getFocusedElementStyles = function() {
+    var elements = this.focusedElements, exclude = this.getExclusionMap(elements);
     var styles = elements.map(function(el) {
-      return el.getStyles();
+      return el.getStyles(exclude);
     });
     return styles.join('\n\n');
   };
 
-  PositionableElementManager.prototype.getFocusedElementStyles = function() {
-    return this.getElementStyles(this.focusedElements);
-  };
-
   PositionableElementManager.prototype.copy = function(evt) {
     var styles = this.getFocusedElementStyles();
-    if(!styles) return;
+    var hasStyles = styles.replace(/^\s+$/, '').length > 0;
     evt.preventDefault();
     evt.clipboardData.clearData();
     evt.clipboardData.setData('text/plain', styles);
-    copyAnimation.animate();
+    copyAnimation.animate(hasStyles);
   };
 
   PositionableElementManager.prototype.save = function(evt) {
-    var styles = this.getElementStyles(this.elements);
-    if(!styles) return;
+    var styles = this.getFocusedElementStyles();
     var link = document.createElement('a');
     link.href = 'data:text/css;base64,' + btoa(styles);
     link.download = settings.get(Settings.DOWNLOAD_FILENAME);
     link.click();
   };
 
+  PositionableElementManager.prototype.getExclusionMap = function(elements) {
+    if (elements.length < 2 || !settings.get(Settings.OUTPUT_UNIQUE)) {
+      return;
+    }
+    var map = elements[0].getExportedProperties();
+    elements.slice(1).forEach(function(el) {
+      map = hashIntersect(map, el.getExportedProperties());
+    }, this);
+    return map;
+  }
 
   /*-------------------------] StatusBar [--------------------------*/
 
@@ -1795,7 +1952,7 @@
 
 
   DragSelection.prototype.mouseMove = function(evt) {
-    if(elementManager.draggingElement !== this) return;
+    if (elementManager.draggingElement !== this) return;
     DraggableElement.prototype.mouseMove.call(this, evt);
   };
 
@@ -1816,7 +1973,7 @@
   };
 
   DragSelection.prototype.contains = function(point) {
-    if(!this.min || !this.max) {
+    if (!this.min || !this.max) {
       return false;
     }
     return point.x >= this.min.x && point.x <= this.max.x && point.y >= this.min.y && point.y <= this.max.y;
@@ -2017,7 +2174,7 @@
 
     this.buildHelpBox(keyboardHelp.el, 'alt', function(box, text) {
       new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.OPTION);
-      text.html('Option/Alt: Peek at the background image when dragging.');
+      text.html('Option/Alt: Peek at the background image.');
     });
 
     this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
@@ -2126,7 +2283,7 @@
 
   StatusBar.prototype.buildHelpBlock = function(name, header) {
     var block = new Element(this.helpArea.el, 'div', 'help-block '+ name +'-help-block');
-    if(header) {
+    if (header) {
       new Element(block.el, 'h4', 'help-block-header').html(header);
     }
     return block;
@@ -2199,7 +2356,7 @@
       [Settings.TABS_FOUR_SPACES, 'Four Spaces']
     ]);
 
-    this.buildSelect(area, Settings.SELECTOR, 'Selector:', [
+    this.buildSelect(area, Settings.SELECTOR, 'Output Selector:', [
       [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
       [Settings.SELECTOR_NONE, 'None', 'No selector used. Styles will be inline.', 'width: 200px; height: 200px;...'],
       [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
@@ -2207,9 +2364,10 @@
       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
       [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
+      [Settings.SELECTOR_TAG_NTH, 'Tag + nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
     ]);
 
-    this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output styles that have changed:');
+    this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
     this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
 
     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
@@ -2250,7 +2408,7 @@
     var select;
     this.buildFormControl(area, name, label, function(block) {
       select = new Element(block.el, 'select', 'setting-input');
-      if(options[0].length > 2) {
+      if (options[0].length > 2) {
         // Associated descriptions exist so create the elements
         this[name + 'Description'] = new Element(block.el, 'div', 'setting-description');
         this[name + 'Example'] = new Element(block.el, 'div', 'setting-example');
@@ -2259,11 +2417,11 @@
         var option = new Element(select.el, 'option', 'setting-option');
         option.el.value = o[0];
         option.el.textContent = o[1];
-        if(o[2]) {
+        if (o[2]) {
           option.el.dataset.description = o[2];
           option.el.dataset.example = o[3];
         }
-        if(settings.get(name) === option.el.value) {
+        if (settings.get(name) === option.el.value) {
           option.el.selected = true;
         }
       });
@@ -2314,7 +2472,7 @@
   StatusBar.prototype.inputChanged = function(evt) {
     var target = evt.target;
     settings.set(target.dataset.name, target.value);
-    if(target.selectedIndex !== undefined) {
+    if (target.selectedIndex !== undefined) {
       this.checkLinkedDescription(target);
     }
   };
@@ -2325,7 +2483,7 @@
 
   StatusBar.prototype.filterKeyboardInput = function(evt) {
     evt.stopPropagation();
-    if(evt.keyCode === EventManager.ENTER) {
+    if (evt.keyCode === EventManager.ENTER) {
       this.saveSettings();
     }
   };
@@ -2334,7 +2492,7 @@
 
   StatusBar.prototype.setState = function(name) {
     this.stateIcons.forEach(function(i) {
-      if(i.name === name) {
+      if (i.name === name) {
         i.addClass('element-active-state');
       } else {
         i.removeClass('element-active-state');
@@ -2347,17 +2505,17 @@
     var option = select.options[select.selectedIndex];
     var description = this[name + 'Description'];
     var example = this[name + 'Example'];
-    if(description && example) {
+    if (description && example) {
       description.html(option.dataset.description);
       example.html(option.dataset.example);
     }
   };
 
   StatusBar.prototype.setArea = function(area) {
-    if(this.currentArea === area) return;
+    if (this.currentArea === area) return;
     this.areas.forEach(function(a) {
       var className = 'status-bar-' + a.name + '-active';
-      if(a === area) {
+      if (a === area) {
         this.addClass(className);
         a.addClass('active-area');
       } else {
@@ -2366,18 +2524,21 @@
       }
     }, this);
     this.currentArea = area;
-    if(area === this.elementArea) {
+    if (area === this.elementArea) {
       this.defaultArea = this.elementArea;
     }
-    if(area === this.settingsArea) {
+    if (area === this.settingsArea) {
       this.inputs[0].el.focus();
+      // Forcing focus can make the scrolling go haywire,
+      // so need to actively reset the scrolling here.
+      this.resetScroll();
     } else {
       document.activeElement.blur();
     }
   };
 
   StatusBar.prototype.toggleArea = function(area) {
-    if(this.currentArea !== area) {
+    if (this.currentArea !== area) {
       this.setArea(area);
     } else {
       this.resetArea();
@@ -2385,7 +2546,7 @@
   };
 
   StatusBar.prototype.clearSettings = function() {
-    if(confirm('Really clear all settings?')) {
+    if (confirm('Really clear all settings?')) {
       settings.clear();
       this.inputs.forEach(this.setFormControl, this);
       this.setArea(this.defaultArea);
@@ -2399,7 +2560,7 @@
   };
 
   StatusBar.prototype.checkSelectorUpdate = function() {
-    if(this.selectorsChanged()) {
+    if (this.selectorsChanged()) {
       window.currentElementManager.refresh();
       settings.update(Settings.INCLUDE_ELEMENTS);
       settings.update(Settings.EXCLUDE_ELEMENTS);
@@ -2415,7 +2576,7 @@
   };
 
   StatusBar.prototype.getStartArea = function() {
-    if(settings.get(Settings.SHOW_QUICK_START)) {
+    if (settings.get(Settings.SHOW_QUICK_START)) {
       return this.quickStartArea;
     } else {
       return this.startArea;
@@ -2440,14 +2601,14 @@
   };
 
   StatusBar.prototype.activate = function() {
-    if(this.active) return;
+    if (this.active) return;
     this.show();
     this.addClass('status-bar-active');
     this.active = true;
   };
 
   StatusBar.prototype.deactivate = function() {
-    if(!this.active) return;
+    if (!this.active) return;
     this.active = false;
     this.removeClass('status-bar-active');
     setTimeout(function() {
@@ -2483,10 +2644,10 @@
 
   StatusBar.prototype.update = function() {
     var size = elementManager.getFocusedSize();
-    if(size === 0) {
+    if (size === 0) {
       this.setArea(this.quickStartArea);
       return;
-    } else if(size === 1) {
+    } else if (size === 1) {
       this.setSingle(elementManager.getFirstFocused());
     } else {
       this.setMultiple(elementManager.getAllFocused());
@@ -2557,6 +2718,7 @@
   Settings.SELECTOR_ID      = 'id';
   Settings.SELECTOR_ALL     = 'all';
   Settings.SELECTOR_TAG     = 'tag';
+  Settings.SELECTOR_TAG_NTH = 'tag-nth';
   Settings.SELECTOR_AUTO    = 'auto';
   Settings.SELECTOR_FIRST   = 'first';
   Settings.SELECTOR_NONE    = 'inline';
@@ -2574,7 +2736,7 @@
   };
 
   Settings.prototype.set = function(name, value) {
-    if(value !== this.get(name)) {
+    if (value !== this.get(name)) {
       this.changed[name] = true;
     }
     localStorage[name] = value;
@@ -2590,7 +2752,7 @@
 
   Settings.prototype.clear = function() {
     for (key in localStorage) {
-      if(localStorage[key]) {
+      if (localStorage[key]) {
         this.changed[key] = true;
       }
     }
@@ -2641,11 +2803,7 @@
     this.box.show();
     this.shade.show();
     this.defer(function() {
-      this.finished = function() {
-        this.box.el.removeEventListener('webkitTransitionEnd', this.finished);
-        if(fn) fn();
-      }.bind(this);
-      this.box.addEventListener('webkitTransitionEnd', this.finished);
+      this.box.afterTransition(fn);
       this.box.addClass('loading-active');
       this.shade.addClass('loading-shade-active');
     });
@@ -2653,15 +2811,14 @@
 
   LoadingAnimation.prototype.hide = function(fn) {
     this.defer(function() {
-      this.finished = function() {
-        this.box.el.removeEventListener('webkitTransitionEnd', this.finished);
-        this.box.hide();
-        this.shade.hide();
+      var box = this.box, shade = this.shade;
+      box.afterTransition(function() {
+        box.hide();
+        shade.hide();
         fn();
-      }.bind(this);
-      this.box.addEventListener('webkitTransitionEnd', this.finished);
-      this.box.removeClass('loading-active');
-      this.shade.removeClass('loading-shade-active');
+      });
+      box.removeClass('loading-active');
+      shade.removeClass('loading-shade-active');
     });
   };
 
@@ -2670,6 +2827,9 @@
   function CopyAnimation () {
     this.build();
   };
+
+  CopyAnimation.COPIED_TEXT = 'Copied!';
+  CopyAnimation.NOT_COPIED_TEXT = 'No Styles';
 
   // --- Inheritance
 
@@ -2684,13 +2844,18 @@
 
   CopyAnimation.prototype.build = function() {
     this.box  = new Element(document.body, 'div', 'copy-animation');
-    this.text = new Element(this.box.el, 'div', 'copy-animation-text').html('Copied!');
+    this.text = new Element(this.box.el, 'div', 'copy-animation-text');
   };
 
   // --- Actions
 
-  CopyAnimation.prototype.animate = function(dir) {
+  CopyAnimation.prototype.setText = function(text) {
+    this.text.html(text);
+  }
 
+  CopyAnimation.prototype.animate = function(copied) {
+
+    this.setText(copied ? CopyAnimation.COPIED_TEXT : CopyAnimation.NOT_COPIED_TEXT);
     this.reset();
     this.box.show();
 
@@ -2722,10 +2887,15 @@
   };
 
   SpriteRecognizer.ORIGIN_REG = new RegExp('^' + window.location.origin.replace(/([\/.])/g, '\\$1'));
+  SpriteRecognizer.EXTENSION_REG = /^chrome-extension:\/\//;
 
   SpriteRecognizer.prototype.loadPixelData = function(url) {
     var xDomain = !SpriteRecognizer.ORIGIN_REG.test(url);
-    if(xDomain) {
+    var extension = SpriteRecognizer.EXTENSION_REG.test(url);
+    if (extension) {
+      return;
+    }
+    if (xDomain) {
       this.loadXDomainImage(url);
     } else {
       this.loadImage(url);
@@ -2733,8 +2903,8 @@
   };
 
   SpriteRecognizer.prototype.loadImage = function(obj) {
-    if(obj.error) {
-      console.warn('Positionable: "' + obj.url + '" could not be loaded!');
+    if (obj.error) {
+      console.error('Positionable: "' + obj.url + '" could not be loaded!');
       return;
     }
     var url = obj;
@@ -2766,11 +2936,11 @@
     pixel = pixel.round();
     var cached, alpha = this.getAlphaForPixel(pixel);
     // No sprite detected
-    if(!alpha) {
+    if (!alpha) {
       return;
     }
     cached = this.map[this.getKey(pixel)];
-    if(cached) {
+    if (cached) {
       return cached;
     }
     this.queue = [];
@@ -2790,9 +2960,9 @@
 
   SpriteRecognizer.prototype.testPixel = function(pixel) {
     var key = this.getKey(pixel);
-    if(this.map[key] === undefined) {
+    if (this.map[key] === undefined) {
       // If we have a pixel, then move on and test the adjacent ones.
-      if(this.getAlphaForPixel(pixel)) {
+      if (this.getAlphaForPixel(pixel)) {
         this.rect.top    = Math.min(this.rect.top, pixel.y);
         this.rect.left   = Math.min(this.rect.left, pixel.x);
         this.rect.right  = Math.max(this.rect.right, pixel.x);
@@ -2888,12 +3058,14 @@
     this.rotation = rotation || 0;
   };
 
-  Rectangle.prototype.getWidth = function() {
-    return this.right - this.left;
+  Rectangle.prototype.getWidth = function(r) {
+    var w = this.right - this.left;
+    return r ? round(w) : w;
   };
 
-  Rectangle.prototype.getHeight = function() {
-    return this.bottom - this.top;
+  Rectangle.prototype.getHeight = function(r) {
+    var h = this.bottom - this.top;
+    return r ? round(h) : h;
   };
 
   Rectangle.prototype.setPosition = function(point) {
@@ -2905,7 +3077,7 @@
   };
 
   Rectangle.prototype.add = function(prop, amount) {
-    if(!prop) return;
+    if (!prop) return;
     amount = this.constrainProperty(prop, this[prop] + amount);
     this[prop] = amount;
   };
@@ -2929,14 +3101,14 @@
 
   // The rotated position for a given un-rotated coordinate.
   Rectangle.prototype.getPositionForCoords = function(coord) {
-    if(!this.rotation) return coord;
+    if (!this.rotation) return coord;
     var center = this.getCenter();
     return coord.subtract(center).rotate(this.rotation).add(center);
   };
 
   // The un-rotated coords for a given rotated position.
   Rectangle.prototype.getCoordsForPosition = function(position) {
-    if(!this.rotation) return position;
+    if (!this.rotation) return position;
     var center = this.getCenter();
     return position.subtract(center).rotate(-this.rotation).add(center);
   };
@@ -2947,7 +3119,7 @@
 
   /*-------------------------] Init [--------------------------*/
 
-  if(window.currentElementManager) {
+  if (window.currentElementManager) {
     window.currentElementManager.toggleActive();
     return;
   }
