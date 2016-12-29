@@ -778,13 +778,14 @@
 
   PositionableElement.prototype.getAttributes = function() {
     this.style = window.getComputedStyle(this.el);
-    this.getDimensions(this.style);
+    this.getDimensions();
     if(this.style.backgroundImage !== 'none') {
-      this.getBackgroundAttributes(this.style);
+      this.getBackgroundPosition();
     }
   };
 
-  PositionableElement.prototype.getDimensions = function(style) {
+  PositionableElement.prototype.getDimensions = function() {
+    var style  = this.style;
     var left   = this.el.offsetLeft;
     var top    = this.el.offsetTop;
     var width  = this.getDimension(style.width);
@@ -797,7 +798,7 @@
       left,
       this.getRotation(style)
     );
-    this.zIndex = parseInt(style.zIndex);
+    this.zIndex = style.zIndex === '' ? null : parseInt(style.zIndex);
   };
 
   PositionableElement.prototype.getDimension = function(val) {
@@ -817,8 +818,8 @@
     return 0;
   };
 
-  PositionableElement.prototype.getBackgroundAttributes = function(style) {
-    var match;
+  PositionableElement.prototype.getBackgroundPosition = function() {
+    var match, style = this.style;
 
     // Get background recognizer
     match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
@@ -1319,7 +1320,7 @@
     this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
     css += this.getSelector() + openingBrace;
     if(this.isPositioned()) {
-      if(this.zIndex !== 0) {
+      if(this.zIndex !== null) {
         css += this.getNewStyleLine('z-index', this.zIndex);
       }
       css += this.getNewStyleLine('left', this.position.x);
@@ -1395,7 +1396,7 @@
   PositionableElement.prototype.getData = function() {
     var text = '', rotation = this.getRoundedRotation();
     text += Math.round(this.position.x) + 'px, ' + Math.round(this.position.y) + 'px';
-    if(this.zIndex !== 0) {
+    if (this.zIndex !== null) {
       text += ', ' + this.zIndex + 'z';
     }
     text += ' | ';
@@ -1713,18 +1714,15 @@
 
   // --- Output
 
-  PositionableElementManager.prototype.getAllElementStyles = function() {
-    var styles = this.elements.map(function(el) {
+  PositionableElementManager.prototype.getElementStyles = function(elements) {
+    var styles = elements.map(function(el) {
       return el.getStyles();
     });
     return styles.join('\n\n');
   };
 
   PositionableElementManager.prototype.getFocusedElementStyles = function() {
-    var styles = this.focusedElements.map(function(el) {
-      return el.getStyles();
-    });
-    return styles.join('\n\n');
+    return this.getElementStyles(this.focusedElements);
   };
 
   PositionableElementManager.prototype.copy = function(evt) {
@@ -1737,7 +1735,7 @@
   };
 
   PositionableElementManager.prototype.save = function(evt) {
-    var styles = this.getAllElementStyles();
+    var styles = this.getElementStyles(this.elements);
     if(!styles) return;
     var link = document.createElement('a');
     link.href = 'data:text/css;base64,' + btoa(styles);
