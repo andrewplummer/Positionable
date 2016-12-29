@@ -770,6 +770,12 @@
     }
   };
 
+  PositionableElement.prototype.ensurePositioned = function() {
+    if (this.style.position === 'static') {
+      this.el.style.position = 'absolute';
+    }
+  };
+
   PositionableElement.prototype.setupEvents = function() {
     this.addEventListener('dblclick', this.dblclick.bind(this));
     this.addEventListener('mouseover', this.mouseover.bind(this));
@@ -778,6 +784,7 @@
 
   PositionableElement.prototype.getAttributes = function() {
     this.style = window.getComputedStyle(this.el);
+    this.ensurePositioned();
     this.getDimensions();
     if(this.style.backgroundImage !== 'none') {
       this.getBackgroundPosition();
@@ -1476,7 +1483,7 @@
         try {
           this.elements.push(new PositionableElement(el));
         } catch(e) {
-          // Errors can often be thrown here due to cross-origin restrictions.
+          // Errors can be thrown here due to cross-origin restrictions.
         }
       }
     }
