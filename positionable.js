@@ -494,6 +494,17 @@
   };
 
 
+  /*-------------------------] IconElement [--------------------------*/
+
+  function IconElement (parent, id, className) {
+    Element.call(this, parent, 'img', className);
+
+    this.el.src = chrome.extension.getURL('images/icons/' + id + '.svg');
+  }
+
+  IconElement.prototype = Object.create(Element.prototype);
+
+
   /*-------------------------] DraggableElement [--------------------------*/
 
 
@@ -608,9 +619,11 @@
   /*-------------------------] Handle [--------------------------*/
 
 
-  function Handle () {};
+  function Handle () {
+    DraggableElement.call(this);
+  };
 
-  Handle.prototype = new DraggableElement;
+  Handle.prototype = Object.create(DraggableElement.prototype);
 
   Handle.prototype.setup = function(target, type) {
     this.target = target;
@@ -646,6 +659,8 @@
 
 
   function RotationHandle (target) {
+    Handle.call(this);
+
     this.setup(target, 'rotate');
     this.setHover('rotate');
   };
@@ -654,7 +669,7 @@
 
   // --- Inheritance
 
-  RotationHandle.prototype = new Handle();
+  RotationHandle.prototype = Object.create(Handle.prototype);
 
   RotationHandle.prototype.dragStart = function(evt) {
     Handle.prototype.dragStart.apply(this, arguments);
@@ -680,6 +695,8 @@
   /*-------------------------] SizingHandle [--------------------------*/
 
   function SizingHandle (target, type, xProp, yProp) {
+    Handle.call(this);
+
     this.setup(target, type);
     this.setHover('resize');
     this.addClass('sizing-handle');
@@ -690,7 +707,7 @@
 
   // --- Inheritance
 
-  SizingHandle.prototype = new Handle();
+  SizingHandle.prototype = Object.create(Handle.prototype);
 
   // --- Setup
 
@@ -769,6 +786,8 @@
 
 
   function PositionableElement (el) {
+    DraggableElement.call(this);
+
     this.states = [];
     this.setupElement(el);
     this.setupEvents();
@@ -779,7 +798,7 @@
 
   // --- Inheritance
 
-  PositionableElement.prototype = new DraggableElement;
+  PositionableElement.prototype = Object.create(DraggableElement.prototype);
 
   // --- Constants
 
@@ -857,7 +876,7 @@
       left,
       this.getRotation(style)
     );
-    this.zIndex = style.zIndex === '' ? null : parseInt(style.zIndex);
+    this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
   };
 
   PositionableElement.prototype.getInitialPosition = function(side, style) {
@@ -1912,13 +1931,15 @@
 
 
   function DragSelection () {
+    DraggableElement.call(this);
+
     this.build();
     this.setupDragging();
     this.dimensions = new Rectangle();
   };
 
 
-  DragSelection.prototype = new DraggableElement;
+  DragSelection.prototype = Object.create(DraggableElement.prototype);
 
   DragSelection.prototype.build = function() {
     this.box = new Element(document.body, 'div', 'drag-selection');
@@ -1998,8 +2019,9 @@
   /*-------------------------] StatusBar [--------------------------*/
 
 
-
   function StatusBar () {
+    DraggableElement.call(this);
+
     this.build();
     this.setupDragging();
     this.getPosition();
@@ -2009,38 +2031,34 @@
 
   StatusBar.FADE_DELAY = 200;
 
-  StatusBar.POSITION_ICON  = '&#xe001;';
-  StatusBar.RESIZE_ICON    = '&#xe002;';
-  StatusBar.ROTATE_ICON    = '&#xe004;';
-  StatusBar.RESIZE_NW_ICON = '&#xe005;';
-  StatusBar.RESIZE_SE_ICON = '&#xe006;';
-  StatusBar.SETTINGS_ICON  = '&#xf013;';
-  StatusBar.BG_IMAGE_ICON  = '&#xe00b;';
-  StatusBar.Z_INDEX_ICON   = '&#xe096;';
-  StatusBar.MOUSE_ICON     = '&#xe013;';
-  StatusBar.KEYBOARD_ICON  = '&#xe012;';
-  StatusBar.POINTER_ICON   = '&#xe014;';
-  StatusBar.DOWNLOAD_ICON  = '&#xe015;';
+  StatusBar.POSITION_ICON  = 'position';
+  StatusBar.RESIZE_ICON    = 'resize';
+  StatusBar.ROTATE_ICON    = 'rotate';
+  StatusBar.RESIZE_NW_ICON = 'resize-nw';
+  StatusBar.RESIZE_SE_ICON = 'resize-se';
+  StatusBar.SETTINGS_ICON  = 'settings';
+  StatusBar.BG_IMAGE_ICON  = 'background';
+  StatusBar.Z_INDEX_ICON   = 'layer';
+  StatusBar.MOUSE_ICON     = 'mouse';
+  StatusBar.KEYBOARD_ICON  = 'keyboard';
+  StatusBar.POINTER_ICON   = 'pointer';
+  StatusBar.DOWNLOAD_ICON  = 'download';
 
-  StatusBar.ALIGN_TOP_ICON        = '&#xe018;';
-  StatusBar.ALIGN_HORIZONTAL_ICON = '&#xe016;';
-  StatusBar.ALIGN_BOTTOM_ICON     = '&#xe01a;';
-  StatusBar.ALIGN_LEFT_ICON       = '&#xe019;';
-  StatusBar.ALIGN_VERTICAL_ICON   = '&#xe011;';
-  StatusBar.ALIGN_RIGHT_ICON      = '&#xe017;';
+  StatusBar.ALIGN_TOP_ICON        = 'align-top';
+  StatusBar.ALIGN_LEFT_ICON       = 'align-left';
+  StatusBar.ALIGN_RIGHT_ICON      = 'align-right';
+  StatusBar.ALIGN_BOTTOM_ICON     = 'align-bottom';
+  StatusBar.ALIGN_VERTICAL_ICON   = 'align-vcenter';
+  StatusBar.ALIGN_HORIZONTAL_ICON = 'align-hcenter';
 
-  StatusBar.DISTRIBUTE_TOP_ICON        = '&#xe00c;';
-  StatusBar.DISTRIBUTE_HORIZONTAL_ICON = '&#xe000;';
-  StatusBar.DISTRIBUTE_BOTTOM_ICON     = '&#xe00f;';
-  StatusBar.DISTRIBUTE_LEFT_ICON       = '&#xe00e;';
-  StatusBar.DISTRIBUTE_VERTICAL_ICON   = '&#xe003;';
-  StatusBar.DISTRIBUTE_RIGHT_ICON      = '&#xe010;';
+  StatusBar.DISTRIBUTE_TOP_ICON        = 'distribute-top';
+  StatusBar.DISTRIBUTE_LEFT_ICON       = 'distribute-left';
+  StatusBar.DISTRIBUTE_RIGHT_ICON      = 'distribute-right';
+  StatusBar.DISTRIBUTE_BOTTOM_ICON     = 'distribute-bottom';
+  StatusBar.DISTRIBUTE_VERTICAL_ICON   = 'distribute-vcenter';
+  StatusBar.DISTRIBUTE_HORIZONTAL_ICON = 'distribute-hcenter';
 
-  StatusBar.LEFT_ARROW_ICON       = '&#xe00d;';
-  StatusBar.UP_LEFT_ARROW_ICON    = '&#xe008;';
-  StatusBar.UP_RIGHT_ARROW_ICON   = '&#xe007;';
-  StatusBar.DOWN_RIGHT_ARROW_ICON = '&#xe009;';
-  StatusBar.DOWN_LEFT_ARROW_ICON  = '&#xe00a;';
+  StatusBar.ARROW_KEY_ICON = 'arrow-key';
 
   StatusBar.SHIFT   = '\u21e7';
   StatusBar.CTRL    = '\u2303';
@@ -2049,7 +2067,7 @@
 
   // --- Inheritance
 
-  StatusBar.prototype = new DraggableElement;
+  StatusBar.prototype = Object.create(DraggableElement.prototype);
 
   // --- Setup
 
@@ -2079,8 +2097,8 @@
     this.resetArea();
   };
 
-  StatusBar.prototype.buildButton = function(icon, area) {
-    var button = new Element(this.el, 'div', 'icon ' + area.name +'-button').html(icon);
+  StatusBar.prototype.buildButton = function(iconId, area) {
+    var button = new IconElement(this.el, iconId, area.name + '-button');
     button.addEventListener('click', this.toggleArea.bind(this, area));
   };
 
@@ -2096,7 +2114,7 @@
 
   StatusBar.prototype.buildStartArea = function(area) {
     this.buildStartBlock('mouse', function(block) {
-      new Element(block.el, 'div', 'icon start-icon').html(StatusBar.MOUSE_ICON);
+      new IconElement(block.el, StatusBar.MOUSE_ICON, 'start-icon');
       new Element(block.el, 'div', 'start-help-text').html('Use the mouse to drag, resize, and rotate elements.');
     });
 
@@ -2106,14 +2124,13 @@
       var mKey = this.buildInlineKeyIcon('m');
       var text = 'Arrow keys nudge elements.<br>'+ bKey + sKey + mKey +' change nudge modes.';
 
-      new Element(block.el, 'div', 'icon start-icon').html(StatusBar.KEYBOARD_ICON);
+      new IconElement(block.el, StatusBar.KEYBOARD_ICON, 'start-icon');
       new Element(block.el, 'div', 'start-help-text').html(text);
 
     });
 
     this.buildStartBlock('sprites', function(block) {
-      new Element(block.el, 'div', 'icon start-icon').html(StatusBar.BG_IMAGE_ICON);
-      new Element(block.el, 'div', 'icon start-pointer-icon').html(StatusBar.POINTER_ICON);
+      new IconElement(block.el, StatusBar.BG_IMAGE_ICON, 'start-icon');
       new Element(block.el, 'div', 'start-help-text').html('Double click on a background image to fit sprite dimensions.');
     });
 
@@ -2124,12 +2141,12 @@
       var sKey = this.buildInlineKeyIcon('s');
       var text = cmdKey + cKey + ' Copy styles to clipboard<br>' + cmdKey + sKey +' Save styles to disk';
 
-      new Element(block.el, 'div', 'icon start-icon').html(StatusBar.DOWNLOAD_ICON);
+      new IconElement(block.el, StatusBar.DOWNLOAD_ICON, 'start-icon');
       new Element(block.el, 'div', 'start-help-text start-help-text-left').html(text);
     });
 
-    new Element(this.startArea.el, 'div', 'icon start-horizontal-line');
-    new Element(this.startArea.el, 'div', 'icon start-vertical-line');
+    new Element(this.startArea.el, 'div', 'start-horizontal-line');
+    new Element(this.startArea.el, 'div', 'start-vertical-line');
 
     var hide = new Element(this.startArea.el, 'span', 'start-hide-link').html("Don't Show");
     hide.addEventListener('click', this.skipStartArea.bind(this));
@@ -2146,7 +2163,7 @@
   };
 
   StatusBar.prototype.buildQuickStartArea = function(area) {
-    new Element(area.el, 'div', 'icon quickstart-icon').html(StatusBar.POINTER_ICON);
+    new IconElement(area.el, StatusBar.POINTER_ICON, 'quickstart-icon');
     new Element(area.el, 'div', 'quickstart-text').html('Select Element');
   };
 
@@ -2158,7 +2175,8 @@
     var keyboardHelp = this.buildHelpBlock('keys', 'Keyboard');
 
     this.buildHelpBox(keyboardHelp.el, 'arrow', function(box, text) {
-      new Element(box.el, 'div', 'icon key-icon arrow-key-icon left-key-icon').html(StatusBar.LEFT_ARROW_ICON);
+      var box = new Element(box.el, 'div', 'key-icon');
+      new IconElement(box.el, StatusBar.ARROW_KEY_ICON, 'arrow-key-icon');
       text.html('Use the arrow keys to nudge the element.');
     });
 
@@ -2209,16 +2227,20 @@
 
     this.buildHelpBox(mouseHelp.el, 'position', function(box, text) {
       new Element(box.el, 'div', 'help-element');
-      new Element(box.el, 'div', 'icon help-icon position-help-icon').html(StatusBar.POSITION_ICON);
+      new IconElement(box.el, StatusBar.POSITION_ICON, 'help-icon position-help-icon');
       text.html('Drag the middle of the element to move it around.');
     });
     this.buildHelpBox(mouseHelp.el, 'resize', function(box, text) {
       new Element(box.el, 'div', 'help-element');
-      new Element(box.el, 'div', 'icon help-icon resize-help-icon resize-nw-help-icon').html(StatusBar.UP_LEFT_ARROW_ICON);
-      new Element(box.el, 'div', 'icon help-icon resize-help-icon resize-ne-help-icon').html(StatusBar.UP_RIGHT_ARROW_ICON);
-      new Element(box.el, 'div', 'icon help-icon resize-help-icon resize-se-help-icon').html(StatusBar.DOWN_RIGHT_ARROW_ICON);
-      new Element(box.el, 'div', 'icon help-icon resize-help-icon resize-sw-help-icon').html(StatusBar.DOWN_LEFT_ARROW_ICON);
-      text.html('Drag element handles to resize.');
+      new Element(box.el, 'div', 'resize-help-icon resize-nw-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-n-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-ne-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-e-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-se-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-s-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-sw-help-icon');
+      new Element(box.el, 'div', 'resize-help-icon resize-w-help-icon');
+      text.html('Drag border handles to resize.');
     });
 
     this.buildHelpBox(mouseHelp.el, 'rotate', function(box, text) {
@@ -2229,14 +2251,14 @@
 
     this.buildHelpBox(mouseHelp.el, 'snapping', function(box, text) {
       new Element(box.el, 'div', 'help-element');
-      new Element(box.el, 'div', 'icon help-icon snapping-help-icon').html(StatusBar.BG_IMAGE_ICON);
-      new Element(box.el, 'div', 'icon help-icon snapping-nw-help-icon').html(StatusBar.UP_LEFT_ARROW_ICON);
+      new IconElement(box.el, StatusBar.BG_IMAGE_ICON, 'help-icon snapping-help-icon');
+      new IconElement(box.el, StatusBar.POINTER_ICON, 'help-icon snapping-help-pointer-icon');
       text.html('Double click to snap element dimensions to a background sprite.');
     });
 
     this.buildHelpBox(mouseHelp.el, 'aligning', function(box, text) {
       new Element(box.el, 'div', 'help-element multiple-select-help');
-      new Element(box.el, 'div', 'icon help-icon aligning-pointer-icon').html(StatusBar.POINTER_ICON);
+      new IconElement(box.el, StatusBar.POINTER_ICON, 'help-icon aligning-pointer-icon');
       new Element(box.el, 'div', 'icon help-icon aligning-box-one');
       new Element(box.el, 'div', 'icon help-icon aligning-box-two');
       text.html('Drag to select multiple elements.');
@@ -2329,15 +2351,15 @@
 
   };
 
-  StatusBar.prototype.buildElementAlign = function(type, icon, title) {
+  StatusBar.prototype.buildElementAlign = function(type, iconId, title) {
     var method = type === 'horizontal' || type === 'vertical' ? 'alignMiddle' : 'alignFocused';
-    var action = new Element(this.elementActions.el, 'span', 'icon element-action element-align-' + type).html(icon);
+    var action = new IconElement(this.elementActions.el, iconId, 'element-action');
     action.el.title = title;
     action.addEventListener('click', this.delegateElementAction(method, type));
   };
 
-  StatusBar.prototype.buildElementDistribute = function(type, icon, title) {
-    var action = new Element(this.elementActions.el, 'span', 'icon element-action element-distribute-' + type).html(icon);
+  StatusBar.prototype.buildElementDistribute = function(type, iconId, title) {
+    var action = new IconElement(this.elementActions.el, iconId, 'element-action');
     action.el.title = title;
     action.addEventListener('click', this.delegateElementAction('alignFocused', type, true));
   };
@@ -2364,7 +2386,7 @@
       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
       [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
-      [Settings.SELECTOR_TAG_NTH, 'Tag + nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
+      [Settings.SELECTOR_TAG_NTH, 'Tag:nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
     ]);
 
     this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
@@ -2452,10 +2474,10 @@
     }
   }
 
-  StatusBar.prototype.createState = function(name, text, icon) {
+  StatusBar.prototype.createState = function(name, text, iconId) {
     var state = new Element(this.elementStates.el, 'div', 'element-state ' + name + '-state');
     state.name = name;
-    new Element(state.el, 'div', 'icon element-state-icon').html(icon);
+    new IconElement(state.el, iconId, 'element-state-icon');
     new Element(state.el, 'p', 'element-state-text').html(text);
     this.stateIcons.push(state);
   };
@@ -2777,7 +2799,7 @@
 
   // --- Inheritance
 
-  LoadingAnimation.prototype = new Animation();
+  LoadingAnimation.prototype = Object.create(Animation.prototype);
 
   // --- Constants
 
@@ -2833,7 +2855,7 @@
 
   // --- Inheritance
 
-  CopyAnimation.prototype = new Animation();
+  CopyAnimation.prototype = Object.create(Animation.prototype);
 
   // --- Constants
 
