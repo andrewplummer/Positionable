@@ -17,7 +17,11 @@
     return typeof el.className.baseVal === 'string' ? el.className.baseVal : el.className;
   }
 
-  function round(n) {
+  function round(n, precision) {
+    if (precision) {
+      var mult = Math.pow(10, precision);
+      return Math.round(n * mult) / mult;
+    }
     return Math.round(n);
   }
 
@@ -64,11 +68,15 @@
     this.checkNextNudge = this.checkNextNudge.bind(this);
   };
 
+  NudgeManager.DELAY_TO_SLOW = 250;
+  NudgeManager.DELAY_TO_MID  = 1500;
+  NudgeManager.DELAY_TO_FAST = 3000;
+
+  NudgeManager.REPEAT_SLOW      = 20;
+  NudgeManager.REPEAT_MID       = 10;
+  NudgeManager.REPEAT_FAST      = 5;
+
   NudgeManager.SHIFT_MULTIPLIER = 5;
-  NudgeManager.INITIAL_DELAY    = 250;
-  NudgeManager.SLOW_REPEAT      = 20;
-  NudgeManager.MED_REPEAT       = 10;
-  NudgeManager.FAST_REPEAT      = 5;
 
   NudgeManager.POSITION_MODE    = 'position';
   NudgeManager.RESIZE_NW_MODE   = 'resize-nw';
@@ -116,25 +124,18 @@
 
   // --- Actions
 
-  NudgeManager.prototype.begin = function() {
-    this.resizeOffset = new Point(0, 0);
-    elementManager.pushState();
-    if (this.isResizeMode()) {
-      elementManager.resizeStart(this.getSizingHandle());
-    }
-  };
-
   NudgeManager.prototype.dispatchNudge = function(vector) {
     if (this.isBackgroundMode()) {
-      elementManager.moveBackgroundPosition(vector);
+      elementManager.incrementBackgroundPosition(vector);
     } else if (this.isResizeMode()) {
       this.resizeOffset = this.resizeOffset.add(vector);
       elementManager.resize(this.resizeOffset, this.getSizingHandle());
     } else if (this.isZIndexMode()) {
-      elementManager.moveZIndex(vector);
+      elementManager.incrementZIndex(vector);
     } else {
-      elementManager.movePosition(vector);
+      elementManager.incrementPosition(vector);
     }
+    statusBar.update();
   };
 
   NudgeManager.prototype.addDirection = function(dir) {
@@ -152,6 +153,15 @@
     }
   };
 
+  NudgeManager.prototype.begin = function() {
+    this.startTime = new Date();
+    this.resizeOffset = new Point(0, 0);
+    elementManager.pushState();
+    if (this.isResizeMode()) {
+      elementManager.resizeStart(this.getSizingHandle());
+    }
+  };
+
   NudgeManager.prototype.next = function() {
     if (this.timer) return;
     var nudgeX = 0, nudgeY = 0, mult = this.getMultiplier();
@@ -166,7 +176,6 @@
       nudgeX = 1;
     }
     this.dispatchNudge(new Point(nudgeX * mult, nudgeY * mult));
-    this.count++;
     this.timer = setTimeout(this.checkNextNudge, this.getDelay());
   };
 
@@ -178,19 +187,19 @@
   };
 
   NudgeManager.prototype.reset = function() {
-    this.count = 0;
     this.timer = clearTimeout(this.timer);
   };
 
   NudgeManager.prototype.getDelay = function() {
-    if (this.count <= 1 && !this.multiplier) {
-      return NudgeManager.INITIAL_DELAY;
-    } else if (this.count > 200) {
-      return NudgeManager.FAST_REPEAT;
-    } else if (this.count > 50) {
-      return NudgeManager.MED_REPEAT;
+    var ms = new Date() - this.startTime;
+    if (ms >= NudgeManager.DELAY_TO_FAST) {
+      return NudgeManager.REPEAT_FAST;
+    } else if (ms >= NudgeManager.DELAY_TO_MID) {
+      return NudgeManager.REPEAT_MID;
+    } else if (ms >= NudgeManager.DELAY_TO_SLOW) {
+      return NudgeManager.REPEAT_SLOW;
     } else {
-      return NudgeManager.SLOW_REPEAT;
+      return NudgeManager.DELAY_TO_SLOW;
     }
   };
 
@@ -201,7 +210,7 @@
   };
 
   NudgeManager.prototype.isNudging = function() {
-    return this.up || this.down || this.left || this.right;
+    return !!(this.up || this.down || this.left || this.right);
   };
 
   // --- Multiplier
@@ -220,8 +229,7 @@
 
 
   function EventManager () {
-    this.handledKeyCodes = [];
-    this.handledKeyNames = [];
+    this.handledKeys = {};
     this.setupHandlers();
   };
 
@@ -282,8 +290,8 @@
   };
 
   EventManager.prototype.setupKey = function(name) {
-    this.handledKeyNames.push(name);
-    this.handledKeyCodes.push(EventManager[name.toUpperCase()]);
+    var code = EventManager[name.toUpperCase()];
+    this.handledKeys[code] = name;
   };
 
   EventManager.prototype.handleKeyDown = function(evt) {
@@ -295,9 +303,9 @@
   };
 
   EventManager.prototype.checkKeyEvent = function(type, evt) {
-    var code = evt.keyCode, index = this.handledKeyCodes.indexOf(code), name, fn;
-    if (index !== -1) {
-      name = this.isArrowKey(code) ? 'arrow' : this.handledKeyNames[index];
+    var code = evt.keyCode, name, fn;
+    var name = this.getKeyName(code);
+    if (name) {
       fn = this[name + type];
       if (fn) {
         evt.preventDefault();
@@ -306,6 +314,10 @@
         this[name + type].call(this, evt);
       }
     }
+  };
+
+  EventManager.prototype.getKeyName = function(code) {
+    return this.isArrowKey(code) ? 'arrow' : this.handledKeys[code];
   };
 
   EventManager.prototype.isArrowKey = function(code) {
@@ -398,7 +410,6 @@
 
   EventManager.prototype.arrowKeyDown = function(evt) {
     nudgeManager.addDirection(this.getArrowName(evt.keyCode));
-    statusBar.update();
   };
 
   EventManager.prototype.arrowKeyUp = function(evt) {
@@ -486,6 +497,11 @@
 
   Element.prototype.html = function(html) {
     this.el.innerHTML = html;
+    return this;
+  };
+
+  Element.prototype.title = function(title) {
+    this.el.title = title;
     return this;
   };
 
@@ -685,7 +701,7 @@
     var deg    = new Point(deltaX, deltaY).getAngle() - new Point(w, h).getAngle();
     if (deg < 0) deg += 360;
     if (this.isConstrained(evt)) {
-      deg = Math.round(deg / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
+      deg = round(deg / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
     }
     elementManager.setRotation(deg - this.target.getLastRotation());
     statusBar.update();
@@ -767,11 +783,12 @@
   // --- Calculations
 
   SizingHandle.prototype.getCoords = function() {
-    return new Point(this.target.dimensions[this.xProp], this.target.dimensions[this.yProp]);
+    return new Point(this.target.dimensions[this.xProp].px, this.target.dimensions[this.yProp].px);
   };
 
   SizingHandle.prototype.getPosition = function() {
-    return this.target.dimensions.getPositionForCoords(this.getCoords()).add(this.target.getPositionOffset());
+    console.info('umm', this.target);
+    return this.target.dimensions.getCoordsForPosition(this.getCoords()).add(this.target.getPositionOffset());
   };
 
   SizingHandle.prototype.offsetToCenter = function(x, y) {
@@ -791,8 +808,8 @@
     this.states = [];
     this.setupElement(el);
     this.setupEvents();
-    this.getAttributes();
-    this.getPositionedParents();
+    this.setupAttributes();
+    this.setupParents();
     this.createHandles();
   };
 
@@ -831,7 +848,7 @@
     this.w.destroy();
   };
 
-  PositionableElement.prototype.getPositionedParents = function() {
+  PositionableElement.prototype.setupParents = function() {
     var el = this.el, style;
     this.positionedParents = [];
     while(el = el.offsetParent) {
@@ -843,7 +860,8 @@
   };
 
   PositionableElement.prototype.ensurePositioned = function() {
-    if (this.style.position === 'static') {
+    var style = this.getComputedStyle();
+    if (style.position === 'static') {
       this.el.style.position = 'absolute';
     }
   };
@@ -854,60 +872,135 @@
     this.addEventListener('contextmenu', this.contextmenu.bind(this));
   };
 
-  PositionableElement.prototype.getAttributes = function() {
-    this.style = window.getComputedStyle(this.el);
+  PositionableElement.prototype.setupAttributes = function() {
+    var rules, style;
+
+    // Ensure positioning first to make sure the rules are up to date.
     this.ensurePositioned();
-    this.getDimensions(this.style);
-    if (this.style.backgroundImage !== 'none') {
-      this.getBackgroundAttributes(this.style);
+
+    // TODO: remove reference to allow garbage collection
+    style = this.getComputedStyle();
+    rules = this.getCSSRules();
+
+    this.getDimensions(rules, style);
+
+    if (style.backgroundImage !== 'none') {
+      this.getBackgroundAttributes(style);
     }
   };
 
-  PositionableElement.prototype.getDimensions = function(style) {
-    var left = this.getInitialPosition('Left', style);
-    var top = this.getInitialPosition('Top', style);
-    var width  = this.getNumericValue(style.width);
-    var height = this.getNumericValue(style.height);
-    this.position = new Point(left, top);
-    this.dimensions = new Rectangle(
-      top,
-      left + width,
-      top + height,
-      left,
-      this.getRotation(style)
-    );
-    this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
+  PositionableElement.prototype.getComputedStyle = function() {
+    return window.getComputedStyle(this.el);
   };
 
-  PositionableElement.prototype.getInitialPosition = function(side, style) {
-    var computed = style[side.toLowerCase()];
-    if (computed !== 'auto') {
+  PositionableElement.prototype.getCSSRules = function() {
+    try {
+      return window.getMatchedCSSRules(this.el);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  PositionableElement.prototype.getDimensions = function(rules, style) {
+    //this.position = new CSSPoint(left, top);
+    this.dimensions = new CSSBox(
+      this.getInitialPosition(rules, style, 'Left'),
+      this.getInitialPosition(rules, style, 'Top'),
+      this.getCSSValue(rules, style, 'width', 'px'),
+      this.getCSSValue(rules, style, 'height', 'px'),
+      // not "length"?
+      this.getCSSValue(rules, style, 'zIndex'),
+      this.getRotation(rules, style)
+    );
+    //this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
+  };
+
+  PositionableElement.prototype.getInitialPosition = function(rules, style, prop, autoUnit) {
+
+    var side = this.getCSSValue(rules, style, prop.toLowerCase(), 'px');
+
+    if (!side.isAuto()) {
       // If the element is already explictly positioned, then
       // trust those values first as they are the ones that will
       // be directly manipulated.
-      return this.getNumericValue(computed);
+      return side;
     }
-    return this.el['offset' + side] -
-           this.getNumericValue(style['margin' + side]) -
-           this.getNumericValue(style['padding' + side]) -
-           this.getNumericValue(style['border' + side + 'Width']);
+
+    var px = this.el['offset' + prop] -
+             CSSValue.parseValue(style['margin' + prop]) -
+             CSSValue.parseValue(style['padding' + prop]) -
+             CSSValue.parseValue(style['border' + prop + 'Width']);
+
+    return new CSSValue(px, autoUnit);
   }
+
+  // TODO: getCSSValue?
+  PositionableElement.prototype.getCSSValue = function(rules, style, prop, unit) {
+    var val;
+
+    function getProp(style, computed) {
+      if (typeof prop === 'function') {
+        return prop.call(this, style, computed);
+      } else {
+        return style[prop];
+      }
+    }
+
+    if (rules) {
+      for (var rules, i = rules.length - 1; rule = rules[i]; i--) {
+        val = getProp.call(this, rule.style, false);
+        if (val) {
+          break;
+        }
+      }
+    }
+
+    // Fall back to computed values.
+    if (!val) {
+      val = getProp.call(this, style, true);
+    }
+
+    return typeof val === 'number' ? new CSSValue(val, unit) : CSSValue.fromString(val, unit);
+  };
 
   PositionableElement.prototype.getNumericValue = function(val) {
     val = parseFloat(val);
     return isNaN(val) ? 0 : val;
   };
 
-  PositionableElement.prototype.getRotation = function(style) {
-    var matrix, match, a, b;
-    matrix = style.webkitTransform || style.transform;
-    match  = matrix.match(/[-.\d]+/g);
+  PositionableElement.prototype.getRotationComputed = function(matrix) {
+    var match = matrix.match(/[-.\d]+/g);
     if (match) {
       a = parseFloat(match[0]);
       b = parseFloat(match[1]);
       return new Point(a, b).getAngle();
     }
     return 0;
+  };
+
+  PositionableElement.prototype.getRotationStylesheet = function(transform) {
+    var match = transform && transform.match(/rotateZ\(([\d.]+)\s*(deg|rad|turn)\)?/i);
+    if (match) {
+      var val  = parseFloat(match[1]);
+      var unit = parseFloat(match[2]);
+      if (unit === 'rad') {
+        val = Point.radToDeg(val);
+      } else if (unit === 'turn') {
+        val *= 360;
+      };
+      return val;
+    }
+    return 0;
+  };
+
+  PositionableElement.prototype.unpackRotation = function(style, computed) {
+    var transform = style.webkitTransform || style.transform;
+    return computed ? this.getRotationComputed(transform) : this.getRotationStylesheet(transform);
+  };
+
+  PositionableElement.prototype.getRotation = function(rules, style) {
+    var matrix, match, a, b;
+    return this.getCSSValue(rules, style, this.unpackRotation, 'deg');
   };
 
   PositionableElement.prototype.getBackgroundPosition = function() {
@@ -1057,8 +1150,8 @@
     if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
-    dimensions.add(handle.xProp, vector.x);
-    dimensions.add(handle.yProp, vector.y);
+    dimensions.adjustSide(handle.xProp, vector.x);
+    dimensions.adjustSide(handle.yProp, vector.y);
     if (constrained) {
       handle.applyConstraint(dimensions, lastAspectRatio);
     }
@@ -1107,19 +1200,21 @@
   };
 
   PositionableElement.prototype.positionDrag = function(evt) {
-    this.setPosition(this.applyPositionDrag(evt, this.getLastState().position));
+    var drag = this.applyPositionDrag(evt, this.getLastState().dimensions.position);
+    this.dimensions.setPosition(drag);
+    this.updatePosition();
     statusBar.update();
   };
 
-  PositionableElement.prototype.applyPositionDrag = function(evt, point) {
-    var delta  = evt.dragOffset, offset = point.add(delta), absX, absY;
+  PositionableElement.prototype.applyPositionDrag = function(evt, origin) {
+    var delta = evt.dragOffset, offset = origin.add(delta), absX, absY;
     if (this.isConstrained(evt)) {
       absX = Math.abs(delta.x);
       absY = Math.abs(delta.y);
       if (absX < absY) {
-        offset.x = point.x;
+        offset.x = origin.x;
       } else {
-        offset.y = point.y;
+        offset.y = origin.y;
       }
     }
     return offset;
@@ -1130,8 +1225,8 @@
 
   PositionableElement.prototype.pushState = function() {
     this.states.push({
-      zIndex: this.zIndex,
-      position: this.position.clone(),
+      //zIndex: this.zIndex,
+      //position: this.position.clone(),
       dimensions: this.dimensions.clone(),
       backgroundPosition: this.backgroundPosition ? this.backgroundPosition.clone() : null
     });
@@ -1195,13 +1290,14 @@
     this.updateBackgroundPosition();
   };
 
+  // TODO: remove?
   PositionableElement.prototype.setPosition = function(point) {
     this.position = point;
     this.dimensions.setPosition(point);
     this.updatePosition();
   };
 
-  PositionableElement.prototype.moveBackgroundPosition = function(vector) {
+  PositionableElement.prototype.incrementBackgroundPosition = function(vector) {
     if (!this.backgroundPosition) return;
     if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
@@ -1209,17 +1305,19 @@
     this.setBackgroundPosition(this.backgroundPosition.add(vector));
   };
 
-  PositionableElement.prototype.movePosition = function(vector) {
-    this.setPosition(this.position.add(vector));
+  PositionableElement.prototype.incrementPosition = function(vector) {
+    this.dimensions.incrementPosition(vector);
+    this.updatePosition();
+    //this.setPosition(this.position.add(vector));
     this.checkScrollBounds();
   };
 
-  PositionableElement.prototype.moveZIndex = function(vector) {
+  PositionableElement.prototype.incrementZIndex = function(vector) {
     // Positive Y is actually down, so decrement here.
     if (vector.x > 0 || vector.y < 0) {
-      this.zIndex++;
+      this.dimensions.zIndex.increment(1);
     } else if (vector.x < 0 || vector.y > 0) {
-      this.zIndex--;
+      this.dimensions.zIndex.increment(-1);
     }
     this.updateZIndex();
   };
@@ -1235,13 +1333,13 @@
   };
 
   PositionableElement.prototype.updatePosition = function() {
-    this.el.style.left = this.position.x + 'px';
-    this.el.style.top  = this.position.y + 'px';
+    this.el.style.left = this.dimensions.cssLeft;
+    this.el.style.top  = this.dimensions.cssTop;
   };
 
   PositionableElement.prototype.updateSize = function(size) {
-    this.el.style.width  = this.dimensions.getWidth() + 'px';
-    this.el.style.height = this.dimensions.getHeight() + 'px';
+    this.el.style.width  = this.dimensions.cssWidth;
+    this.el.style.height = this.dimensions.cssHeight;
   };
 
   PositionableElement.prototype.updateRotation = function() {
@@ -1258,7 +1356,7 @@
   };
 
   PositionableElement.prototype.updateZIndex = function() {
-    this.el.style.zIndex = this.zIndex;
+    this.el.style.zIndex = this.dimensions.zIndex;
   };
 
 
@@ -1281,7 +1379,7 @@
   PositionableElement.prototype.getPositionOffset = function() {
     // The offset between the element's position and it's actual
     // rectangle's left/top coordinates, which can sometimes differ.
-    return this.position.subtract(new Point(this.dimensions.left, this.dimensions.top));
+    return this.dimensions.position.subtract(new Point(this.dimensions.left.px, this.dimensions.top.px));
   };
 
   PositionableElement.prototype.getPositionFromRotatedHandle = function(anchor) {
@@ -1312,15 +1410,13 @@
   };
 
   PositionableElement.prototype.getAbsoluteDimensions = function() {
-    var el = this.el;
-    var dim = this.dimensions.clone();
-    while(el = el.offsetParent) {
-      dim.top += el.offsetTop;
-      dim.left += el.offsetLeft;
-    }
-    dim.bottom += dim.top - this.dimensions.top;
-    dim.right += dim.left - this.dimensions.left;
-    return dim;
+    var rect = this.el.getBoundingClientRect();
+    return new Rectangle(
+      rect.top + window.scrollY,
+      rect.right,
+      rect.bottom,
+      rect.left + window.scrollX
+    );
   };
 
   PositionableElement.prototype.getEdgeValue = function(side) {
@@ -1565,21 +1661,6 @@
     return this.style.position !== 'static';
   };
 
-  PositionableElement.prototype.getData = function() {
-    var text = '', rotation = this.getRoundedRotation();
-    text += Math.round(this.position.x) + 'px, ' + Math.round(this.position.y) + 'px';
-    if (this.zIndex !== null) {
-      text += ', ' + this.zIndex + 'z';
-    }
-    text += ' | ';
-    text += this.dimensions.getWidth(true) + 'w, ' + this.dimensions.getHeight(true) + 'h';
-    if (rotation) {
-      text += ' | ';
-      text += rotation + 'deg';
-    }
-    return text;
-  };
-
 
   /*-------------------------] PositionableElementManager [--------------------------*/
 
@@ -1616,9 +1697,9 @@
     this.delegateToFocused('backgroundDrag');
 
     // Nudging
-    this.delegateToFocused('movePosition');
-    this.delegateToFocused('moveBackgroundPosition');
-    this.delegateToFocused('moveZIndex');
+    this.delegateToFocused('incrementPosition');
+    this.delegateToFocused('incrementBackgroundPosition');
+    this.delegateToFocused('incrementZIndex');
 
     // Resizing
     this.delegateToFocused('resize');
@@ -1643,18 +1724,20 @@
     this.excludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
 
     try {
-      els = document.body.querySelectorAll(this.includeSelector || '*');
+      var query = this.includeSelector || '*';
+      query += ':not([class*="'+ EXTENSION_CLASS_PREFIX +'"])';
+      els = document.body.querySelectorAll(query);
     } catch(e) {
       console.error(e.message);
     }
 
     for(var i = 0, el; el = els[i]; i++) {
       if (this.elementIsIncluded(el)) {
-        try {
+        //try {
           this.elements.push(new PositionableElement(el));
-        } catch(e) {
+        //} catch(e) {
           // Errors can be thrown here due to cross-origin restrictions.
-        }
+        //}
       }
     }
     loadingAnimation.hide(this.finishBuild.bind(this));
@@ -2322,7 +2405,19 @@
 
     this.singleElementArea = new Element(area.el, 'div', 'single-element-area');
     this.elementHeader     = new Element(this.singleElementArea.el, 'h3', 'single-header');
-    this.elementData       = new Element(this.singleElementArea.el, 'div', 'single-data');
+
+    this.elementDetails  = new Element(this.singleElementArea.el, 'div', 'details');
+    this.detailsLeft     = new Element(this.elementDetails.el, 'span').title('Left');
+    this.detailsComma1   = new Element(this.elementDetails.el, 'span').html(', ');
+    this.detailsTop      = new Element(this.elementDetails.el, 'span').title('Top');
+    this.detailsComma2   = new Element(this.elementDetails.el, 'span').html(', ');
+    this.detailsZIndex   = new Element(this.elementDetails.el, 'span').title('Z-Index');
+    this.detailsDivider1 = new Element(this.elementDetails.el, 'span').html(' | ');
+    this.detailsWidth    = new Element(this.elementDetails.el, 'span').title('Width');
+    this.detailsComma3   = new Element(this.elementDetails.el, 'span').html(', ');
+    this.detailsHeight   = new Element(this.elementDetails.el, 'span').title('Height');
+    this.detailsDivider2 = new Element(this.elementDetails.el, 'span').html(' | ');
+    this.detailsRotation = new Element(this.elementDetails.el, 'span').title('Rotation');
 
     this.multipleElementArea   = new Element(area.el, 'div', 'multiple-element-area');
     this.multipleElementHeader = new Element(this.multipleElementArea.el, 'h3', 'multiple-header');
@@ -2656,8 +2751,30 @@
     this.elementHeader.el.title = str;
   };
 
-  StatusBar.prototype.setElementData = function(str) {
-    this.elementData.html(str);
+  StatusBar.prototype.setElementDetails = function(el) {
+    this.detailsLeft.html(el.dimensions.left);
+    this.detailsTop.html(el.dimensions.top);
+
+    if (el.dimensions.cssZIndex.isAuto()) {
+      this.detailsZIndex.hide();
+      this.detailsComma2.hide();
+    } else {
+      this.detailsZIndex.html(el.dimensions.zIndex);
+      this.detailsZIndex.show(false);
+      this.detailsComma2.show(false);
+    }
+
+    this.detailsWidth.html(el.dimensions.width);
+    this.detailsHeight.html(el.dimensions.height);
+
+    var rotation = el.getRoundedRotation();
+    if (rotation) {
+      this.detailsRotation.html(rotation + 'deg');
+      this.detailsDivider2.show(false);
+    } else {
+      this.detailsDivider2.hide();
+    }
+
   };
 
   StatusBar.prototype.setMultipleText = function(str) {
@@ -2680,7 +2797,7 @@
 
   StatusBar.prototype.setSingle = function(el) {
     this.setSelectorText(el.getSelector());
-    this.setElementData(el.getData());
+    this.setElementDetails(el);
     this.singleElementArea.show();
     this.multipleElementArea.hide();
   };
@@ -3066,7 +3183,7 @@
   };
 
   Point.prototype.round = function() {
-    return new Point(Math.round(this.x), Math.round(this.y));
+    return new Point(round(this.x), round(this.y));
   };
 
 
@@ -3137,6 +3254,221 @@
 
   Rectangle.prototype.clone = function() {
     return new Rectangle(this.top, this.right, this.bottom, this.left, this.rotation);
+  };
+
+  /*-------------------------] CSSPoint [--------------------------*/
+
+  function CSSPoint (left, top) {
+    this.point = new Point(left.px, top.px);
+  }
+
+  /*-------------------------] CSSBox [--------------------------*/
+
+  // TODO: can this supersede rectangle?
+  function CSSBox (cssLeft, cssTop, cssWidth, cssHeight, cssZIndex, cssRotation) {
+    this.cssLeft     = cssLeft;
+    this.cssTop      = cssTop;
+    this.cssWidth    = cssWidth;
+    this.cssHeight   = cssHeight;
+    this.cssZIndex   = cssZIndex;
+    this.cssRotation = cssRotation;
+  }
+
+  function setupCSSAccessors(klass, props) {
+    props.forEach(function(prop) {
+      var cssProp = 'css' + prop.charAt(0).toUpperCase() + prop.slice(1);
+      Object.defineProperty(klass, prop, {
+
+        get: function() {
+          return this[cssProp].px;
+        },
+
+        set: function(val) {
+          this[cssProp].px = val;
+        }
+
+      });
+    });
+  }
+
+  setupCSSAccessors(CSSBox, ['left', 'top', 'width', 'height', 'zIndex', 'rotation']);
+
+  CSSBox.prototype = {
+
+    get right () {
+      return this.left + this.width;
+    },
+
+    set right (val) {
+      this.width = val - this.left;
+    },
+
+    get bottom () {
+      return this.top + this.height;
+    },
+
+    set bottom (val) {
+      this.height = val - this.top;
+    },
+
+    get position () {
+      return new Point(this.left, this.top);
+    },
+
+    set position (vector) {
+      this.left = vector.x;
+      this.top  = vector.y;
+    },
+
+    // Returns coordinates in the box's XY coordinate
+    // frame for a given non-rotated XY position.
+    getCoordsForPosition: function(pos) {
+      if (!this.rotation) return pos;
+      var center = this.getCenter();
+      return pos.subtract(center).rotate(this.rotation).add(center);
+    },
+
+    getAspectRatio: function() {
+      return this.width / this.height;
+    },
+
+    adjustSide: function(prop, amount) {
+      if (!prop) return;
+      amount = this.constrainProperty(prop, this[prop] + amount);
+      this[prop] = amount;
+    },
+
+    constrainProperty: function(prop, amount) {
+      switch(prop) {
+        case 'left':   return Math.min(amount, this.right - 1);
+        case 'right':  return Math.max(amount, this.left + 1);
+        case 'top':    return Math.min(amount, this.bottom - 1);
+        case 'bottom': return Math.max(amount, this.top + 1);
+      }
+    },
+
+    incrementPosition: function(vector) {
+      this.cssLeft.increment(vector.x);
+      this.cssLop.increment(vector.y);
+    },
+
+    clone: function() {
+      return new CSSBox(
+        this.cssLeft.clone(),
+        this.cssTop.clone(),
+        this.cssWidth.clone(),
+        this.cssHeight.clone(),
+        this.cssZIndex.clone(),
+        this.cssRotation.clone()
+      );
+    }
+
+  }
+
+  /*-------------------------] CSSValue [--------------------------*/
+
+
+  function CSSValue(val, unit) {
+    this.val = val;
+    this.unit = unit;
+  }
+
+  CSSValue.parseValue = function(str) {
+    return parseFloat(str) || 0;
+  };
+
+  CSSValue.parseUnit = function(str) {
+    // TODO: test percentages too!
+    return str.match(/px|deg|v(w|h|min|max)$/)[0];
+  };
+
+  CSSValue.fromString = function(str, defaultUnit) {
+    if (str === 'auto' || str === '') {
+      return new CSSValue(null, defaultUnit || null);
+    }
+    return new CSSValue(CSSValue.parseValue(str), CSSValue.parseUnit(str));
+  };
+
+  CSSValue.prototype = {
+
+    get px() {
+      return this.getPixelValue();
+    },
+
+    set px(val) {
+      this.setPixelValue(val);
+    },
+
+    toString: function() {
+      return round(this.val, this.getPrecision()) + this.unit;
+    },
+
+    clone: function() {
+      return new CSSValue(this.val, this.unit);
+    },
+
+    isAuto: function() {
+      return this.val === null;
+    },
+
+    increment: function(amt) {
+      if (amt === 0) {
+        return;
+      }
+      var precision = this.getPrecision();
+      var mult = Math.pow(10, -precision);
+      this.val = round(this.val + amt * mult, precision);
+    },
+
+    getPrecision: function() {
+      return this.unit === null ||
+             this.unit === 'px' ||
+             this.unit === 'deg' ? 0 : 1;
+    },
+
+    getPixelValue: function() {
+      switch (this.unit) {
+        case 'vw':
+          return this.viewportToPixel(this.val, window.innerWidth);
+        case 'vh':
+          return this.viewportToPixel(this.val, window.innerHeight);
+        case 'vmin':
+          return this.viewportToPixel(this.val, Math.min(window.innerWidth, window.innerHeight));
+        case 'vmax':
+          return this.viewportToPixel(this.val, Math.max(window.innerWidth, window.innerHeight));
+      }
+      return this.val;
+    },
+
+    setPixelValue: function(px) {
+      var val;
+      switch (this.unit) {
+        case 'vw':
+          val = this.pixelToViewport(px, window.innerWidth);
+          break;
+        case 'vh':
+          val = this.pixelToViewport(px, window.innerHeight);
+          break;
+        case 'vmin':
+          val = this.pixelToViewport(px, Math.min(window.innerWidth, window.innerHeight));
+          break;
+        case 'vmax':
+          val = this.pixelToViewport(px, Math.max(window.innerWidth, window.innerHeight));
+          break;
+        default:
+          val = px;
+      }
+      this.val = val;
+    },
+
+    viewportToPixel: function(val, dim) {
+      return val * dim / 100;
+    },
+
+    pixelToViewport: function(px, dim) {
+      return px / dim * 100;
+    }
+
   };
 
   /*-------------------------] Init [--------------------------*/
