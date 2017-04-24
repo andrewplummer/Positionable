@@ -694,8 +694,8 @@
 
   RotationHandle.prototype.drag = function(evt) {
     var dim = this.target.getAbsoluteDimensions();
-    var w = this.target.dimensions.getWidth() / 2;
-    var h = this.target.dimensions.getHeight() / 2;
+    var w = this.target.dimensions.width / 2;
+    var h = this.target.dimensions.height / 2;
     var deltaX = (evt.clientX + window.scrollX) - (dim.left + w);
     var deltaY = (evt.clientY + window.scrollY) - (dim.top + h);
     var deg    = new Point(deltaX, deltaY).getAngle() - new Point(w, h).getAngle();
@@ -763,8 +763,8 @@
 
   SizingHandle.prototype.applyConstraint = function(dimensions, ratio) {
     var w, h, xMult, yMult, type, min;
-    w = dimensions.getWidth();
-    h = dimensions.getHeight();
+    w = dimensions.width;
+    h = dimensions.height;
     xMult = 1 * (ratio || 1);
     yMult = 1;
     type = this.type;
@@ -787,7 +787,6 @@
   };
 
   SizingHandle.prototype.getPosition = function() {
-    console.info('umm', this.target);
     return this.target.dimensions.getCoordsForPosition(this.getCoords()).add(this.target.getPositionOffset());
   };
 
@@ -1144,23 +1143,29 @@
   };
 
   PositionableElement.prototype.resize = function(vector, handleType, constrained) {
-    var dimensions = this.getLastState().dimensions.clone(), min;
+    var dimensions = this.getLastState().dimensions.clone();
     var lastAspectRatio = dimensions.getAspectRatio();
     var handle = this[handleType];
     if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
-    dimensions.adjustSide(handle.xProp, vector.x);
-    dimensions.adjustSide(handle.yProp, vector.y);
+
+    dimensions[handle.xProp] += vector.x;
+    dimensions[handle.yProp] += vector.y;
+
+    //dimensions.adjustSide(handle.xProp, vector.x);
+    //dimensions.adjustSide(handle.yProp, vector.y);
+
     if (constrained) {
       handle.applyConstraint(dimensions, lastAspectRatio);
     }
+
     this.dimensions = dimensions;
 
     if (this.dimensions.rotation) {
-      this.position = this.getPositionFromRotatedHandle(handle.anchor);
+      this.dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
     } else {
-      this.position = new Point(this.dimensions.left, this.dimensions.top);
+      this.dimensions.setPosition(new Point(this.dimensions.left, this.dimensions.top));
     }
 
     this.render();
@@ -1200,7 +1205,7 @@
   };
 
   PositionableElement.prototype.positionDrag = function(evt) {
-    var drag = this.applyPositionDrag(evt, this.getLastState().dimensions.position);
+    var drag = this.applyPositionDrag(evt, this.getLastState().dimensions.getPosition());
     this.dimensions.setPosition(drag);
     this.updatePosition();
     statusBar.update();
@@ -1292,6 +1297,7 @@
 
   // TODO: remove?
   PositionableElement.prototype.setPosition = function(point) {
+    // TODO: Remove all direct this. properties
     this.position = point;
     this.dimensions.setPosition(point);
     this.updatePosition();
@@ -1379,12 +1385,13 @@
   PositionableElement.prototype.getPositionOffset = function() {
     // The offset between the element's position and it's actual
     // rectangle's left/top coordinates, which can sometimes differ.
-    return this.dimensions.position.subtract(new Point(this.dimensions.left.px, this.dimensions.top.px));
+    return this.dimensions.getPosition().subtract(
+        new Point(this.dimensions.left.px, this.dimensions.top.px));
   };
 
   PositionableElement.prototype.getPositionFromRotatedHandle = function(anchor) {
-    var offsetX  = this.dimensions.getWidth() / 2;
-    var offsetY  = this.dimensions.getHeight() / 2;
+    var offsetX  = this.dimensions.width / 2;
+    var offsetY  = this.dimensions.height / 2;
     var toCenter = anchor.offsetToCenter(offsetX, offsetY).rotate(this.dimensions.rotation);
     var toCorner = new Point(-offsetX, -offsetY);
     return anchor.startPosition.add(toCenter).add(toCorner);
@@ -2010,7 +2017,7 @@
     return map;
   }
 
-  /*-------------------------] StatusBar [--------------------------*/
+  /*-------------------------] DragSelection [--------------------------*/
 
 
   function DragSelection () {
@@ -2752,20 +2759,20 @@
   };
 
   StatusBar.prototype.setElementDetails = function(el) {
-    this.detailsLeft.html(el.dimensions.left);
-    this.detailsTop.html(el.dimensions.top);
+    this.detailsLeft.html(el.dimensions.cssLeft);
+    this.detailsTop.html(el.dimensions.cssTop);
 
     if (el.dimensions.cssZIndex.isAuto()) {
       this.detailsZIndex.hide();
       this.detailsComma2.hide();
     } else {
-      this.detailsZIndex.html(el.dimensions.zIndex);
+      this.detailsZIndex.html(el.dimensions.cssZIndex);
       this.detailsZIndex.show(false);
       this.detailsComma2.show(false);
     }
 
-    this.detailsWidth.html(el.dimensions.width);
-    this.detailsHeight.html(el.dimensions.height);
+    this.detailsWidth.html(el.dimensions.cssWidth);
+    this.detailsHeight.html(el.dimensions.cssHeight);
 
     var rotation = el.getRoundedRotation();
     if (rotation) {
@@ -3274,6 +3281,7 @@
     this.cssRotation = cssRotation;
   }
 
+/*
   function setupCSSAccessors(klass, props) {
     props.forEach(function(prop) {
       var cssProp = 'css' + prop.charAt(0).toUpperCase() + prop.slice(1);
@@ -3290,34 +3298,90 @@
       });
     });
   }
+  */
 
-  setupCSSAccessors(CSSBox, ['left', 'top', 'width', 'height', 'zIndex', 'rotation']);
+  //setupCSSAccessors(CSSBox, ['left', 'top', 'width', 'height', 'zIndex', 'rotation']);
 
   CSSBox.prototype = {
 
+    // Basic dimensions
+
+    get left () {
+      return this.cssLeft.px;
+    },
+
+    set left (val) {
+      var px = Math.min(val, this.right - 1)
+      this.cssWidth.px += this.cssLeft.px - px;
+      this.cssLeft.px = px;
+    },
+
+    get top () {
+      return this.cssTop.px;
+    },
+
+    set top (val) {
+      var px = Math.min(val, this.bottom - 1)
+      this.cssHeight.px += this.cssTop.px - px;
+      this.cssTop.px = px;
+    },
+
+    get width () {
+      return this.cssWidth.px;
+    },
+
+    set width (val) {
+      this.cssWidth.px = Math.max(val, 1);
+    },
+
+    get height () {
+      return this.cssHeight.px;
+    },
+
+    set height (val) {
+      this.cssHeight.px = Math.max(val, 1);
+    },
+
+    // Basic rotation accessors
+
+    get rotation () {
+      return this.cssRotation.getValue();
+    },
+
+    set rotation (val) {
+      return this.cssRotation.setValue(val);
+    },
+
+    // Computed dimensions
+
     get right () {
-      return this.left + this.width;
+      return this.cssLeft.px + this.cssWidth.px;
     },
 
     set right (val) {
-      this.width = val - this.left;
+      this.cssWidth.px = Math.max(1, val - this.cssLeft.px);
     },
 
     get bottom () {
-      return this.top + this.height;
+      return this.cssTop.px + this.cssHeight.px;
     },
 
     set bottom (val) {
-      this.height = val - this.top;
+      this.cssHeight.px = Math.max(1, val - this.cssTop.px);
     },
 
-    get position () {
+    getPosition: function () {
       return new Point(this.left, this.top);
     },
 
-    set position (vector) {
-      this.left = vector.x;
-      this.top  = vector.y;
+    // TODO: setPosition?
+    setPosition: function (vector) {
+      this.cssLeft.px = vector.x;
+      this.cssTop.px  = vector.y;
+    },
+
+    getCenter: function() {
+      return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
     },
 
     // Returns coordinates in the box's XY coordinate
@@ -3332,9 +3396,20 @@
       return this.width / this.height;
     },
 
+    // TODO: better name for this?
+    /*
     adjustSide: function(prop, amount) {
-      if (!prop) return;
+      if (!prop || !amount) {
+        return;
+      }
+      console.info('OKKKKKKK', prop, amount);
+
       amount = this.constrainProperty(prop, this[prop] + amount);
+
+      // If the side is "left" or "top", then
+      if (prop === 'left') {
+      }
+
       this[prop] = amount;
     },
 
@@ -3346,10 +3421,11 @@
         case 'bottom': return Math.max(amount, this.top + 1);
       }
     },
+    */
 
     incrementPosition: function(vector) {
       this.cssLeft.increment(vector.x);
-      this.cssLop.increment(vector.y);
+      this.cssTop.increment(vector.y);
     },
 
     clone: function() {
@@ -3392,11 +3468,11 @@
   CSSValue.prototype = {
 
     get px() {
-      return this.getPixelValue();
+      return this.getValue();
     },
 
     set px(val) {
-      this.setPixelValue(val);
+      this.setValue(val);
     },
 
     toString: function() {
@@ -3423,10 +3499,11 @@
     getPrecision: function() {
       return this.unit === null ||
              this.unit === 'px' ||
-             this.unit === 'deg' ? 0 : 1;
+             this.unit === 'deg' ? 0 : 2;
     },
 
-    getPixelValue: function() {
+    getValue: function() {
+      // TODO: percent!
       switch (this.unit) {
         case 'vw':
           return this.viewportToPixel(this.val, window.innerWidth);
@@ -3436,27 +3513,31 @@
           return this.viewportToPixel(this.val, Math.min(window.innerWidth, window.innerHeight));
         case 'vmax':
           return this.viewportToPixel(this.val, Math.max(window.innerWidth, window.innerHeight));
+        case 'rad':
+          return Point.radToDeg(this.val);
       }
       return this.val;
     },
 
-    setPixelValue: function(px) {
+    setValue: function(val) {
       var val;
       switch (this.unit) {
         case 'vw':
-          val = this.pixelToViewport(px, window.innerWidth);
+          val = this.pixelToViewport(val, window.innerWidth);
           break;
         case 'vh':
-          val = this.pixelToViewport(px, window.innerHeight);
+          val = this.pixelToViewport(val, window.innerHeight);
           break;
         case 'vmin':
-          val = this.pixelToViewport(px, Math.min(window.innerWidth, window.innerHeight));
+          val = this.pixelToViewport(val, Math.min(window.innerWidth, window.innerHeight));
           break;
         case 'vmax':
-          val = this.pixelToViewport(px, Math.max(window.innerWidth, window.innerHeight));
+          val = this.pixelToViewport(val, Math.max(window.innerWidth, window.innerHeight));
           break;
+        case 'rad':
+          val = Point.degToRad(val);
         default:
-          val = px;
+          val = val;
       }
       this.val = val;
     },
