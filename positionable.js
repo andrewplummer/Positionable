@@ -72,9 +72,9 @@
   NudgeManager.DELAY_TO_MID  = 1500;
   NudgeManager.DELAY_TO_FAST = 3000;
 
-  NudgeManager.REPEAT_SLOW      = 20;
-  NudgeManager.REPEAT_MID       = 10;
-  NudgeManager.REPEAT_FAST      = 5;
+  NudgeManager.REPEAT_SLOW = 20;
+  NudgeManager.REPEAT_MID  = 10;
+  NudgeManager.REPEAT_FAST = 5;
 
   NudgeManager.SHIFT_MULTIPLIER = 5;
 
@@ -783,11 +783,37 @@
   // --- Calculations
 
   SizingHandle.prototype.getCoords = function() {
-    return new Point(this.target.dimensions[this.xProp], this.target.dimensions[this.yProp]);
+    var coords, center, d;
+
+    coords = new Point(this.getX(), this.getY());
+    d = this.target.dimensions;
+
+    if (d.rotation) {
+      center = new Point(d.width / 2, d.height / 2);
+      coords = center.add(coords.subtract(center).rotate(d.rotation));
+    }
+
+    return coords;
   };
 
   SizingHandle.prototype.getPosition = function() {
-    return this.target.dimensions.getCoordsForPosition(this.getCoords()).add(this.target.getPositionOffset());
+    return this.target.dimensions.getPosition().add(this.getCoords());
+  };
+
+  SizingHandle.prototype.getX = function() {
+    switch (this.xProp) {
+      case 'left':  return 0;
+      case 'right': return this.target.dimensions.width;
+      default:      return this.target.dimensions.width / 2;
+    }
+  };
+
+  SizingHandle.prototype.getY = function() {
+    switch (this.yProp) {
+      case 'top':  return 0;
+      case 'bottom': return this.target.dimensions.height;
+      default:      return this.target.dimensions.height / 2;
+    }
   };
 
   SizingHandle.prototype.offsetToCenter = function(x, y) {
@@ -1140,6 +1166,8 @@
   PositionableElement.prototype.resizeStart = function(handleType) {
     var handle = this[handleType];
     handle.anchor.startPosition = handle.anchor.getPosition();
+    //this.startPosition = this.dimensions.getPosition();
+    //handle.anchor.startPosition = handle.anchor.getPosition();
   };
 
   PositionableElement.prototype.resize = function(vector, handleType, constrained) {
@@ -1148,8 +1176,10 @@
     var handle = this[handleType];
 
     if (this.dimensions.rotation) {
-      vector = vector.rotate(-this.dimensions.rotation);
+      //vector = vector.rotate(-this.dimensions.rotation);
     }
+
+    //console.info(vector);
 
     dimensions[handle.xProp] += vector.x;
     dimensions[handle.yProp] += vector.y;
@@ -1165,9 +1195,17 @@
 
     //dimensions.calculateRotationOffset();
 
-    this.dimensions = dimensions;
 
-    if (this.dimensions.rotation) {
+    if (dimensions.rotation) {
+
+      var dPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
+      dimensions.addPosition(dPosition);
+      //console.info(handle.anchor.getPosition(), dPosition);
+      //dimensions.addPosition(dPosition);
+
+      //var movedPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
+      //this.dimensions.setPosition(this.startPosition.subtract(movedPosition));
+      //console.info('hmm', movedPosition, this.dimensions.getPosition());
       //this.dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
     } else {
       //j//console.info('umm', this.dimensions.left);
@@ -1176,6 +1214,7 @@
       //console.info('now', this.dimensions.left);
     }
 
+    this.dimensions = dimensions;
     this.render();
     statusBar.update();
   };
@@ -1320,7 +1359,7 @@
   };
 
   PositionableElement.prototype.incrementPosition = function(vector) {
-    this.dimensions.incrementPosition(vector);
+    this.dimensions.addPosition(vector);
     this.updatePosition();
     //this.setPosition(this.position.add(vector));
     this.checkScrollBounds();
@@ -1329,9 +1368,9 @@
   PositionableElement.prototype.incrementZIndex = function(vector) {
     // Positive Y is actually down, so decrement here.
     if (vector.x > 0 || vector.y < 0) {
-      this.dimensions.zIndex.increment(1);
+      this.dimensions.zIndex.addValue(1);
     } else if (vector.x < 0 || vector.y > 0) {
-      this.dimensions.zIndex.increment(-1);
+      this.dimensions.zIndex.addValue(-1);
     }
     this.updateZIndex();
   };
@@ -3387,6 +3426,11 @@
       this.cssTop.px  = vector.y;
     },
 
+    addPosition: function(vector) {
+      this.cssLeft.addValue(vector.x);
+      this.cssTop.addValue(vector.y);
+    },
+
     getCenter: function() {
       return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
     },
@@ -3453,11 +3497,6 @@
     },
     */
 
-    incrementPosition: function(vector) {
-      this.cssLeft.increment(vector.x);
-      this.cssTop.increment(vector.y);
-    },
-
     clone: function() {
       return new CSSBox(
         this.cssLeft.clone(),
@@ -3517,15 +3556,6 @@
       return this.val === null;
     },
 
-    increment: function(amt) {
-      if (amt === 0) {
-        return;
-      }
-      var precision = this.getPrecision();
-      var mult = Math.pow(10, -precision);
-      this.val = round(this.val + amt * mult, precision);
-    },
-
     getPrecision: function() {
       return this.unit === null ||
              this.unit === 'px' ||
@@ -3568,6 +3598,21 @@
           val = Point.degToRad(val);
         default:
           val = val;
+      }
+      this.val = val;
+    },
+
+    addValue: function(amt) {
+      var precision, mult, val;;
+      if (amt === 0) {
+        return;
+      }
+      precision = this.getPrecision();
+      if (precision === 0) {
+        val = this.val + amt;
+      } else {
+        mult = Math.pow(10, -precision);
+        val = round(this.val + amt * mult, precision);
       }
       this.val = val;
     },
