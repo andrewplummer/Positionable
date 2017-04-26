@@ -2,7 +2,7 @@
  *  Chrome Extension
  *
  *  Freely distributable and licensed under the MIT-style license.
- *  Copyright (c) 2015 Andrew Plummer
+ *  Copyright (c) 2017 Andrew Plummer
  *
  * ---------------------------- */
 
@@ -783,7 +783,7 @@
   // --- Calculations
 
   SizingHandle.prototype.getCoords = function() {
-    return new Point(this.target.dimensions[this.xProp].px, this.target.dimensions[this.yProp].px);
+    return new Point(this.target.dimensions[this.xProp], this.target.dimensions[this.yProp]);
   };
 
   SizingHandle.prototype.getPosition = function() {
@@ -1146,6 +1146,7 @@
     var dimensions = this.getLastState().dimensions.clone();
     var lastAspectRatio = dimensions.getAspectRatio();
     var handle = this[handleType];
+
     if (this.dimensions.rotation) {
       vector = vector.rotate(-this.dimensions.rotation);
     }
@@ -1153,19 +1154,26 @@
     dimensions[handle.xProp] += vector.x;
     dimensions[handle.yProp] += vector.y;
 
+
     //dimensions.adjustSide(handle.xProp, vector.x);
     //dimensions.adjustSide(handle.yProp, vector.y);
 
     if (constrained) {
+      // TODO: This should be BEFORE adjustment
       handle.applyConstraint(dimensions, lastAspectRatio);
     }
+
+    //dimensions.calculateRotationOffset();
 
     this.dimensions = dimensions;
 
     if (this.dimensions.rotation) {
-      this.dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
+      //this.dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
     } else {
-      this.dimensions.setPosition(new Point(this.dimensions.left, this.dimensions.top));
+      //j//console.info('umm', this.dimensions.left);
+      // TODO: this doesn't even make logical sense...?
+      //this.dimensions.setPosition(new Point(this.dimensions.left, this.dimensions.top));
+      //console.info('now', this.dimensions.left);
     }
 
     this.render();
@@ -3374,7 +3382,6 @@
       return new Point(this.left, this.top);
     },
 
-    // TODO: setPosition?
     setPosition: function (vector) {
       this.cssLeft.px = vector.x;
       this.cssTop.px  = vector.y;
@@ -3382,6 +3389,29 @@
 
     getCenter: function() {
       return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
+    },
+
+    // TODO: rename??
+    calculateRotationOffset: function() {
+      if (!this.rotation) {
+        return;
+      }
+
+      var pos = this.getPosition();
+      var center = new Point(this.width / 2, this.height / 2);
+      var rotatedCoords = center.rotate(this.rotation);
+      var rotatedPos = pos.subtract(rotatedCoords.subtract(center));
+      console.info(rotatedCoords, rotatedCoords.subtract(center), pos, rotatedPos);
+      this.setPosition(rotatedPos);
+
+      /*
+      var offsetX  = this.dimensions.width / 2;
+      var offsetY  = this.dimensions.height / 2;
+      var toCenter = anchor.offsetToCenter(offsetX, offsetY).rotate(this.dimensions.rotation);
+      console.info('OKKKKKKKKKK', anchor, anchor.offsetToCenter(offsetX, offsetY));
+      var toCorner = new Point(-offsetX, -offsetY);
+      return anchor.startPosition.add(toCenter).add(toCorner);
+      */
     },
 
     // Returns coordinates in the box's XY coordinate
