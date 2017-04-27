@@ -1198,15 +1198,15 @@
 
     if (dimensions.rotation) {
 
-      var dPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
-      dimensions.addPosition(dPosition);
+      //var dPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
+      //dimensions.addPosition(dPosition);
       //console.info(handle.anchor.getPosition(), dPosition);
       //dimensions.addPosition(dPosition);
 
       //var movedPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
       //this.dimensions.setPosition(this.startPosition.subtract(movedPosition));
       //console.info('hmm', movedPosition, this.dimensions.getPosition());
-      //this.dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
+      //dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
     } else {
       //j//console.info('umm', this.dimensions.left);
       // TODO: this doesn't even make logical sense...?
