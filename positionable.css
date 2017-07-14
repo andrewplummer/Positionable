@@ -13,7 +13,6 @@
 
 .positionable-extension-positioned-element {
   cursor: move;
-  -webkit-transform: translateZ(0px);
   -webkit-animation: none !important;
   -webkit-transition: none !important;
 }
@@ -52,6 +51,8 @@
   max-width: 50px;
   cursor: ew-resize;
 }
+
+/* TODO: can we remove extra border element? */
 
 .positionable-extension-handle-nw,
 .positionable-extension-handle-se {

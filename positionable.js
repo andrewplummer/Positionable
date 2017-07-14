@@ -1,10 +1,31 @@
 /*
- *  Chrome Extension
+ *  Positionable Chrome Extension
  *
  *  Freely distributable and licensed under the MIT-style license.
  *  Copyright (c) 2017 Andrew Plummer
  *
  * ---------------------------- */
+
+
+// TODO: test with:
+// - scrolling
+// - initial state
+// - undo for everything
+// - unsupported transforms
+// - both degrees and radians!
+// - double check precisions!
+// - rotate before translate??
+// - rotation with a different origin?
+// - try different rotation configurations (negative, over 360?)
+// - resizing with rotated box and pre-existing translation
+// - pre-existing translationX or Y? how to handle?
+// - constraining from all directions
+// - weird bug when going crazy with mouse... div scrolling??
+// - different background positions... top right, percentages
+// - bug: go to zindex nudging and unfocus window, then focus back, move is rendered
+
+// TODO: not sure if I'm liking the accessors... they're too mysterious
+
 
 (function() {
 
@@ -56,6 +77,15 @@
     }
     if (getObjectSize(result) > 0) {
       return result;
+    }
+  }
+
+  function throwError(str, halt) {
+    var msg = 'Positionable: ' + str;
+    if (halt === false) {
+      console.error(msg);
+    } else {
+      throw new Error(msg);
     }
   }
 
@@ -129,7 +159,7 @@
       elementManager.incrementBackgroundPosition(vector);
     } else if (this.isResizeMode()) {
       this.resizeOffset = this.resizeOffset.add(vector);
-      elementManager.resize(this.resizeOffset, this.getSizingHandle());
+      elementManager.resize(this.resizeOffset, this.getHandleName());
     } else if (this.isZIndexMode()) {
       elementManager.incrementZIndex(vector);
     } else {
@@ -157,9 +187,6 @@
     this.startTime = new Date();
     this.resizeOffset = new Point(0, 0);
     elementManager.pushState();
-    if (this.isResizeMode()) {
-      elementManager.resizeStart(this.getSizingHandle());
-    }
   };
 
   NudgeManager.prototype.next = function() {
@@ -205,7 +232,7 @@
 
   // --- States
 
-  NudgeManager.prototype.getSizingHandle = function() {
+  NudgeManager.prototype.getHandleName = function() {
     return this.mode === NudgeManager.RESIZE_NW_MODE ? 'nw' : 'se';
   };
 
@@ -430,18 +457,22 @@
 
   function Element (el, tag, className) {
     this.listeners = [];
-    if (!tag) {
-      this.el = el;
+    if (tag) {
+      this.el = this.createAndAppend(el, tag, className);
     } else {
-      var parent = el;
-      this.el = document.createElement(tag);
-      if (className) {
-        className.split(' ').forEach(function(n) {
-          this.addClass(n);
-        }, this);
-      }
-      parent.appendChild(this.el);
+      this.el = el;
     }
+  };
+
+  Element.prototype.createAndAppend = function(parent, tag, className) {
+    this.el = document.createElement(tag);
+    if (className) {
+      className.split(' ').forEach(function(name) {
+        this.addClass(name);
+      }, this);
+    }
+    parent.appendChild(this.el);
+    return this.el;
   };
 
   Element.prototype.addClass = function(name) {
@@ -523,11 +554,16 @@
 
   /*-------------------------] DraggableElement [--------------------------*/
 
-
-  function DraggableElement () {
+  function DraggableElement (el, tag, className) {
+    Element.call(this, el, tag, className);
     this.listeners = [];
+    this.setupDragging();
   };
 
+  // TODO: Object.create or extend?
+
+  DraggableElement.prototype = Object.create(Element.prototype);
+  /*
   DraggableElement.prototype.hide               = Element.prototype.hide;
   DraggableElement.prototype.show               = Element.prototype.show;
   DraggableElement.prototype.remove             = Element.prototype.remove;
@@ -536,6 +572,7 @@
   DraggableElement.prototype.resetScroll        = Element.prototype.resetScroll;
   DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
   DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
+  */
 
   DraggableElement.prototype.setupDragging = function() {
     this.addEventListener('click', this.click.bind(this));
@@ -635,28 +672,23 @@
   /*-------------------------] Handle [--------------------------*/
 
 
-  function Handle () {
-    DraggableElement.call(this);
+  function Handle (target, name) {
+    DraggableElement.call(this, target.el, 'div', 'handle handle-' + name);
+    this.name = name;
+    this.target = target;
   };
 
   Handle.prototype = Object.create(DraggableElement.prototype);
-
-  Handle.prototype.setup = function(target, type) {
-    this.target = target;
-    this.type   = type;
-    this.el     = new Element(target.el, 'div', 'handle handle-' + type).el;
-    this.setupDragging();
-  };
 
   Handle.prototype.dragStart = function(evt) {
     elementManager.setFocused(this.target);
   };
 
-  Handle.prototype.setHover = function(type) {
+  Handle.prototype.setHover = function(name) {
     this.addEventListener('mouseover', function(evt) {
       evt.stopPropagation();
       if (!this.target.draggingStarted) {
-        statusBar.setState(type);
+        statusBar.setState(name);
       }
     }.bind(this));
     this.addEventListener('mouseout', function(evt) {
@@ -675,9 +707,9 @@
 
 
   function RotationHandle (target) {
-    Handle.call(this);
+    Handle.call(this, target, 'rotate');
 
-    this.setup(target, 'rotate');
+    //this.setup(target, 'rotate');
     this.setHover('rotate');
   };
 
@@ -689,36 +721,39 @@
 
   RotationHandle.prototype.dragStart = function(evt) {
     Handle.prototype.dragStart.apply(this, arguments);
+    this.startAngle = this.getAngleForMouseEvent(evt);
     elementManager.pushState();
   };
 
   RotationHandle.prototype.drag = function(evt) {
-    var dim = this.target.getAbsoluteDimensions();
-    var w = this.target.dimensions.width / 2;
-    var h = this.target.dimensions.height / 2;
-    var deltaX = (evt.clientX + window.scrollX) - (dim.left + w);
-    var deltaY = (evt.clientY + window.scrollY) - (dim.top + h);
-    var deg    = new Point(deltaX, deltaY).getAngle() - new Point(w, h).getAngle();
-    if (deg < 0) deg += 360;
+    var r = this.getAngleForMouseEvent(evt) - this.startAngle;
     if (this.isConstrained(evt)) {
-      deg = round(deg / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
+      r = round(r / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
     }
-    elementManager.setRotation(deg - this.target.getLastRotation());
+    elementManager.rotate(r);
     statusBar.update();
+  };
+
+  RotationHandle.prototype.getAngleForMouseEvent = function(evt) {
+    // TODO: don't have target?
+    var origin = this.target.getRotationOrigin();
+    return new Point(evt.clientX, evt.clientY).subtract(origin).getAngle();
   };
 
 
   /*-------------------------] SizingHandle [--------------------------*/
 
-  function SizingHandle (target, type, xProp, yProp) {
-    Handle.call(this);
+  function SizingHandle (target, name, xProp, yProp) {
+    Handle.call(this, target, name);
 
-    this.setup(target, type);
+    //this.setup(target, name);
     this.setHover('resize');
     this.addClass('sizing-handle');
-    this.handle = new Element(target.el, 'div', 'handle-border handle-' + this.type + '-border');
+    this.handle = new Element(target.el, 'div', 'handle-border handle-' + name + '-border');
     this.xProp = xProp;
     this.yProp = yProp;
+    this.xDir  = !xProp ? 0 : xProp === 'left' ? -1 : 1;
+    this.yDir  = !yProp ? 0 : yProp === 'top'  ? -1 : 1;
   };
 
   // --- Inheritance
@@ -741,11 +776,10 @@
   SizingHandle.prototype.dragStart = function(evt) {
     Handle.prototype.dragStart.apply(this, arguments);
     elementManager.pushState();
-    elementManager.resizeStart(this.type);
   };
 
   SizingHandle.prototype.drag = function(evt) {
-    elementManager.resize(evt.dragOffset, this.type, this.isConstrained(evt));
+    elementManager.resize(evt.dragOffset, this.name, this.isConstrained(evt), true);
   };
 
   // --- State
@@ -761,58 +795,83 @@
 
   // --- Actions
 
-  SizingHandle.prototype.applyConstraint = function(dimensions, ratio) {
-    var w, h, xMult, yMult, type, min;
-    w = dimensions.width;
-    h = dimensions.height;
+  SizingHandle.prototype.applyConstraint = function(box, ratio) {
+    var w, h, xMult, yMult, min;
+    w = box.width;
+    h = box.height;
     xMult = 1 * (ratio || 1);
     yMult = 1;
-    type = this.type;
     min = Math.min(w, h);
-    if (type === 'nw' || type === 'sw') {
+    if (this.name === 'nw' || this.name === 'sw') {
       xMult = -1;
     }
-    if (type === 'nw' || type === 'ne') {
+    if (this.name === 'nw' || this.name === 'ne') {
       yMult = -1;
     }
-    dimensions[this.xProp] = dimensions[this.anchor.xProp] + (min * xMult);
-    dimensions[this.yProp] = dimensions[this.anchor.yProp] + (min * yMult);
+    box[this.xProp] = box[this.anchor.xProp] + (min * xMult);
+    box[this.yProp] = box[this.anchor.yProp] + (min * yMult);
   };
 
 
   // --- Calculations
 
+  /*
+  SizingHandle.prototype.getCoords = function(box) {
+    return new Point(this.getX(box), this.getY(box));
+  };
+
+  SizingHandle.prototype.getCoords = function(box, rotation) {
+    // TODO: next fix specificity issues!!!!!!!!!!!!!!!!!!!!!
+    var coords = new Point(this.getX(box), this.getY(box));
+    if (rotation) {
+      var center = box.getCenterCoords();
+      coords = coords.subtract(center).getRotated(rotation).add(center);
+    }
+    return coords;
+  };
+  */
+
+  SizingHandle.prototype.getPosition = function(box, rotation) {
+    var coords = new Point(this.getX(box), this.getY(box));
+    if (rotation) {
+      var center = box.getCenterCoords();
+      coords = coords.subtract(center).getRotated(rotation).add(center);
+    }
+    return coords.add(box.getPosition());
+  };
+
+  /*
+   * TODO: remove?
   SizingHandle.prototype.getCoords = function() {
     var coords, center, d;
 
     coords = new Point(this.getX(), this.getY());
-    d = this.target.dimensions;
+    d = this.target.box;
 
     if (d.rotation) {
       center = new Point(d.width / 2, d.height / 2);
-      coords = center.add(coords.subtract(center).rotate(d.rotation));
+      coords = center.add(coords.subtract(center).getRotated(d.rotation));
     }
 
     return coords;
   };
 
   SizingHandle.prototype.getPosition = function() {
-    return this.target.dimensions.getPosition().add(this.getCoords());
+    return this.target.box.getPosition().add(this.getCoords());
   };
+  */
 
-  SizingHandle.prototype.getX = function() {
+  SizingHandle.prototype.getX = function(box) {
     switch (this.xProp) {
       case 'left':  return 0;
-      case 'right': return this.target.dimensions.width;
-      default:      return this.target.dimensions.width / 2;
+      case 'right': return box.width;
     }
   };
 
-  SizingHandle.prototype.getY = function() {
+  SizingHandle.prototype.getY = function(box) {
     switch (this.yProp) {
-      case 'top':  return 0;
-      case 'bottom': return this.target.dimensions.height;
-      default:      return this.target.dimensions.height / 2;
+      case 'top':    return 0;
+      case 'bottom': return box.height;
     }
   };
 
@@ -828,11 +887,12 @@
 
 
   function PositionableElement (el) {
-    DraggableElement.call(this);
+    DraggableElement.call(this, el);
 
     this.states = [];
     this.setupElement(el);
     this.setupEvents();
+    // TODO: rename?
     this.setupAttributes();
     this.setupParents();
     this.createHandles();
@@ -844,8 +904,7 @@
 
   // --- Constants
 
-  PositionableElement.BACKGROUND_IMAGE_MATCH = /url\([\u0027\u0022]?(.+?)[\u0022\u0027]?\)/i;
-  PositionableElement.BACKGROUND_POSITION_MATCH = /([-\d]+)(px|%).+?([-\d]+)(px|%)/;
+  //PositionableElement.BACKGROUND_POSITION_MATCH = /([-\d]+)(px|%).+?([-\d]+)(px|%)/;
 
   PositionableElement.PEEKING_DIMENSIONS = 500;
   PositionableElement.DBLCLICK_TIMEOUT   = 500;
@@ -853,24 +912,25 @@
   // --- Setup
 
   PositionableElement.prototype.setupElement = function(el) {
-    this.el = el;
+    //this.el = el;
     this.addClass('positioned-element');
-    this.setupDragging();
+    //this.setupDragging();
   };
 
   PositionableElement.prototype.destroy = function() {
     this.unfocus();
     this.removeClass('positioned-element');
     this.removeAllListeners();
-    this.rotate.remove();
-    this.nw.destroy();
-    this.ne.destroy();
-    this.se.destroy();
-    this.sw.destroy();
-    this.n.destroy();
-    this.e.destroy();
-    this.s.destroy();
-    this.w.destroy();
+    // TODO: why is one remove and the other destroy??
+    this.handles.rotate.remove();
+    this.handles.nw.destroy();
+    this.handles.ne.destroy();
+    this.handles.se.destroy();
+    this.handles.sw.destroy();
+    this.handles.n.destroy();
+    this.handles.e.destroy();
+    this.handles.s.destroy();
+    this.handles.w.destroy();
   };
 
   PositionableElement.prototype.setupParents = function() {
@@ -898,134 +958,68 @@
   };
 
   PositionableElement.prototype.setupAttributes = function() {
-    var rules, style;
+    //var rules, style;
+    var el, matcher;
 
-    // Ensure positioning first to make sure the rules are up to date.
-    this.ensurePositioned();
+    el = this.el;
+    matcher = new CSSRuleMatcher(el);
 
-    // TODO: remove reference to allow garbage collection
-    style = this.getComputedStyle();
-    rules = this.getCSSRules();
+    this.box = new CSSBox(
+      matcher.getPosition('Left', el),
+      matcher.getPosition('Top', el),
+      matcher.getCSSValue('width', el),
+      matcher.getCSSValue('height', el)
+    );
 
-    this.getDimensions(rules, style);
+    this.zIndex = matcher.getCSSValue('zIndex');
+    this.transform = matcher.getTransform(el);
 
-    if (style.backgroundImage !== 'none') {
-      this.getBackgroundAttributes(style);
+    var image = matcher.getBackgroundImage();
+
+    if (image.url) {
+      this.spriteRecognizer = new SpriteRecognizer(image.url);
     }
-  };
 
-  PositionableElement.prototype.getComputedStyle = function() {
-    return window.getComputedStyle(this.el);
-  };
+    this.backgroundPosition = matcher.getBackgroundPosition(el);
 
-  PositionableElement.prototype.getCSSRules = function() {
-    try {
-      return window.getMatchedCSSRules(this.el);
-    } catch (e) {
-      return null;
-    }
-  };
+    // Get background recognizer
+    //match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
+    ////this.spriteRecognizer = new SpriteRecognizer(match[1]);
 
-  PositionableElement.prototype.getDimensions = function(rules, style) {
-    //this.position = new CSSPoint(left, top);
-    this.dimensions = new CSSBox(
+    /*
       this.getInitialPosition(rules, style, 'Left'),
       this.getInitialPosition(rules, style, 'Top'),
       this.getCSSValue(rules, style, 'width', 'px'),
       this.getCSSValue(rules, style, 'height', 'px'),
       // not "length"?
       this.getCSSValue(rules, style, 'zIndex'),
-      this.getRotation(rules, style)
-    );
+      this.getTransform(rules, style)
+      */
+
+    // Ensure positioning first to make sure the rules are up to date.
+    // TODO: is this required? can't use one computed style for all here?
+    //this.ensurePositioned();
+
+    // TODO: remove reference to allow garbage collection
+    //style = this.getComputedStyle();
+    //rules = this.getCSSRules();
+
+    //this.getDimensions(rules, style);
+
+    //if (style.backgroundImage !== 'none') {
+      //this.getBackgroundAttributes(style);
+    //}
+  };
+
+  PositionableElement.prototype.getDimensions = function(rules, style) {
+    //this.position = new CSSPoint(left, top);
     //this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
   };
 
-  PositionableElement.prototype.getInitialPosition = function(rules, style, prop, autoUnit) {
-
-    var side = this.getCSSValue(rules, style, prop.toLowerCase(), 'px');
-
-    if (!side.isAuto()) {
-      // If the element is already explictly positioned, then
-      // trust those values first as they are the ones that will
-      // be directly manipulated.
-      return side;
-    }
-
-    var px = this.el['offset' + prop] -
-             CSSValue.parseValue(style['margin' + prop]) -
-             CSSValue.parseValue(style['padding' + prop]) -
-             CSSValue.parseValue(style['border' + prop + 'Width']);
-
-    return new CSSValue(px, autoUnit);
-  }
-
-  // TODO: getCSSValue?
-  PositionableElement.prototype.getCSSValue = function(rules, style, prop, unit) {
-    var val;
-
-    function getProp(style, computed) {
-      if (typeof prop === 'function') {
-        return prop.call(this, style, computed);
-      } else {
-        return style[prop];
-      }
-    }
-
-    if (rules) {
-      for (var rules, i = rules.length - 1; rule = rules[i]; i--) {
-        val = getProp.call(this, rule.style, false);
-        if (val) {
-          break;
-        }
-      }
-    }
-
-    // Fall back to computed values.
-    if (!val) {
-      val = getProp.call(this, style, true);
-    }
-
-    return typeof val === 'number' ? new CSSValue(val, unit) : CSSValue.fromString(val, unit);
-  };
-
+  /*
   PositionableElement.prototype.getNumericValue = function(val) {
     val = parseFloat(val);
     return isNaN(val) ? 0 : val;
-  };
-
-  PositionableElement.prototype.getRotationComputed = function(matrix) {
-    var match = matrix.match(/[-.\d]+/g);
-    if (match) {
-      a = parseFloat(match[0]);
-      b = parseFloat(match[1]);
-      return new Point(a, b).getAngle();
-    }
-    return 0;
-  };
-
-  PositionableElement.prototype.getRotationStylesheet = function(transform) {
-    var match = transform && transform.match(/rotateZ\(([\d.]+)\s*(deg|rad|turn)\)?/i);
-    if (match) {
-      var val  = parseFloat(match[1]);
-      var unit = parseFloat(match[2]);
-      if (unit === 'rad') {
-        val = Point.radToDeg(val);
-      } else if (unit === 'turn') {
-        val *= 360;
-      };
-      return val;
-    }
-    return 0;
-  };
-
-  PositionableElement.prototype.unpackRotation = function(style, computed) {
-    var transform = style.webkitTransform || style.transform;
-    return computed ? this.getRotationComputed(transform) : this.getRotationStylesheet(transform);
-  };
-
-  PositionableElement.prototype.getRotation = function(rules, style) {
-    var matrix, match, a, b;
-    return this.getCSSValue(rules, style, this.unpackRotation, 'deg');
   };
 
   PositionableElement.prototype.getBackgroundPosition = function() {
@@ -1033,7 +1027,7 @@
 
     // Get background recognizer
     match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
-    this.recognizer = new SpriteRecognizer(match[1]);
+    this.spriteRecognizer = new SpriteRecognizer(match[1]);
 
     // Get background position
     match = style.backgroundPosition.match(PositionableElement.BACKGROUND_POSITION_MATCH);
@@ -1043,31 +1037,24 @@
       this.backgroundPosition = new Point(0, 0);
     }
   };
+  */
 
   PositionableElement.prototype.createHandles = function() {
-    this.rotate = new RotationHandle(this);
+    this.handles = {};
     this.createSizingHandles();
+    this.handles.rotate = new RotationHandle(this);
   };
 
   PositionableElement.prototype.createSizingHandles = function() {
-    this.nw = new SizingHandle(this, 'nw', 'left',  'top');
-    this.ne = new SizingHandle(this, 'ne', 'right', 'top');
-    this.se = new SizingHandle(this, 'se', 'right', 'bottom');
-    this.sw = new SizingHandle(this, 'sw', 'left',  'bottom');
-    this.n  = new SizingHandle(this, 'n', null,  'top');
-    this.e  = new SizingHandle(this, 'e', 'right', null);
-    this.s  = new SizingHandle(this, 's', null,  'bottom');
-    this.w  = new SizingHandle(this, 'w', 'left', null);
-    this.nw.setAnchor(this.se);
-    this.ne.setAnchor(this.sw);
-    this.se.setAnchor(this.nw);
-    this.sw.setAnchor(this.ne);
-    this.n.setAnchor(this.sw);
-    this.e.setAnchor(this.nw);
-    this.s.setAnchor(this.nw);
-    this.w.setAnchor(this.ne);
+    this.handles.nw = new SizingHandle(this, 'nw', 'left',  'top');
+    this.handles.ne = new SizingHandle(this, 'ne', 'right', 'top');
+    this.handles.se = new SizingHandle(this, 'se', 'right', 'bottom');
+    this.handles.sw = new SizingHandle(this, 'sw', 'left',  'bottom');
+    this.handles.n  = new SizingHandle(this, 'n', null,  'top');
+    this.handles.e  = new SizingHandle(this, 'e', 'right', null);
+    this.handles.s  = new SizingHandle(this, 's', null,  'bottom');
+    this.handles.w  = new SizingHandle(this, 'w', 'left', null);
   };
-
 
 
   // --- Events
@@ -1090,16 +1077,21 @@
   };
 
   PositionableElement.prototype.dblclick = function(evt) {
-    if (!this.backgroundPosition) return;
+
+    if (!this.spriteRecognizer) {
+      return;
+    }
+
     var point  = new Point(evt.clientX + window.scrollX, evt.clientY + window.scrollY);
-    var coords = this.getElementCoordsForPoint(point).subtract(this.backgroundPosition);
-    var style = window.getComputedStyle(this.el);
-    var sprite = this.recognizer.getSpriteBoundsForCoordinate(coords);
+    var coords = this.box.getCoords(point, this.transform.rotation.deg).subtract(this.backgroundPosition.getPosition());
+    var sprite = this.spriteRecognizer.getSpriteBoundsForCoordinate(coords);
+
     if (sprite) {
       this.pushState();
       this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
-      this.dimensions.right  = this.dimensions.left + sprite.getWidth();
-      this.dimensions.bottom = this.dimensions.top  + sprite.getHeight();
+      this.box.right  = this.box.left + sprite.getWidth();
+      // TODO: don't have target!
+      this.box.bottom = this.box.top  + sprite.getHeight();
       this.render();
       statusBar.update();
     }
@@ -1163,61 +1155,70 @@
 
   // --- Resizing
 
-  PositionableElement.prototype.resizeStart = function(handleType) {
-    var handle = this[handleType];
-    handle.anchor.startPosition = handle.anchor.getPosition();
-    //this.startPosition = this.dimensions.getPosition();
-    //handle.anchor.startPosition = handle.anchor.getPosition();
+  PositionableElement.prototype.getHandle = function(handleName) {
+    return this.handles[handleName];
   };
 
-  PositionableElement.prototype.resize = function(vector, handleType, constrained) {
-    var dimensions = this.getLastState().dimensions.clone();
-    var lastAspectRatio = dimensions.getAspectRatio();
-    var handle = this[handleType];
+  PositionableElement.prototype.getHandleAnchor = function(handleName) {
+    switch (handleName) {
+      case 'nw': return this.getHandle('se');
+      case 'ne': return this.getHandle('sw');
+      case 'se': return this.getHandle('nw');
+      case 'sw': return this.getHandle('ne');
+      case 'n':  return this.getHandle('s');
+      case 's':  return this.getHandle('n');
+      case 'e':  return this.getHandle('w');
+      case 'w':  return this.getHandle('e');
+    }
+  };
 
-    if (this.dimensions.rotation) {
-      //vector = vector.rotate(-this.dimensions.rotation);
+  PositionableElement.prototype.resize = function(vector, handleName, constrained, isAbsolute) {
+
+    var lastState = this.getLastState();
+    var lastBox = this.getLastState().box;
+    var lastRatio = lastBox.getRatio();
+    var rotation = this.transform.rotation.deg;
+    var handle = this.getHandle(handleName);
+
+    if (isAbsolute && rotation) {
+      vector = vector.getRotated(-rotation);
     }
 
-    //console.info(vector);
-
-    dimensions[handle.xProp] += vector.x;
-    dimensions[handle.yProp] += vector.y;
-
-
-    //dimensions.adjustSide(handle.xProp, vector.x);
-    //dimensions.adjustSide(handle.yProp, vector.y);
+    this.box[handle.xProp] = lastBox[handle.xProp] + vector.x;
+    this.box[handle.yProp] = lastBox[handle.yProp] + vector.y;
 
     if (constrained) {
-      // TODO: This should be BEFORE adjustment
-      handle.applyConstraint(dimensions, lastAspectRatio);
+      this.constrainRatio(lastBox, handle);
     }
 
-    //dimensions.calculateRotationOffset();
+    //box.calculateRotationOffset();
 
-
-    if (dimensions.rotation) {
-
-      //var dPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
-      //dimensions.addPosition(dPosition);
-      //console.info(handle.anchor.getPosition(), dPosition);
-      //dimensions.addPosition(dPosition);
-
-      //var movedPosition = handle.anchor.getPosition().subtract(handle.anchor.startPosition);
-      //this.dimensions.setPosition(this.startPosition.subtract(movedPosition));
-      //console.info('hmm', movedPosition, this.dimensions.getPosition());
-      //dimensions.setPosition(this.getPositionFromRotatedHandle(handle.anchor));
-    } else {
-      //j//console.info('umm', this.dimensions.left);
-      // TODO: this doesn't even make logical sense...?
-      //this.dimensions.setPosition(new Point(this.dimensions.left, this.dimensions.top));
-      //console.info('now', this.dimensions.left);
+    if (rotation) {
+      var anchor = this.getHandleAnchor(handleName);
+      // TODO: move into function?
+      var a1 = anchor.getPosition(lastBox, rotation);
+      var a2 = anchor.getPosition(this.box, rotation);
+      this.transform.translation = lastState.transform.translation.add(a1.subtract(a2));
     }
 
-    this.dimensions = dimensions;
+    // TODO: render only bits?
     this.render();
     statusBar.update();
   };
+
+  PositionableElement.prototype.constrainRatio = function(lastBox, handle) {
+    var box      = this.box;
+    var anchor   = this.getHandleAnchor(handle.name);
+    var oldRatio = lastBox.getRatio();
+    var newRatio = this.box.getRatio();
+
+    if (newRatio < oldRatio) {
+      box[handle.yProp] = box[anchor.yProp] + box.width / oldRatio * handle.yDir;
+    } else if (newRatio > oldRatio) {
+      box[handle.xProp] = box[anchor.xProp] + box.height * oldRatio * handle.xDir;
+    }
+  };
+
 
   PositionableElement.prototype.toggleSizingHandles = function(on) {
     if (on) {
@@ -1230,46 +1231,79 @@
 
   // --- Rotation
 
+  PositionableElement.prototype.rotate = function(offset) {
+    var r = this.getLastRotation() + offset;
+    this.transform.rotation = r;
+    this.updateTransform();
+  };
+
+  /*
   PositionableElement.prototype.setRotation = function(deg) {
-    this.dimensions.rotation = this.getLastRotation() + deg;
-    this.updateRotation();
+    this.transform.rotation = this.getLastRotation() + deg;
+    this.updateTransform();
   };
+  */
 
+  // TODO: can this be removed somehow?
   PositionableElement.prototype.getLastRotation = function() {
-    return this.getLastState().dimensions.rotation || 0;
+    return this.getLastState().transform.rotation.deg;
   };
 
+  // TODO: different origins?
+  PositionableElement.prototype.getRotationOrigin = function() {
+    return this.box.getCenterPosition();
+  };
 
   // --- Position
 
   PositionableElement.prototype.backgroundDrag = function(evt) {
-    var last = this.getLastState().backgroundPosition, rotation = this.dimensions.rotation, offset;
-    if (!last) return;
-    if (rotation) last = last.rotate(rotation);
-    offset = this.applyPositionDrag(evt, last);
-    if (rotation) offset = offset.rotate(-rotation);
-    this.setBackgroundPosition(offset);
+    var lastPostition, rotation, pos;
+
+    lastPosition = this.getLastState().backgroundPosition.getPosition();
+    rotation = this.transform.rotation.deg;
+
+    /*
+    if (rotation) {
+      last = last.getRotated(rotation);
+    }
+    */
+
+    pos = this.getDraggedPosition(evt, lastPosition);
+
+    /*
+    if (rotation) {
+      offset = offset.getRotated(-rotation);
+    }
+    */
+
+    this.setBackgroundPosition(pos);
   };
 
   PositionableElement.prototype.positionDrag = function(evt) {
-    var drag = this.applyPositionDrag(evt, this.getLastState().dimensions.getPosition());
-    this.dimensions.setPosition(drag);
+    var pos = this.getDraggedPosition(evt, this.getLastState().box.getPosition());
+    this.box.setPosition(pos);
     this.updatePosition();
     statusBar.update();
   };
 
-  PositionableElement.prototype.applyPositionDrag = function(evt, origin) {
-    var delta = evt.dragOffset, offset = origin.add(delta), absX, absY;
+  // TODO: rename?
+  PositionableElement.prototype.getDraggedPosition = function(evt, lastPosition) {
+    var drag, pos, absX, absY;
+
+    drag = evt.dragOffset;
+    pos  = lastPosition.add(drag);
+
     if (this.isConstrained(evt)) {
-      absX = Math.abs(delta.x);
-      absY = Math.abs(delta.y);
+      absX = Math.abs(drag.x);
+      absY = Math.abs(drag.y);
       if (absX < absY) {
-        offset.x = origin.x;
+        pos.x = lastPosition.x;
       } else {
-        offset.y = origin.y;
+        pos.y = lastPosition.y;
       }
     }
-    return offset;
+
+    return pos;
   };
 
 
@@ -1277,10 +1311,10 @@
 
   PositionableElement.prototype.pushState = function() {
     this.states.push({
-      //zIndex: this.zIndex,
-      //position: this.position.clone(),
-      dimensions: this.dimensions.clone(),
-      backgroundPosition: this.backgroundPosition ? this.backgroundPosition.clone() : null
+      box: this.box.clone(),
+      zIndex: this.zIndex.clone(),
+      transform: this.transform.clone(),
+      backgroundPosition: this.backgroundPosition.clone()
     });
   };
 
@@ -1291,8 +1325,10 @@
   PositionableElement.prototype.undo = function() {
     var state = this.states.pop();
     if (!state) return;
-    this.position = state.position;
-    this.dimensions = state.dimensions;
+    this.box = state.box;
+    this.zIndex = state.zIndex;
+    this.transform = state.transform;
+    //this.position = state.position;
     this.backgroundPosition = state.backgroundPosition;
     this.render();
   };
@@ -1337,29 +1373,31 @@
 
   // --- Transform
 
-  PositionableElement.prototype.setBackgroundPosition = function(point) {
-    this.backgroundPosition = point;
+  PositionableElement.prototype.setBackgroundPosition = function(p) {
+    this.backgroundPosition.setPosition(p);
     this.updateBackgroundPosition();
   };
 
   // TODO: remove?
+  /*
   PositionableElement.prototype.setPosition = function(point) {
     // TODO: Remove all direct this. properties
     this.position = point;
-    this.dimensions.setPosition(point);
+    this.box.setPosition(point);
     this.updatePosition();
   };
+  */
 
   PositionableElement.prototype.incrementBackgroundPosition = function(vector) {
     if (!this.backgroundPosition) return;
-    if (this.dimensions.rotation) {
-      vector = vector.rotate(-this.dimensions.rotation);
+    if (this.box.rotation) {
+      vector = vector.getRotated(-this.box.rotation);
     }
     this.setBackgroundPosition(this.backgroundPosition.add(vector));
   };
 
   PositionableElement.prototype.incrementPosition = function(vector) {
-    this.dimensions.addPosition(vector);
+    this.box.addPosition(vector);
     this.updatePosition();
     //this.setPosition(this.position.add(vector));
     this.checkScrollBounds();
@@ -1368,9 +1406,9 @@
   PositionableElement.prototype.incrementZIndex = function(vector) {
     // Positive Y is actually down, so decrement here.
     if (vector.x > 0 || vector.y < 0) {
-      this.dimensions.zIndex.addValue(1);
+      this.zIndex.addValue(1);
     } else if (vector.x < 0 || vector.y > 0) {
-      this.dimensions.zIndex.addValue(-1);
+      this.zIndex.addValue(-1);
     }
     this.updateZIndex();
   };
@@ -1378,38 +1416,48 @@
   // --- Rendering
 
   PositionableElement.prototype.render = function() {
+    // TODO: update separately instead of render??
     this.updatePosition();
     this.updateSize();
-    this.updateRotation();
+    this.updateTransform();
     this.updateBackgroundPosition();
     this.updateZIndex();
   };
 
   PositionableElement.prototype.updatePosition = function() {
-    this.el.style.left = this.dimensions.cssLeft;
-    this.el.style.top  = this.dimensions.cssTop;
+    this.el.style.left = this.box.cssLeft;
+    this.el.style.top  = this.box.cssTop;
   };
 
   PositionableElement.prototype.updateSize = function(size) {
-    this.el.style.width  = this.dimensions.cssWidth;
-    this.el.style.height = this.dimensions.cssHeight;
+    this.el.style.width  = this.box.cssWidth;
+    this.el.style.height = this.box.cssHeight;
   };
 
-  PositionableElement.prototype.updateRotation = function() {
-    var r = this.dimensions.rotation;
-    var style = 'rotateZ('+ r +'deg)';
-    this.el.style.webkitTransform = style;
-    this.el.style.transform = style;
+  // TODO: standing in for any transform now... fix this!
+  PositionableElement.prototype.updateTransform = function() {
+    /*
+    var r = this.box.rotation, transforms = [];
+    if (this.box.cssTranslationLeft || this.box.cssTranslationTop) {
+      var tx = this.box.cssTranslationLeft || 0;
+      var ty = this.box.cssTranslationTop || 0;
+      transforms.push('translate('+ tx + ', '+ ty + ')');
+    }
+    transforms.push('rotateZ('+ r +'deg)');
+    this.el.style.webkitTransform = transforms.join(' ');
+    */
+    this.el.style.transform = this.transform;
   };
 
   PositionableElement.prototype.updateBackgroundPosition = function() {
-    if (!this.backgroundPosition) return;
-    var css = this.backgroundPosition.x + 'px ' + this.backgroundPosition.y + 'px'
-    this.el.style.backgroundPosition = css;
+    if (this.backgroundPosition.isNull()) {
+      return;
+    }
+    this.el.style.backgroundPosition = this.backgroundPosition;
   };
 
   PositionableElement.prototype.updateZIndex = function() {
-    this.el.style.zIndex = this.dimensions.zIndex;
+    this.el.style.zIndex = this.zIndex;
   };
 
 
@@ -1421,9 +1469,9 @@
     // x/y internal coordinate system, which may be rotated.
     var dim = this.getAbsoluteDimensions();
     var corner = new Point(dim.left, dim.top);
-    if (this.dimensions.rotation) {
-      corner = this.dimensions.getPositionForCoords(corner).add(this.getPositionOffset());
-      return point.subtract(corner).rotate(-this.dimensions.rotation);
+    if (this.box.rotation) {
+      corner = this.box.getPositionForCoords(corner).add(this.getPositionOffset());
+      return point.subtract(corner).getRotated(-this.box.rotation);
     } else {
       return point.subtract(corner);
     }
@@ -1432,14 +1480,14 @@
   PositionableElement.prototype.getPositionOffset = function() {
     // The offset between the element's position and it's actual
     // rectangle's left/top coordinates, which can sometimes differ.
-    return this.dimensions.getPosition().subtract(
-        new Point(this.dimensions.left.px, this.dimensions.top.px));
+    return this.box.getPosition().subtract(
+        new Point(this.box.left.px, this.box.top.px));
   };
 
   PositionableElement.prototype.getPositionFromRotatedHandle = function(anchor) {
-    var offsetX  = this.dimensions.width / 2;
-    var offsetY  = this.dimensions.height / 2;
-    var toCenter = anchor.offsetToCenter(offsetX, offsetY).rotate(this.dimensions.rotation);
+    var offsetX  = this.box.width / 2;
+    var offsetY  = this.box.height / 2;
+    var toCenter = anchor.offsetToCenter(offsetX, offsetY).getRotated(this.box.rotation);
     var toCorner = new Point(-offsetX, -offsetY);
     return anchor.startPosition.add(toCenter).add(toCorner);
   };
@@ -1456,7 +1504,7 @@
   };
 
   PositionableElement.prototype.getCenter = function() {
-    return this.dimensions.getCenter();
+    return this.box.getCenter();
   };
 
   PositionableElement.prototype.getAbsoluteCenter = function() {
@@ -1497,8 +1545,8 @@
   PositionableElement.prototype.alignToCenter = function(line, val) {
     var axis = line === 'vertical' ? 'x' : 'y';
     var center = this.getCenter().clone();
-    var offsetX  = this.dimensions.getWidth() / 2;
-    var offsetY  = this.dimensions.getHeight() / 2;
+    var offsetX  = this.box.getWidth() / 2;
+    var offsetY  = this.box.getHeight() / 2;
     var toCorner = new Point(-offsetX, -offsetY);
     center[axis] = val;
     this.setPosition(center.add(toCorner));
@@ -1587,12 +1635,12 @@
       add(this.getStyleLines('left', round(this.position.x)));
       add(this.getStyleLines('top', round(this.position.y)));
     }
-    add(this.getStyleLines('width', this.dimensions.getWidth(true)));
-    add(this.getStyleLines('height', this.dimensions.getHeight(true)));
+    add(this.getStyleLines('width', this.box.getWidth(true)));
+    add(this.getStyleLines('height', this.box.getHeight(true)));
     if (this.backgroundPosition) {
       add(this.getStyleLines('background-position', this.backgroundPosition.x, this.backgroundPosition.y));
     }
-    if (this.dimensions.rotation) {
+    if (this.box.rotation) {
       add(this.getStyleLines('rotation', this.getRoundedRotation()));
     }
 
@@ -1670,11 +1718,11 @@
       case 'left':
         return val1 === state.position.x;
       case 'rotation':
-        return val1 === state.dimensions.rotation;
+        return val1 === state.box.rotation;
       case 'width':
-        return val1 === state.dimensions.right - state.dimensions.left;
+        return val1 === state.box.right - state.box.left;
       case 'height':
-        return val1 === state.dimensions.bottom - state.dimensions.top;
+        return val1 === state.box.bottom - state.box.top;
       case 'background-position':
         var bp = state.backgroundPosition;
         return val1 === bp.x && val2 === bp.y;
@@ -1687,8 +1735,8 @@
       'z-index': this.zIndex,
       'top': round(this.position.y),
       'left': round(this.position.x),
-      'width': this.dimensions.getWidth(true),
-      'height': this.dimensions.getHeight(true),
+      'width': this.box.getWidth(true),
+      'height': this.box.getHeight(true),
       'rotation': this.getRoundedRotation(),
       'background-position': this.backgroundPosition
     }
@@ -1703,7 +1751,7 @@
   };
 
   PositionableElement.prototype.getRoundedRotation = function() {
-    var r = this.dimensions.rotation;
+    var r = this.box.rotation;
     if (r % 1 !== 0.5) {
       r = round(r);
     }
@@ -1757,10 +1805,9 @@
 
     // Resizing
     this.delegateToFocused('resize');
-    this.delegateToFocused('resizeStart');
 
     // Rotation
-    this.delegateToFocused('setRotation');
+    this.delegateToFocused('rotate');
 
   };
 
@@ -1771,6 +1818,7 @@
   };
 
   PositionableElementManager.prototype.build = function(fn) {
+
     var els = [];
     this.elements = [];
 
@@ -1782,7 +1830,7 @@
       query += ':not([class*="'+ EXTENSION_CLASS_PREFIX +'"])';
       els = document.body.querySelectorAll(query);
     } catch(e) {
-      console.error(e.message);
+      throwError(e.message, false);
     }
 
     for(var i = 0, el; el = els[i]; i++) {
@@ -2068,23 +2116,20 @@
 
 
   function DragSelection () {
-    DraggableElement.call(this);
+    DraggableElement.call(this, document.body, 'div', 'drag-selection');
 
-    this.build();
-    this.setupDragging();
-    this.dimensions = new Rectangle();
+    this.buildSides();
+    this.box = new Rectangle();
   };
 
 
   DragSelection.prototype = Object.create(DraggableElement.prototype);
 
-  DragSelection.prototype.build = function() {
-    this.box = new Element(document.body, 'div', 'drag-selection');
-    this.boxTop = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-top');
-    this.boxBottom = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-bottom');
-    this.boxLeft = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-left');
-    this.boxRight = new Element(this.box.el, 'div', 'drag-selection-border drag-selection-right');
-    this.el = this.box.el;
+  DragSelection.prototype.buildSides = function() {
+    new Element(this.el, 'div', 'drag-selection-border drag-selection-top');
+    new Element(this.el, 'div', 'drag-selection-border drag-selection-bottom');
+    new Element(this.el, 'div', 'drag-selection-border drag-selection-left');
+    new Element(this.el, 'div', 'drag-selection-border drag-selection-right');
   };
 
   // --- Events
@@ -2092,7 +2137,7 @@
   DragSelection.prototype.dragStart = function(evt) {
     this.from = new Point(evt.clientX, evt.clientY);
     this.to   = this.from;
-    this.box.addClass('drag-selection-active');
+    this.addClass('drag-selection-active');
     this.render();
   };
 
@@ -2102,7 +2147,7 @@
   };
 
   DragSelection.prototype.mouseUp = function(evt) {
-    this.box.removeClass('drag-selection-active');
+    this.removeClass('drag-selection-active');
     this.getFocused();
     DraggableElement.prototype.mouseUp.call(this, evt);
     this.min = this.max = null;
@@ -2157,10 +2202,9 @@
 
 
   function StatusBar () {
-    DraggableElement.call(this);
+    DraggableElement.call(this, document.body, 'div', 'status-bar');
 
     this.build();
-    this.setupDragging();
     this.getPosition();
   };
 
@@ -2209,7 +2253,7 @@
   // --- Setup
 
   StatusBar.prototype.build = function() {
-    this.el = new Element(document.body, 'div', 'status-bar').el;
+
     this.areas = [];
     this.inputs = [];
 
@@ -2471,7 +2515,7 @@
     this.detailsComma3   = new Element(this.elementDetails.el, 'span').html(', ');
     this.detailsHeight   = new Element(this.elementDetails.el, 'span').title('Height');
     this.detailsDivider2 = new Element(this.elementDetails.el, 'span').html(' | ');
-    this.detailsRotation = new Element(this.elementDetails.el, 'span').title('Rotation');
+    this.detailsRotation = new Element(this.elementDetails.el, 'span').title('Rotation (other transforms hidden)');
 
     this.multipleElementArea   = new Element(area.el, 'div', 'multiple-element-area');
     this.multipleElementHeader = new Element(this.multipleElementArea.el, 'h3', 'multiple-header');
@@ -2806,24 +2850,24 @@
   };
 
   StatusBar.prototype.setElementDetails = function(el) {
-    this.detailsLeft.html(el.dimensions.cssLeft);
-    this.detailsTop.html(el.dimensions.cssTop);
+    this.detailsLeft.html(el.box.cssLeft);
+    this.detailsTop.html(el.box.cssTop);
 
-    if (el.dimensions.cssZIndex.isAuto()) {
+    if (el.zIndex.isNull()) {
       this.detailsZIndex.hide();
       this.detailsComma2.hide();
     } else {
-      this.detailsZIndex.html(el.dimensions.cssZIndex);
+      this.detailsZIndex.html(el.zIndex);
       this.detailsZIndex.show(false);
       this.detailsComma2.show(false);
     }
 
-    this.detailsWidth.html(el.dimensions.cssWidth);
-    this.detailsHeight.html(el.dimensions.cssHeight);
+    this.detailsWidth.html(el.box.cssWidth);
+    this.detailsHeight.html(el.box.cssHeight);
 
-    var rotation = el.getRoundedRotation();
-    if (rotation) {
-      this.detailsRotation.html(rotation + 'deg');
+    //var rotation = el.getRoundedRotation();
+    if (el.transform.rotation.deg) {
+      this.detailsRotation.html(el.transform.rotation);
       this.detailsDivider2.show(false);
     } else {
       this.detailsDivider2.hide();
@@ -3097,8 +3141,7 @@
 
   SpriteRecognizer.prototype.loadImage = function(obj) {
     if (obj.error) {
-      console.error('Positionable: "' + obj.url + '" could not be loaded!');
-      return;
+      throwError('Positionable: "' + obj.url + '" could not be loaded!');
     }
     var url = obj;
     var img = new Image();
@@ -3137,7 +3180,7 @@
       return cached;
     }
     this.queue = [];
-    this.rect  = new Rectangle(pixel.y, pixel.x, pixel.y, pixel.x);
+    this.rect = new Rectangle(pixel.y, pixel.x, pixel.y, pixel.x);
     do {
       this.testAdjacentPixels(pixel);
     } while(pixel = this.queue.shift());
@@ -3182,8 +3225,8 @@
 
 
   function Point (x, y) {
-    this.x = x;
-    this.y = y;
+    this.x = x || 0;
+    this.y = y || 0;
   };
 
   Point.DEGREES_IN_RADIANS = 180 / Math.PI;
@@ -3199,10 +3242,11 @@
     return deg;
   };
 
+/*
   Point.vector = function(deg, len) {
-    var rad = Point.degToRad(deg);
-    return new Point(Math.cos(rad) * len, Math.sin(rad) * len);
+
   };
+  */
 
   Point.prototype.add = function(p) {
     return new Point(this.x + p.x, this.y + p.y);
@@ -3220,12 +3264,21 @@
     return Point.radToDeg(Math.atan2(this.y, this.x));
   };
 
+/*
+  Point.prototype.getRotated = function(deg) {
+    var rad = Point.degToRad(deg);
+
+
   Point.prototype.setAngle = function(deg) {
     return Point.vector(deg, this.getLength());
   };
+  */
 
-  Point.prototype.rotate = function(deg) {
-    return this.setAngle(this.getAngle() + deg);
+  Point.prototype.getRotated = function(deg) {
+    var rad = Point.degToRad(deg);
+    var x = this.x * Math.cos(rad) - this.y * Math.sin(rad);
+    var y = this.x * Math.sin(rad) + this.y * Math.cos(rad);
+    return new Point(x, y);
   };
 
   Point.prototype.getLength = function() {
@@ -3239,6 +3292,48 @@
   Point.prototype.round = function() {
     return new Point(round(this.x), round(this.y));
   };
+
+
+/*
+  Point.vectorOLD = function(deg, len) {
+    var rad = Point.degToRad(deg);
+    return new Point(Math.cos(rad) * len, Math.sin(rad) * len);
+  };
+
+  Point.prototype.getAngleOLD = function() {
+    return Point.radToDeg(Math.atan2(this.y, this.x));
+  };
+
+  Point.prototype.setAngleOLD = function(deg) {
+    return Point.vectorOLD(deg, this.getLengthOLD());
+  };
+
+  Point.prototype.getRotatedOLD = function(deg) {
+    return this.setAngleOLD(this.getAngleOLD() + deg);
+  };
+
+  Point.prototype.getLengthOLD = function() {
+    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+  };
+  */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   /*-------------------------] Rectangle [--------------------------*/
@@ -3288,7 +3383,7 @@
     return new Point(this.left + (this.getWidth() / 2), this.top + (this.getHeight() / 2));
   };
 
-  Rectangle.prototype.getAspectRatio = function() {
+  Rectangle.prototype.getRatio = function() {
     return this.getWidth() / this.getHeight();
   };
 
@@ -3296,14 +3391,15 @@
   Rectangle.prototype.getPositionForCoords = function(coord) {
     if (!this.rotation) return coord;
     var center = this.getCenter();
-    return coord.subtract(center).rotate(this.rotation).add(center);
+    return coord.subtract(center).getRotated(this.rotation).add(center);
   };
 
   // The un-rotated coords for a given rotated position.
+  // TODO: consolidate this with CSSBox
   Rectangle.prototype.getCoordsForPosition = function(position) {
     if (!this.rotation) return position;
     var center = this.getCenter();
-    return position.subtract(center).rotate(-this.rotation).add(center);
+    return position.subtract(center).getRotated(-this.rotation).add(center);
   };
 
   Rectangle.prototype.clone = function() {
@@ -3312,20 +3408,40 @@
 
   /*-------------------------] CSSPoint [--------------------------*/
 
-  function CSSPoint (left, top) {
-    this.point = new Point(left.px, top.px);
+  function CSSPoint (cssLeft, cssTop) {
+    this.cssLeft = cssLeft || new CSSValue(null);
+    this.cssTop  = cssTop || new CSSValue(null);
   }
+
+  CSSPoint.prototype.isNull = function() {
+    return this.cssLeft.isNull() && this.cssTop.isNull();
+  };
+
+  CSSPoint.prototype.getPosition = function() {
+    return new Point(this.cssLeft.px, this.cssTop.px);
+  };
+
+  CSSPoint.prototype.setPosition = function(p) {
+    this.cssLeft.px = p.x;
+    this.cssTop.px = p.y;
+  };
+
+  CSSPoint.prototype.toString = function() {
+    return [this.cssLeft, this.cssTop].join(' ');
+  };
+
+  CSSPoint.prototype.clone = function() {
+    return new CSSPoint(this.cssLeft.clone(), this.cssTop.clone());
+  };
 
   /*-------------------------] CSSBox [--------------------------*/
 
   // TODO: can this supersede rectangle?
-  function CSSBox (cssLeft, cssTop, cssWidth, cssHeight, cssZIndex, cssRotation) {
-    this.cssLeft     = cssLeft;
-    this.cssTop      = cssTop;
-    this.cssWidth    = cssWidth;
-    this.cssHeight   = cssHeight;
-    this.cssZIndex   = cssZIndex;
-    this.cssRotation = cssRotation;
+  function CSSBox (cssLeft, cssTop, cssWidth, cssHeight) {
+    this.cssLeft   = cssLeft;
+    this.cssTop    = cssTop;
+    this.cssWidth  = cssWidth;
+    this.cssHeight = cssHeight;
   }
 
 /*
@@ -3389,15 +3505,33 @@
       this.cssHeight.px = Math.max(val, 1);
     },
 
+    // Translation TODO: accessors or "get"? it's confusing
+    // TODO: move this into CSSTranform or something
+
+    /*
+    setTranslation: function (vector) {
+      if (!this.cssTranslationLeft) {
+        this.cssTranslationLeft = new CSSValue(0, 'px');
+      }
+      if (!this.cssTranslationTop) {
+        this.cssTranslationTop = new CSSValue(0, 'px');
+      }
+      this.cssTranslationLeft.setValue(vector.x);
+      this.cssTranslationTop.setValue(vector.y);
+    },
+    */
+
     // Basic rotation accessors
 
+    /*
     get rotation () {
-      return this.cssRotation.getValue();
+      return this.cssTransform.rotation.getValue();
     },
 
     set rotation (val) {
-      return this.cssRotation.setValue(val);
+      return this.cssTransform.rotation.setValue(val);
     },
+    */
 
     // Computed dimensions
 
@@ -3431,10 +3565,33 @@
       this.cssTop.addValue(vector.y);
     },
 
+    getCoords: function(p, rotation) {
+      var center;
+
+      p = p.subtract(this.getPosition());
+
+      if (rotation) {
+        center = this.getCenter();
+        p = p.subtract(center).getRotated(-potation).add(center);
+      }
+
+      return p;
+    },
+
+    getCenterCoords: function() {
+      return new Point(this.width / 2, this.height / 2);
+    },
+
+    getCenterPosition: function() {
+      return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
+    },
+
+    // TODO: vague
     getCenter: function() {
       return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
     },
 
+    /*
     // TODO: rename??
     calculateRotationOffset: function() {
       if (!this.rotation) {
@@ -3443,30 +3600,29 @@
 
       var pos = this.getPosition();
       var center = new Point(this.width / 2, this.height / 2);
-      var rotatedCoords = center.rotate(this.rotation);
+      var rotatedCoords = center.getRotated(this.rotation);
       var rotatedPos = pos.subtract(rotatedCoords.subtract(center));
-      console.info(rotatedCoords, rotatedCoords.subtract(center), pos, rotatedPos);
       this.setPosition(rotatedPos);
 
-      /*
-      var offsetX  = this.dimensions.width / 2;
-      var offsetY  = this.dimensions.height / 2;
-      var toCenter = anchor.offsetToCenter(offsetX, offsetY).rotate(this.dimensions.rotation);
-      console.info('OKKKKKKKKKK', anchor, anchor.offsetToCenter(offsetX, offsetY));
+      var offsetX  = this.box.width / 2;
+      var offsetY  = this.box.height / 2;
+      var toCenter = anchor.offsetToCenter(offsetX, offsetY).getRotated(this.box.rotation);
       var toCorner = new Point(-offsetX, -offsetY);
       return anchor.startPosition.add(toCenter).add(toCorner);
-      */
     },
+    */
 
+    /*
     // Returns coordinates in the box's XY coordinate
     // frame for a given non-rotated XY position.
     getCoordsForPosition: function(pos) {
       if (!this.rotation) return pos;
       var center = this.getCenter();
-      return pos.subtract(center).rotate(this.rotation).add(center);
+      return pos.subtract(center).getRotated(this.rotation).add(center);
     },
+    */
 
-    getAspectRatio: function() {
+    getRatio: function() {
       return this.width / this.height;
     },
 
@@ -3476,7 +3632,6 @@
       if (!prop || !amount) {
         return;
       }
-      console.info('OKKKKKKK', prop, amount);
 
       amount = this.constrainProperty(prop, this[prop] + amount);
 
@@ -3502,37 +3657,360 @@
         this.cssLeft.clone(),
         this.cssTop.clone(),
         this.cssWidth.clone(),
-        this.cssHeight.clone(),
-        this.cssZIndex.clone(),
-        this.cssRotation.clone()
+        this.cssHeight.clone()
       );
     }
 
   }
 
-  /*-------------------------] CSSValue [--------------------------*/
+  /*-------------------------] CSSRuleMatcher [--------------------------*/
 
-
-  function CSSValue(val, unit) {
-    this.val = val;
-    this.unit = unit;
+  function CSSRuleMatcher(el) {
+    this.computedStyles = window.getComputedStyle(el);
+    this.matchedRules = this.getMatchedRules(el);
   }
 
-  CSSValue.parseValue = function(str) {
-    return parseFloat(str) || 0;
-  };
-
-  CSSValue.parseUnit = function(str) {
-    // TODO: test percentages too!
-    return str.match(/px|deg|v(w|h|min|max)$/)[0];
-  };
-
-  CSSValue.fromString = function(str, defaultUnit) {
-    if (str === 'auto' || str === '') {
-      return new CSSValue(null, defaultUnit || null);
+  CSSRuleMatcher.prototype.getMatchedRules = function (el) {
+    // Note: This API is deprecated and may be removed.
+    try {
+      return window.getMatchedCSSRules(el);
+    } catch (e) {
+      return null;
     }
-    return new CSSValue(CSSValue.parseValue(str), CSSValue.parseUnit(str));
   };
+
+  CSSRuleMatcher.prototype.getPosition = function(prop, el) {
+    var val = this.getCSSValue(prop.toLowerCase(), el);
+    return val;
+
+    /*
+     * TODO: check this is necessary?
+    if (!val.isAuto()) {
+      // If the element is already explictly positioned, then
+      // trust those values first as they are the ones that will
+      // be directly manipulated.
+      return val;
+    }
+
+    var px = this.el['offset' + prop] -
+             CSSValue.parseValue(style['margin' + prop]) -
+             CSSValue.parseValue(style['padding' + prop]) -
+             CSSValue.parseValue(style['border' + prop + 'Width']);
+
+    return new CSSValue(px);
+    */
+  }
+
+  CSSRuleMatcher.prototype.getCSSValue = function(prop, el) {
+    // Normal percentages are relative to their parent nodes.
+    if (el) {
+      var parent = el.parentNode, percentComponent;
+      switch (prop) {
+        case 'left':   percentComponent = 'width';  break;
+        case 'top':    percentComponent = 'height'; break;
+        case 'width':  percentComponent = 'width';  break;
+        case 'height': percentComponent = 'height'; break;
+      }
+      if (!percentComponent) {
+        // TODO: make sure nothing slips by
+        throw new Error('FUCK');
+      }
+      return CSSValue.parse(this.getProperty(prop), el.parentNode, percentComponent);
+    }
+
+    return CSSValue.parse(this.getProperty(prop));
+  };
+
+  CSSRuleMatcher.prototype.getTransform = function(el) {
+    var str = this.getProperty('transform');
+    if (!str || str === 'none') {
+      return new CSSCompositeTransform();
+    } else if (str.match(/matrix/)) {
+      return CSSMatrixTransform.parse(str);
+    } else {
+      return CSSCompositeTransform.parse(str, el);
+    }
+  };
+
+  CSSRuleMatcher.prototype.getBackgroundImage = function() {
+    // Must use computed styles here,
+    // otherwise the url may not include the host.
+    return CSSUrl.parse(this.computedStyles['backgroundImage']);
+  };
+
+  CSSRuleMatcher.prototype.getBackgroundPosition = function(el) {
+    var str = this.getProperty('backgroundPosition'), positions, xy, x, y;
+
+    if (str === 'initial') {
+      return new CSSPoint();
+    }
+
+    positions = str.split(',');
+
+    if (positions.length > 1) {
+      throwError('Only one background image allowed per element');
+    }
+
+    xy = positions[0].split(' ');
+
+    x = CSSValue.parse(xy[0], el, 'width');
+    y = CSSValue.parse(xy[1], el, 'height');
+
+    // Background percentages are relative to the element itself.
+    // TODO: this won't work with percentages unless we have the
+    // size of the element AND the image to work with... this is
+    // getting silly, so let's move the work that CSSValue is
+    // doing into somewhere else and have CSSValue call out to
+    // it when it needs it instead.
+    return new CSSPoint(x, y);
+  };
+
+
+  CSSRuleMatcher.prototype.getProperty = function(prop) {
+    var str;
+
+    // Attempt to get value from matched rules.
+    if (this.matchedRules) {
+      for (var rules = this.matchedRules, i = rules.length - 1, rule; rule = rules[i]; i--) {
+        str = rule.style[prop];
+        if (str) {
+          break;
+        }
+      }
+    }
+
+    // Fall back to computed values.
+    if (!str) {
+      str = this.computedStyles[prop];
+    }
+
+    return str;
+  };
+
+  /*-------------------------] CSSCompositeTransform [--------------------------*/
+
+  function CSSCompositeTransform (functions) {
+    this.functions = functions || [];
+  }
+
+  CSSCompositeTransform.parse = function (str, el) {
+    var functions = str.split(' ').map(function(f) {
+      return CSSCompositeTransformFunction.parse(f, el);
+    });
+    return new CSSCompositeTransform(functions);
+  };
+
+  CSSCompositeTransform.prototype = {
+
+    // TODO: this seems better as getRotation()
+
+    get rotation () {
+      var func = this.getRotationFunction();
+      return func ? func.values[0] : new CSSValue(null);
+    },
+
+    set rotation (deg) {
+      var func = this.getRotationFunction();
+      if (func) {
+        func.values[0].deg = deg;
+      } else {
+        var values = [new CSSValue(deg, 'deg')];
+        this.functions.push(new CSSCompositeTransformFunction('rotate', values));
+      }
+    },
+
+    get translation () {
+      var func = this.getTranslationFunction();
+      if (func) {
+        return new Point(func.values[0].px, func.values[1].px);
+      }
+      return new Point(0, 0);
+    },
+
+    set translation (p) {
+      var func = this.getTranslationFunction();
+      if (func) {
+        func.values[0].px = p.x;
+        func.values[1].px = p.y;
+      } else {
+        // Translation respects subpixel values, so override precision here.
+        // TODO: standardize precision for translation and make sure it works when one exists already
+        var values = [new CSSValue(p.x, 'px', 2), new CSSValue(p.y, 'px', 2)];
+        // Ensure that translate comes first, otherwise anchors will not work.
+        this.functions.unshift(new CSSCompositeTransformFunction('translate', values));
+      }
+    },
+
+    getRotationFunction: function() {
+      return this.functions.find(function(f) {
+        return f.name === CSSCompositeTransformFunction.ROTATE;
+      });
+    },
+
+    getTranslationFunction: function() {
+      return this.functions.find(function(f) {
+        return f.name === CSSCompositeTransformFunction.TRANSLATE;
+      });
+    },
+
+    toString: function () {
+      return this.functions.join(' ');
+    },
+
+    clone: function () {
+      var functions = this.functions.map(function(f) {
+        if (f.canMutate()) {
+          return f.clone();
+        }
+        return f;
+      });
+      return new CSSCompositeTransform(functions);
+    }
+
+  };
+
+  /*-------------------------] CSSCompositeTransformFunction [--------------------------*/
+
+    /*
+    var match = transform && transform.match(/rotateZ\(([\d.]+)\s*(deg|rad|turn)\)?/i);
+    if (match) {
+      var val  = parseFloat(match[1]);
+      var unit = parseFloat(match[2]);
+      if (unit === 'rad') {
+        val = Point.radToDeg(val);
+      } else if (unit === 'turn') {
+        val *= 360;
+      };
+      return val;
+    }
+    return 0;
+    */
+
+  function CSSCompositeTransformFunction (name, values) {
+    this.name = name;
+    this.values = values;
+  }
+
+  // transform: matrix(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+  // transform: translate(12px, 50%);
+  // transform: translateX(2em);
+  // transform: translateY(3in);
+  // transform: scale(2, 0.5);
+  // transform: scaleX(2);
+  // transform: scaleY(0.5);
+  // transform: rotate(0.5turn);
+  // transform: skew(30deg, 20deg);
+  // transform: skewX(30deg);
+  // transform: skewY(1.07rad);
+
+  CSSCompositeTransformFunction.ROTATE = 'rotate';
+  CSSCompositeTransformFunction.TRANSLATE = 'translate';
+  CSSCompositeTransformFunction.COMPOSITE_FUNCTION_REG = /^(rotate|(?:translate|scale|skew)[XY]?)\((.+)\)$/;
+
+  CSSCompositeTransformFunction.parse = function (str, el) {
+    var match, name, values;
+
+    // TODO: needs toLowerCase??
+    match = str.match(CSSCompositeTransformFunction.COMPOSITE_FUNCTION_REG);
+
+    if (!match) {
+      throwError('Value not allowed: "'+ str +'". Only 2d transforms are supported.');
+    }
+
+    name   = match[1];
+    // TODO: needs space after comma?
+    values = match[2].split(',').map(function(s) {
+      // Percentages in translate functions are relative to the element itself.
+      var val = CSSValue.parse(s, el);
+      if (val.unit === '%') {
+        // Won't support percentages here as they would have to take scale
+        // operations into account as well, which is too complex to handle.
+        throwError('Percent values are not allowed in translate operarations.');
+      }
+      return val;
+    });
+
+    return new CSSCompositeTransformFunction(name, values);
+  };
+
+  CSSCompositeTransformFunction.prototype.toString = function () {
+    return this.name + '(' + this.values.join(',') + ')';
+  };
+
+  CSSCompositeTransformFunction.prototype.canMutate = function () {
+    return this.name === 'rotate' ||
+           this.name === 'translate' ||
+           this.name === 'translateX' ||
+           this.name === 'translateY';
+  };
+
+  CSSCompositeTransformFunction.prototype.clone = function () {
+    var values = this.values.map(function(v) {
+      return v.clone();
+    });
+    return new CSSCompositeTransformFunction(this.name, values);
+  };
+
+  /*-------------------------] CSSMatrixTransform [--------------------------*/
+
+  function CSSMatrixTransform () {
+  }
+
+  CSSMatrixTransform.parse = function() {
+    // TODO: this
+    var match = matrix.match(/[-.\d]+/g);
+    if (match) {
+      a = parseFloat(match[0]);
+      b = parseFloat(match[1]);
+      return new Point(a, b).getAngle();
+    }
+    return 0;
+  };
+
+  CSSMatrixTransform.prototype.clone = function() {
+    // TODO: this
+  };
+
+  /*-------------------------] CSSUrl [--------------------------*/
+
+  function CSSUrl (url) {
+    this.url = url;
+  }
+
+  CSSUrl.MATCH_REG = /url\([\u0027\u0022]?(.+?)[\u0022\u0027]?\)/i;
+
+  CSSUrl.parse = function(str) {
+    var match = str.match(CSSUrl.MATCH_REG);
+    return new CSSUrl(match ? match[1] : null);
+  };
+
+  /*-------------------------] CSSValue [--------------------------*/
+
+  function CSSValue (val, unit, precision, percentTarget, percentComponent) {
+    this.val       = val;
+    this.unit      = unit;
+    this.precision = precision || this.getDefaultPrecisionForUnit();
+    if (percentTarget && percentComponent && unit === '%') {
+      this.percentTarget = percentTarget;
+      this.percentComponent = percentComponent;
+    }
+  }
+
+  CSSValue.parse = function(str, percentTarget, percentComponent) {
+
+    if (str === 'auto' || str === '') {
+      return new CSSValue(null);
+    } else if (str === 'center') {
+      // TODO: other values??
+      return new CSSValue(50, '%', percentTarget, percentComponent);
+    }
+
+    var val = parseFloat(str) || 0;
+    var unit = str.match(/px|%|deg|rad|v(w|h|min|max)$/)[0];
+
+    return new CSSValue(val, unit, null, percentTarget, percentComponent);
+  };
+
 
   CSSValue.prototype = {
 
@@ -3544,19 +4022,30 @@
       this.setValue(val);
     },
 
+    get deg() {
+      return this.getValue();
+    },
+
+    set deg(val) {
+      this.setValue(val);
+    },
+
     toString: function() {
-      return round(this.val, this.getPrecision()) + this.unit;
+      if (this.isNull()) {
+        return '';
+      }
+      return round(this.val, this.precision) + this.unit;
     },
 
     clone: function() {
-      return new CSSValue(this.val, this.unit);
+      return new CSSValue(this.val, this.unit, this.precision, this.percentTarget, this.percentComponent);
     },
 
-    isAuto: function() {
-      return this.val === null;
+    isNull: function() {
+      return this.val == null;
     },
 
-    getPrecision: function() {
+    getDefaultPrecisionForUnit: function() {
       return this.unit === null ||
              this.unit === 'px' ||
              this.unit === 'deg' ? 0 : 2;
@@ -3573,6 +4062,8 @@
           return this.viewportToPixel(this.val, Math.min(window.innerWidth, window.innerHeight));
         case 'vmax':
           return this.viewportToPixel(this.val, Math.max(window.innerWidth, window.innerHeight));
+        case '%':
+          return this.percentToPixel(this.val);
         case 'rad':
           return Point.radToDeg(this.val);
       }
@@ -3594,8 +4085,12 @@
         case 'vmax':
           val = this.pixelToViewport(val, Math.max(window.innerWidth, window.innerHeight));
           break;
+        case '%':
+          val = this.pixelToPercent(val);
+          break;
         case 'rad':
           val = Point.degToRad(val);
+          break;
         default:
           val = val;
       }
@@ -3603,11 +4098,11 @@
     },
 
     addValue: function(amt) {
-      var precision, mult, val;;
+      var precision, mult, val;
       if (amt === 0) {
         return;
       }
-      precision = this.getPrecision();
+      precision = this.precision;
       if (precision === 0) {
         val = this.val + amt;
       } else {
@@ -3623,6 +4118,22 @@
 
     pixelToViewport: function(px, dim) {
       return px / dim * 100;
+    },
+
+    percentToPixel: function(pct) {
+      return pct / 100 * this.getPercentTargetComponent();
+    },
+
+    pixelToPercent: function(px) {
+      return px / this.getPercentTargetComponent() * 100;
+    },
+
+    getPercentTargetComponent: function() {
+      if (this.percentComponent === 'width') {
+        return this.percentTarget.clientWidth;
+      } else if (this.percentComponent === 'height') {
+        return this.percentTarget.clientHeight;
+      }
     }
 
   };
