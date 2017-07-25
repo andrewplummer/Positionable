@@ -312,8 +312,8 @@
 
       this.setupKey('shift');
       this.setupKey('ctrl');
-      this.setupKey('cmd');
       this.setupKey('alt');
+      this.setupKey('cmd', true);
 
     }
 
