@@ -118,7 +118,7 @@
   border-width: 0;
 }
 
-.positionable-extension-positioned-element-focused .positionable-extension-handle-border {
+.positionable-extension-positioned-element-focused > .positionable-extension-handle-border {
   border-color: rgba(0,0,0,0.7);
 }
 

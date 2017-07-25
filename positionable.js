@@ -4018,6 +4018,7 @@
 
     static parse (str, prop, percentTarget) {
 
+      // TODO: test these on different properties!
       if (str === 'auto') {
         return new CSSValue();
       }
@@ -4297,10 +4298,14 @@
         throwError('Only one background image allowed per element');
       }
 
-      components = backgroundPosition.split(' ');
-
-      cssLeft = this.getPositionComponent(components[0], 'backgroundLeft', el, img);
-      cssTop  = this.getPositionComponent(components[1], 'backgroundTop', el, img);
+      if (backgroundPosition === 'initial') {
+        cssLeft = new CSSPixelValue(0);
+        cssTop  = new CSSPixelValue(0);
+      } else {
+        components = backgroundPosition.split(' ');
+        cssLeft = this.getPositionComponent(components[0], 'backgroundLeft', el, img);
+        cssTop  = this.getPositionComponent(components[1], 'backgroundTop', el, img);
+      }
 
       return new BackgroundImage(img, cssLeft, cssTop);
       //x = CSSValue.parse(xy[0], el, 'width');
