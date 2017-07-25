@@ -26,6 +26,7 @@
 // - test background-image: none
 // - resize while flipping between sizing modes (jumps?)
 // - position drag then hit ctrl to background drag (jumps?)
+// - test command key on windows
 
 // TODO: not sure if I'm liking the accessors... they're too mysterious
 
@@ -2270,6 +2271,10 @@
     static get OPTION_CHAR()  { return '\u2325'; }
     static get COMMAND_CHAR() { return '\u2318'; }
 
+    static getCommandModifierKey() {
+      return navigator.platform.match(/Mac/) ? StatusBar.COMMAND_CHAR : StatusBar.CTRL_CHAR;
+    }
+
     constructor() {
       super(document.body, 'div', 'status-bar');
       this.build();
@@ -2341,7 +2346,7 @@
 
       this.buildStartBlock('output', function(block) {
 
-        var cmdKey = this.buildInlineKeyIcon(this.getCommandKey());
+        var cmdKey = this.buildInlineKeyIcon(StatusBar.getCommandModifierKey());
         var cKey = this.buildInlineKeyIcon('c');
         var sKey = this.buildInlineKeyIcon('s');
         var text = cmdKey + cKey + ' Copy styles to clipboard<br>' + cmdKey + sKey +' Save styles to disk';
@@ -2481,7 +2486,7 @@
 
       this.buildHelpBox(commandHelp.el, 'undo', function(box, text) {
         box.addClass('command-help-box');
-        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.getCommandModifierKey());
         new Element(box.el, 'span', 'key-plus').html('+');
         new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
         text.html('Undo');
@@ -2489,7 +2494,7 @@
 
       this.buildHelpBox(commandHelp.el, 'select-all', function(box, text) {
         box.addClass('command-help-box');
-        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.getCommandModifierKey());
         new Element(box.el, 'span', 'key-plus').html('+');
         new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('a');
         text.html('Select All');
@@ -2497,7 +2502,7 @@
 
       this.buildHelpBox(commandHelp.el, 'copy', function(box, text) {
         box.addClass('command-help-box');
-        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.getCommandModifierKey());
         new Element(box.el, 'span', 'key-plus').html('+');
         new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('c');
         text.html('Copy Styles');
@@ -2505,7 +2510,7 @@
 
       this.buildHelpBox(commandHelp.el, 'save', function(box, text) {
         box.addClass('command-help-box');
-        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.getCommandModifierKey());
         new Element(box.el, 'span', 'key-plus').html('+');
         new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
         text.html('Save Styles');
@@ -2704,12 +2709,6 @@
       this.stateIcons.push(state);
     }
 
-
-    // --- Util
-
-    getCommandKey() {
-      return navigator.platform.match(/Mac/) ? StatusBar.COMMAND : StatusBar.CTRL;
-    }
 
     // --- Events
 
