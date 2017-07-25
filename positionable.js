@@ -6,7 +6,6 @@
  *
  * ---------------------------- */
 
-
 // TODO: test with:
 // - scrolling
 // - initial state
@@ -23,6 +22,10 @@
 // - weird bug when going crazy with mouse... div scrolling??
 // - different background positions... top right, percentages
 // - bug: go to zindex nudging and unfocus window, then focus back, move is rendered
+// - test "auto" values? what should happen here?
+// - test background-image: none
+// - resize while flipping between sizing modes (jumps?)
+// - position drag then hit ctrl to background drag (jumps?)
 
 // TODO: not sure if I'm liking the accessors... they're too mysterious
 
@@ -91,3425 +94,3451 @@
 
   /*-------------------------] NudgeManager [--------------------------*/
 
+  class NudgeManager {
 
-  function NudgeManager () {
-    this.reset();
-    this.setPositionMode();
-    this.checkNextNudge = this.checkNextNudge.bind(this);
-  };
+    static get DELAY_TO_SLOW() { return 250;  };
+    static get DELAY_TO_MID()  { return 1500; };
+    static get DELAY_TO_FAST() { return 3000; };
 
-  NudgeManager.DELAY_TO_SLOW = 250;
-  NudgeManager.DELAY_TO_MID  = 1500;
-  NudgeManager.DELAY_TO_FAST = 3000;
+    static get REPEAT_SLOW()   { return 20; };
+    static get REPEAT_MID ()   { return 10; };
+    static get REPEAT_FAST()   { return 5;  };
 
-  NudgeManager.REPEAT_SLOW = 20;
-  NudgeManager.REPEAT_MID  = 10;
-  NudgeManager.REPEAT_FAST = 5;
+    static get SHIFT_MULTIPLIER() { return 5; }
 
-  NudgeManager.SHIFT_MULTIPLIER = 5;
+    static get POSITION_MODE()    { return 'position';            }
+    static get ROTATE_MODE()      { return 'rotate';              }
+    static get RESIZE_NW_MODE()   { return 'resize-nw';           }
+    static get RESIZE_SE_MODE()   { return 'resize-se';           }
+    static get BG_POSITION_MODE() { return 'background-position'; }
+    static get Z_INDEX_MODE()     { return 'z-index';             }
 
-  NudgeManager.POSITION_MODE    = 'position';
-  NudgeManager.RESIZE_NW_MODE   = 'resize-nw';
-  NudgeManager.RESIZE_SE_MODE   = 'resize-se';
-  NudgeManager.BG_POSITION_MODE = 'background-position';
-  NudgeManager.Z_INDEX_MODE     = 'z-index';
-
-  // --- Modes
-
-  NudgeManager.prototype.setPositionMode = function() {
-    this.mode = NudgeManager.POSITION_MODE;
-  };
-
-  NudgeManager.prototype.toggleResizeMode = function(on) {
-    this.mode = this.mode === NudgeManager.RESIZE_SE_MODE ? NudgeManager.RESIZE_NW_MODE : NudgeManager.RESIZE_SE_MODE;
-  };
-
-  NudgeManager.prototype.toggleBackgroundMode = function() {
-    if (this.mode === NudgeManager.BG_POSITION_MODE) {
-      this.setPositionMode();
-    } else {
-      this.mode = NudgeManager.BG_POSITION_MODE;
+    constructor() {
+      this.resetNudges();
+      this.resetTimeout();
+      this.setMode(NudgeManager.POSITION_MODE);
+      this.checkNextNudge = this.checkNextNudge.bind(this);
     }
-  };
 
-  NudgeManager.prototype.toggleZIndexMode = function(on) {
-    if (this.mode === NudgeManager.Z_INDEX_MODE) {
-      this.setPositionMode();
-    } else {
-      this.mode = NudgeManager.Z_INDEX_MODE;
+    // --- Init
+
+    resetNudges() {
+      this.nudges = {};
     }
-  };
 
-  NudgeManager.prototype.isBackgroundMode = function() {
-    return this.mode === NudgeManager.BG_POSITION_MODE;
-  };
-
-  NudgeManager.prototype.isResizeMode = function() {
-    return this.mode === NudgeManager.RESIZE_NW_MODE || this.mode === NudgeManager.RESIZE_SE_MODE;
-  };
-
-  NudgeManager.prototype.isZIndexMode = function() {
-    return this.mode === NudgeManager.Z_INDEX_MODE;
-  };
-
-  // --- Actions
-
-  NudgeManager.prototype.dispatchNudge = function(vector) {
-    if (this.isBackgroundMode()) {
-      elementManager.incrementBackgroundPosition(vector);
-    } else if (this.isResizeMode()) {
-      this.resizeOffset = this.resizeOffset.add(vector);
-      elementManager.resize(this.resizeOffset, this.getHandleName());
-    } else if (this.isZIndexMode()) {
-      elementManager.incrementZIndex(vector);
-    } else {
-      elementManager.incrementPosition(vector);
+    resetTimeout() {
+      this.timer = clearTimeout(this.timer);
     }
-    statusBar.update();
-  };
 
-  NudgeManager.prototype.addDirection = function(dir) {
-    if (!this.isNudging()) {
-      this.begin();
+    // --- Modes
+
+    setMode(mode) {
+      this.mode = mode;
     }
-    this[dir] = true;
-    this.next();
-  };
 
-  NudgeManager.prototype.removeDirection = function(dir) {
-    this[dir] = false;
-    if (!this.isNudging()) {
-      this.reset();
+    toggleMode(mode) {
+      if (this.mode === mode) {
+        // Resize SE -> Resize NW
+        // Resize NW -> Resize SE
+        // All other modes toggle back to position mode.
+        if (mode === NudgeManager.RESIZE_SE_MODE) {
+          this.mode = NudgeManager.RESIZE_NW_MODE;
+        } else if (mode === NudgeManager.RESIZE_NW_MODE) {
+          this.mode = NudgeManager.RESIZE_SE_MODE;
+        } else {
+          this.mode = NudgeManager.POSITION_MODE;
+        }
+      } else {
+        this.mode = mode;
+      }
     }
-  };
 
-  NudgeManager.prototype.begin = function() {
-    this.startTime = new Date();
-    this.resizeOffset = new Point(0, 0);
-    elementManager.pushState();
-  };
-
-  NudgeManager.prototype.next = function() {
-    if (this.timer) return;
-    var nudgeX = 0, nudgeY = 0, mult = this.getMultiplier();
-    if (this.up) {
-      nudgeY = -1;
-    } else if (this.down) {
-      nudgeY = 1;
+    isMode(mode) {
+      return this.mode === mode;
     }
-    if (this.left) {
-      nudgeX = -1;
-    } else if (this.right) {
-      nudgeX = 1;
-    }
-    this.dispatchNudge(new Point(nudgeX * mult, nudgeY * mult));
-    this.timer = setTimeout(this.checkNextNudge, this.getDelay());
-  };
 
-  NudgeManager.prototype.checkNextNudge = function() {
-    this.timer = null;
-    if (this.isNudging()) {
+    // --- Multiplier
+
+    setMultiplier(on) {
+      this.multiplier = on;
+    }
+
+    getMultiplier() {
+      return this.multiplier ? NudgeManager.SHIFT_MULTIPLIER : 1;
+    }
+
+    // --- States
+
+    isNudging() {
+      var nudges = this.nudges;
+      return !!(nudges.up || nudges.down || nudges.left || nudges.right);
+    }
+
+    // --- Actions
+
+    dispatchNudge(vector) {
+      if (this.isMode(NudgeManager.RESIZE_NW_MODE)) {
+        this.resizeOffset = this.resizeOffset.add(vector);
+        elementManager.resize(this.resizeOffset, 'nw');
+      } else if (this.isMode(NudgeManager.RESIZE_SE_MODE)) {
+        this.resizeOffset = this.resizeOffset.add(vector);
+        elementManager.resize(this.resizeOffset, 'se');
+      } else if (this.isMode(NudgeManager.BG_POSITION_MODE)) {
+        elementManager.incrementBackgroundPosition(vector);
+      } else if (this.isMode(NudgeManager.Z_INDEX_MODE)) {
+        elementManager.incrementZIndex(vector);
+      } else if (this.isMode(NudgeManager.ROTATE_MODE)) {
+        elementManager.incrementRotation(vector);
+      } else {
+        elementManager.incrementPosition(vector);
+      }
+      statusBar.update();
+    }
+
+    addDirection(dir) {
+      if (!this.isNudging()) {
+        this.start();
+      }
+      this.nudges[dir] = true;
       this.next();
     }
-  };
 
-  NudgeManager.prototype.reset = function() {
-    this.timer = clearTimeout(this.timer);
-  };
-
-  NudgeManager.prototype.getDelay = function() {
-    var ms = new Date() - this.startTime;
-    if (ms >= NudgeManager.DELAY_TO_FAST) {
-      return NudgeManager.REPEAT_FAST;
-    } else if (ms >= NudgeManager.DELAY_TO_MID) {
-      return NudgeManager.REPEAT_MID;
-    } else if (ms >= NudgeManager.DELAY_TO_SLOW) {
-      return NudgeManager.REPEAT_SLOW;
-    } else {
-      return NudgeManager.DELAY_TO_SLOW;
+    removeDirection(dir) {
+      this.nudges[dir] = false;
+      if (!this.isNudging()) {
+        this.resetTimeout();
+      }
     }
-  };
 
-  // --- States
+    start() {
+      this.startTime = new Date();
+      this.resizeOffset = new Point(0, 0);
+      elementManager.pushState();
+    }
 
-  NudgeManager.prototype.getHandleName = function() {
-    return this.mode === NudgeManager.RESIZE_NW_MODE ? 'nw' : 'se';
-  };
+    next() {
+      if (this.timer) return;
+      var nudges, nudgeX, nudgeY, mult;
 
-  NudgeManager.prototype.isNudging = function() {
-    return !!(this.up || this.down || this.left || this.right);
-  };
+      nudges = this.nudges;
+      nudgeX = 0;
+      nudgeY = 0;
+      mult = this.getMultiplier();
 
-  // --- Multiplier
+      if (nudges.up) {
+        nudgeY = -1;
+      } else if (nudges.down) {
+        nudgeY = 1;
+      }
+      if (nudges.left) {
+        nudgeX = -1;
+      } else if (nudges.right) {
+        nudgeX = 1;
+      }
+      this.dispatchNudge(new Point(nudgeX * mult, nudgeY * mult));
+      this.timer = setTimeout(this.checkNextNudge, this.getDelay());
+    }
 
-  NudgeManager.prototype.toggleMultiplier = function(on) {
-    this.multiplier = on;
-  };
+    checkNextNudge() {
+      this.timer = null;
+      if (this.isNudging()) {
+        this.next();
+      }
+    }
 
-  NudgeManager.prototype.getMultiplier = function() {
-    return this.multiplier ? NudgeManager.SHIFT_MULTIPLIER : 1;
-  };
+    getDelay() {
+      var ms = new Date() - this.startTime;
+      if (ms >= NudgeManager.DELAY_TO_FAST) {
+        return NudgeManager.REPEAT_FAST;
+      } else if (ms >= NudgeManager.DELAY_TO_MID) {
+        return NudgeManager.REPEAT_MID;
+      } else if (ms >= NudgeManager.DELAY_TO_SLOW) {
+        return NudgeManager.REPEAT_SLOW;
+      } else {
+        return NudgeManager.DELAY_TO_SLOW;
+      }
+    }
 
+  }
 
+  /*-------------------------] KeyEventManager [--------------------------*/
 
-  /*-------------------------] EventManager [--------------------------*/
+  class KeyEventManager {
 
+    static get LEFT()  { return 37; }
+    static get UP()    { return 38; }
+    static get RIGHT() { return 39; }
+    static get DOWN()  { return 40; }
 
-  function EventManager () {
-    this.handledKeys = {};
-    this.setupHandlers();
-  };
+    static get ENTER() { return 13; }
+    static get SHIFT() { return 16; }
+    static get CTRL()  { return 17; }
+    static get ALT()   { return 18; }
+    static get CMD()   { return 91; }
 
-  EventManager.LEFT  = 37;
-  EventManager.UP    = 38;
-  EventManager.RIGHT = 39;
-  EventManager.DOWN  = 40;
-  EventManager.SHIFT = 16;
-  EventManager.CTRL  = 17;
-  EventManager.ALT   = 18;
-  EventManager.CMD   = 91;
-  EventManager.ENTER = 13;
-  EventManager.A     = 65;
-  EventManager.B     = 66;
-  EventManager.M     = 77;
-  EventManager.S     = 83;
-  EventManager.Z     = 90;
+    static get A()     { return 65; }
+    static get B()     { return 66; }
+    static get M()     { return 77; }
+    static get S()     { return 83; }
+    static get R()     { return 82; }
+    static get Z()     { return 90; }
 
-  EventManager.prototype.setupHandlers = function() {
+    constructor() {
+      this.handledKeys = {};
+      this.setupHandlers();
+    }
 
-    this.delegateEventToElementManager('mouseDown');
-    this.delegateEventToElementManager('mouseMove');
-    this.delegateEventToElementManager('mouseUp');
-    this.delegateEventToElementManager('scroll', window);
-    this.delegateEventToElementManager('copy', window);
+    setupHandlers() {
 
-    this.setupHandler('keydown', this.handleKeyDown);
-    this.setupHandler('keyup', this.handleKeyUp);
+      this.delegateEventToElementManager('mouseDown');
+      this.delegateEventToElementManager('mouseMove');
+      this.delegateEventToElementManager('mouseUp');
+      this.delegateEventToElementManager('scroll', window);
+      this.delegateEventToElementManager('copy', window);
 
-    this.setupKey('b');
-    this.setupKey('m');
-    this.setupKey('s');
-    this.setupKey('z');
-    this.setupKey('a');
+      this.setupHandler('keydown', this.handleKeyDown);
+      this.setupHandler('keyup', this.handleKeyUp);
 
-    this.setupKey('left');
-    this.setupKey('up');
-    this.setupKey('right');
-    this.setupKey('down');
+      this.setupKey('b');
+      this.setupKey('m');
+      this.setupKey('r');
+      this.setupKey('s', true);
+      this.setupKey('z', true);
+      this.setupKey('a', true);
 
-    this.setupKey('shift');
-    this.setupKey('ctrl');
-    this.setupKey('cmd');
-    this.setupKey('alt');
+      this.setupKey('left');
+      this.setupKey('up');
+      this.setupKey('right');
+      this.setupKey('down');
 
-  };
+      this.setupKey('shift');
+      this.setupKey('ctrl');
+      this.setupKey('cmd');
+      this.setupKey('alt');
 
-  EventManager.prototype.setupHandler = function(name, handler, target) {
-    if (!handler) return;
-    target = target || document.documentElement;
-    target.addEventListener(name, handler.bind(this));
-  };
+    }
 
-  EventManager.prototype.delegateEventToElementManager = function(name, target) {
-    this.setupHandler(name.toLowerCase(), function(evt) {
-      elementManager[name](evt);
-    }.bind(this), target);
-  };
+    // --- Setup
 
-  EventManager.prototype.setupKey = function(name) {
-    var code = EventManager[name.toUpperCase()];
-    this.handledKeys[code] = name;
-  };
+    setupHandler(name, handler, target) {
+      if (!handler) return;
+      target = target || document.documentElement;
+      target.addEventListener(name, handler.bind(this));
+    }
 
-  EventManager.prototype.handleKeyDown = function(evt) {
-    this.checkKeyEvent('KeyDown', evt);
-  };
+    delegateEventToElementManager(name, target) {
+      this.setupHandler(name.toLowerCase(), function(evt) {
+        elementManager[name](evt);
+      }, target);
+    }
 
-  EventManager.prototype.handleKeyUp = function(evt) {
-    this.checkKeyEvent('KeyUp', evt);
-  };
+    setupKey(name, allowsCommand) {
+      var code = KeyEventManager[name.toUpperCase()];
+      this.handledKeys[code] = {
+        name: name,
+        allowsCommand: !!allowsCommand
+      }
+    }
 
-  EventManager.prototype.checkKeyEvent = function(type, evt) {
-    var code = evt.keyCode, name, fn;
-    var name = this.getKeyName(code);
-    if (name) {
-      fn = this[name + type];
+    handleKeyDown(evt) {
+      this.checkKeyEvent('KeyDown', evt);
+    }
+
+    handleKeyUp(evt) {
+      this.checkKeyEvent('KeyUp', evt);
+    }
+
+    checkKeyEvent(type, evt) {
+      var code = evt.keyCode;
+      if (this.isArrowKey(code)) {
+        this.callKeyHandler('arrow', type, evt, this.getArrowName(code));
+      } else {
+        var key = this.getHandledKey(code);
+        var withCommand = this.hasCommandKey(evt);
+        if (key && (key.allowsCommand || !withCommand)) {
+          this.callKeyHandler(key.name, type, evt, withCommand);
+        }
+      }
+    }
+
+    callKeyHandler(name, type, evt, arg) {
+      var fn = this[name + type];
       if (fn) {
         evt.preventDefault();
         evt.stopPropagation();
         evt.stopImmediatePropagation();
-        this[name + type].call(this, evt);
+        fn.call(this, arg);
       }
     }
-  };
 
-  EventManager.prototype.getKeyName = function(code) {
-    return this.isArrowKey(code) ? 'arrow' : this.handledKeys[code];
-  };
-
-  EventManager.prototype.isArrowKey = function(code) {
-    return code === EventManager.UP ||
-           code === EventManager.RIGHT ||
-           code === EventManager.DOWN ||
-           code === EventManager.LEFT;
-  };
-
-  EventManager.prototype.withCommandKey = function(evt, prevent) {
-    var usingCommandKey = evt.ctrlKey || evt.metaKey;
-    if (usingCommandKey && prevent) {
-      evt.preventDefault();
+    getHandledKey(code) {
+      return this.isArrowKey(code) ? 'arrow' : this.handledKeys[code];
     }
-    return usingCommandKey;
-  };
 
+    isArrowKey(code) {
+      return code === KeyEventManager.UP ||
+             code === KeyEventManager.RIGHT ||
+             code === KeyEventManager.DOWN ||
+             code === KeyEventManager.LEFT;
+    }
 
-  // --- Events
+    hasCommandKey(evt) {
+      return evt.ctrlKey || evt.metaKey;
+    }
 
-  EventManager.prototype.shiftKeyDown = function() {
-    nudgeManager.toggleMultiplier(true);
-  };
+    // --- Events
 
-  EventManager.prototype.shiftKeyUp = function() {
-    nudgeManager.toggleMultiplier(false);
-  };
+    shiftKeyDown() {
+      nudgeManager.setMultiplier(true);
+    }
 
-  EventManager.prototype.ctrlKeyDown = function() {
-    elementManager.toggleSizingHandles(false);
-    elementManager.dragReset();
-  };
+    shiftKeyUp() {
+      nudgeManager.setMultiplier(false);
+    }
 
-  EventManager.prototype.ctrlKeyUp = function(evt) {
-    elementManager.toggleSizingHandles(true);
-    nudgeManager.setPositionMode();
-    elementManager.dragReset();
-    statusBar.update();
-  };
+    ctrlKeyDown() {
+      elementManager.toggleSizingHandles(false);
+      elementManager.dragReset();
+    }
 
-  EventManager.prototype.cmdKeyDown = function() {
-    elementManager.temporarilyFocusDraggingElement();
-  };
-
-  EventManager.prototype.cmdKeyUp = function() {
-    elementManager.releasedFocusedDraggingElement();
-  };
-
-  EventManager.prototype.altKeyDown = function() {
-    elementManager.peek(true);
-  };
-
-  EventManager.prototype.altKeyUp = function() {
-    elementManager.peek(false);
-  };
-
-  EventManager.prototype.bKeyDown = function() {
-    nudgeManager.toggleBackgroundMode();
-    statusBar.update();
-  };
-
-  EventManager.prototype.mKeyDown = function() {
-    nudgeManager.setPositionMode();
-    statusBar.update();
-  };
-
-  EventManager.prototype.sKeyDown = function(evt) {
-    if (this.withCommandKey(evt, true)) {
-      elementManager.save(evt);
-    } else {
-      nudgeManager.toggleResizeMode();
+    ctrlKeyUp() {
+      elementManager.toggleSizingHandles(true);
+      nudgeManager.setMode(NudgeManager.POSITION_MODE);
+      elementManager.dragReset();
       statusBar.update();
     }
-  };
 
-  EventManager.prototype.zKeyDown = function(evt) {
-    if (this.withCommandKey(evt, true)) {
-      elementManager.undo();
-    } else {
-      nudgeManager.toggleZIndexMode();
+    cmdKeyDown() {
+      elementManager.temporarilyFocusDraggingElement();
+    }
+
+    cmdKeyUp() {
+      elementManager.releasedFocusedDraggingElement();
+      nudgeManager.resetNudges();
+    }
+
+    altKeyDown() {
+      elementManager.peek(true);
+    }
+
+    altKeyUp() {
+      elementManager.peek(false);
+    }
+
+    rKeyDown() {
+      nudgeManager.toggleMode(NudgeManager.ROTATE_MODE);
       statusBar.update();
     }
-  };
 
-  EventManager.prototype.aKeyDown = function(evt) {
-    if (this.withCommandKey(evt, true)) {
-      elementManager.focusAll();
+    bKeyDown() {
+      nudgeManager.toggleMode(NudgeManager.BG_POSITION_MODE);
+      statusBar.update();
     }
-  };
 
-  EventManager.prototype.arrowKeyDown = function(evt) {
-    nudgeManager.addDirection(this.getArrowName(evt.keyCode));
-  };
-
-  EventManager.prototype.arrowKeyUp = function(evt) {
-    nudgeManager.removeDirection(this.getArrowName(evt.keyCode));
-  };
-
-  EventManager.prototype.getArrowName = function(code) {
-    switch(code) {
-      case EventManager.LEFT:  return 'left';
-      case EventManager.UP:    return 'up';
-      case EventManager.RIGHT: return 'right';
-      case EventManager.DOWN:  return 'down';
+    mKeyDown() {
+      nudgeManager.setMode(NudgeManager.POSITION_MODE);
+      statusBar.update();
     }
-  };
+
+    sKeyDown(withCommand) {
+      if (withCommand) {
+        elementManager.save();
+      } else {
+        nudgeManager.toggleMode(NudgeManager.RESIZE_SE_MODE);
+        statusBar.update();
+      }
+    }
+
+    zKeyDown(withCommand) {
+      if (withCommand) {
+        elementManager.undo();
+      } else {
+        nudgeManager.toggleMode(NudgeManager.Z_INDEX_MODE);
+        statusBar.update();
+      }
+    }
+
+    aKeyDown(withCommand) {
+      if (withCommand) {
+        elementManager.focusAll();
+      }
+    }
+
+    arrowKeyDown(arrowName) {
+      nudgeManager.addDirection(arrowName);
+    }
+
+    arrowKeyUp(arrowName) {
+      nudgeManager.removeDirection(arrowName);
+    }
+
+    getArrowName(code) {
+      switch(code) {
+        case KeyEventManager.LEFT:  return 'left';
+        case KeyEventManager.UP:    return 'up';
+        case KeyEventManager.RIGHT: return 'right';
+        case KeyEventManager.DOWN:  return 'down';
+      }
+    }
+
+  }
 
   /*-------------------------] Element [--------------------------*/
 
+  class Element {
 
-  function Element (el, tag, className) {
-    this.listeners = [];
-    if (tag) {
-      this.el = this.createAndAppend(el, tag, className);
-    } else {
-      this.el = el;
+    constructor(el, tag, className) {
+      this.listeners = [];
+      if (tag) {
+        this.el = this.createAndAppend(el, tag, className);
+      } else {
+        this.el = el;
+      }
     }
-  };
 
-  Element.prototype.createAndAppend = function(parent, tag, className) {
-    this.el = document.createElement(tag);
-    if (className) {
-      className.split(' ').forEach(function(name) {
-        this.addClass(name);
+    createAndAppend(parent, tag, className) {
+      this.el = document.createElement(tag);
+      if (className) {
+        className.split(' ').forEach(function(name) {
+          this.addClass(name);
+        }, this);
+      }
+      parent.appendChild(this.el);
+      return this.el;
+    }
+
+    addClass(name) {
+      this.el.classList.add(EXTENSION_CLASS_PREFIX + name);
+      return this;
+    }
+
+    removeClass(name) {
+      this.el.classList.remove(EXTENSION_CLASS_PREFIX + name);
+      return this;
+    }
+
+    addEventListener(type, handler) {
+      this.el.addEventListener(type, handler);
+      this.listeners.push({
+        type: type,
+        handler: handler
+      });
+    }
+
+    afterTransition(fn) {
+      var self = this, el = this.el;
+      function finished() {
+        // TODO: change to transitionend?
+        el.removeEventListener('webkitTransitionEnd', finished);
+        fn.call(self);
+      }
+      el.addEventListener('webkitTransitionEnd', finished);
+    }
+
+    removeAllListeners() {
+      this.listeners.forEach(function(l) {
+        this.el.removeEventListener(l.type, l.handler);
       }, this);
     }
-    parent.appendChild(this.el);
-    return this.el;
-  };
 
-  Element.prototype.addClass = function(name) {
-    this.el.classList.add(EXTENSION_CLASS_PREFIX + name);
-    return this;
-  };
-
-  Element.prototype.removeClass = function(name) {
-    this.el.classList.remove(EXTENSION_CLASS_PREFIX + name);
-    return this;
-  };
-
-  Element.prototype.addEventListener = function(type, handler) {
-    this.el.addEventListener(type, handler);
-    this.listeners.push({
-      type: type,
-      handler: handler
-    });
-  };
-
-  Element.prototype.afterTransition = function(fn) {
-    var self = this, el = this.el;
-    function finished() {
-      el.removeEventListener('webkitTransitionEnd', finished);
-      fn.call(self);
+    resetScroll() {
+      this.el.scrollTop = 0;
+      this.el.scrollLeft = 0;
     }
-    el.addEventListener('webkitTransitionEnd', finished);
+
+    show(on) {
+      this.el.style.display = on === false ? '' : 'block';
+    }
+
+    hide() {
+      this.el.style.display = 'none';
+    }
+
+    html(html) {
+      this.el.innerHTML = html;
+      return this;
+    }
+
+    title(title) {
+      this.el.title = title;
+      return this;
+    }
+
+    remove(html) {
+      this.el.remove();
+    }
+
   }
-
-  Element.prototype.removeAllListeners = function() {
-    this.listeners.forEach(function(l) {
-      this.el.removeEventListener(l.type, l.handler);
-    }, this);
-  };
-
-  Element.prototype.resetScroll = function() {
-    this.el.scrollTop = 0;
-    this.el.scrollLeft = 0;
-  }
-
-  Element.prototype.show = function(on) {
-    this.el.style.display = on === false ? '' : 'block';
-  };
-
-  Element.prototype.hide = function() {
-    this.el.style.display = 'none';
-  };
-
-  Element.prototype.id = function(id) {
-    this.el.id = EXTENSION_CLASS_PREFIX + id;
-    return this;
-  };
-
-  Element.prototype.html = function(html) {
-    this.el.innerHTML = html;
-    return this;
-  };
-
-  Element.prototype.title = function(title) {
-    this.el.title = title;
-    return this;
-  };
-
-  Element.prototype.remove = function(html) {
-    this.el.remove();
-  };
-
 
   /*-------------------------] IconElement [--------------------------*/
 
-  function IconElement (parent, id, className) {
-    Element.call(this, parent, 'img', className);
+  class IconElement extends Element {
 
-    this.el.src = chrome.extension.getURL('images/icons/' + id + '.svg');
+    constructor(parent, id, className) {
+      super(parent, 'img', className);
+      this.el.src = chrome.extension.getURL('images/icons/' + id + '.svg');
+    }
+
   }
-
-  IconElement.prototype = Object.create(Element.prototype);
-
 
   /*-------------------------] DraggableElement [--------------------------*/
 
-  function DraggableElement (el, tag, className) {
-    Element.call(this, el, tag, className);
-    this.listeners = [];
-    this.setupDragging();
-  };
+  class DraggableElement extends Element {
 
-  // TODO: Object.create or extend?
+    constructor(el, tag, className) {
+      super(el, tag, className);
+      this.setupDragging();
+    }
 
-  DraggableElement.prototype = Object.create(Element.prototype);
-  /*
-  DraggableElement.prototype.hide               = Element.prototype.hide;
-  DraggableElement.prototype.show               = Element.prototype.show;
-  DraggableElement.prototype.remove             = Element.prototype.remove;
-  DraggableElement.prototype.addClass           = Element.prototype.addClass;
-  DraggableElement.prototype.removeClass        = Element.prototype.removeClass;
-  DraggableElement.prototype.resetScroll        = Element.prototype.resetScroll;
-  DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
-  DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
-  */
+    // TODO: Object.create or extend?
 
-  DraggableElement.prototype.setupDragging = function() {
-    this.addEventListener('click', this.click.bind(this));
-    this.addEventListener('mousedown', this.mouseDown.bind(this));
+    //DraggableElement.prototype = Object.create(Element.prototype);
+    /*
+    DraggableElement.prototype.hide               = Element.prototype.hide;
+    DraggableElement.prototype.show               = Element.prototype.show;
+    DraggableElement.prototype.remove             = Element.prototype.remove;
+    DraggableElement.prototype.addClass           = Element.prototype.addClass;
+    DraggableElement.prototype.removeClass        = Element.prototype.removeClass;
+    DraggableElement.prototype.resetScroll        = Element.prototype.resetScroll;
+    DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
+    DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
+    */
 
-    // These two events are actually on the document,
-    // so being called in manually.
-    this.mouseUp   = this.mouseUp.bind(this);
-    this.mouseMove = this.mouseMove.bind(this);
-  };
+    setupDragging() {
+      this.addEventListener('click', this.click.bind(this));
+      this.addEventListener('mousedown', this.mouseDown.bind(this));
 
-  // --- Events
+      // These two events are actually on the document,
+      // so being called in manually.
+      this.mouseUp   = this.mouseUp.bind(this);
+      this.mouseMove = this.mouseMove.bind(this);
+    }
 
-  DraggableElement.prototype.click = function(evt) {
-    if (evt.target.href) {
+    // --- Events
+
+    click(evt) {
+      if (evt.target.href) {
+        evt.preventDefault();
+        evt.stopPropagation();
+      }
+    }
+
+    mouseDown(evt) {
+      if (evt.button !== 0) return;
+      if (this.draggingStarted) {
+        // There are certain areas (over the dev tools) that do not
+        // trigger mouseup events so if the element is still in the
+        // middle of draggin when another mousedown is detected, then
+        // call mouseUp, and then call the whole thing off.
+        this.mouseUp(evt);
+        return;
+      }
+      this.dragStartX = evt.clientX + window.scrollX;
+      this.dragStartY = evt.clientY + window.scrollY;
+      elementManager.draggingElement = this;
+      this.draggingStarted = false;
+      this.resetTarget = null;
       evt.preventDefault();
       evt.stopPropagation();
+      this.currentMouseX = evt.clientX;
+      this.currentMouseY = evt.clientY;
     }
-  };
 
-  DraggableElement.prototype.mouseDown = function(evt) {
-    if (evt.button !== 0) return;
-    if (this.draggingStarted) {
-      // There are certain areas (over the dev tools) that do not
-      // trigger mouseup events so if the element is still in the
-      // middle of draggin when another mousedown is detected, then
-      // call mouseUp, and then call the whole thing off.
-      this.mouseUp(evt);
-      return;
+    mouseMove(evt) {
+      if (this.resetTarget) {
+        // Setting the reset target flags this element for a
+        // reset. In practice this means that a canceling key
+        // (such as ctrl) has interrupted the flow and is telling
+        // the drag to reset itself, so call a mouseup and mousedown
+        // here. However, since we're leveraging the mousemove event
+        // to do this, the actual event may be on a child element
+        // so resetTarget so that it can be picked up and used later
+        // if needed.
+        evt.resetTarget = this.resetTarget;
+        this.mouseUp(evt);
+        this.mouseDown(evt);
+      }
+      var x = evt.clientX + window.scrollX;
+      var y = evt.clientY + window.scrollY;
+      evt.dragOffset = new Point(x - this.dragStartX, y - this.dragStartY);
+      if (!this.draggingStarted) {
+        this.fireEvent('dragStart', evt);
+        this.draggingStarted = true;
+      }
+      this.fireEvent('drag', evt);
+      this.currentMouseX = evt.clientX;
+      this.currentMouseY = evt.clientY;
     }
-    this.dragStartX = evt.clientX + window.scrollX;
-    this.dragStartY = evt.clientY + window.scrollY;
-    elementManager.draggingElement = this;
-    this.draggingStarted = false;
-    this.resetTarget = null;
-    evt.preventDefault();
-    evt.stopPropagation();
-    this.currentMouseX = evt.clientX;
-    this.currentMouseY = evt.clientY;
-  };
 
-  DraggableElement.prototype.mouseMove = function(evt) {
-    if (this.resetTarget) {
-      // Setting the reset target flags this element for a
-      // reset. In practice this means that a canceling key
-      // (such as ctrl) has interrupted the flow and is telling
-      // the drag to reset itself, so call a mouseup and mousedown
-      // here. However, since we're leveraging the mousemove event
-      // to do this, the actual event may be on a child element
-      // so resetTarget so that it can be picked up and used later
-      // if needed.
-      evt.resetTarget = this.resetTarget;
-      this.mouseUp(evt);
-      this.mouseDown(evt);
+    mouseUp(evt) {
+      if (!this.draggingStarted) {
+        this.fireEvent('click', evt);
+      } else {
+        this.fireEvent('dragStop', evt);
+      }
+      this.draggingStarted = false;
+      elementManager.draggingElement = null;
     }
-    var x = evt.clientX + window.scrollX;
-    var y = evt.clientY + window.scrollY;
-    evt.dragOffset = new Point(x - this.dragStartX, y - this.dragStartY);
-    if (!this.draggingStarted) {
-      this.fireEvent('dragStart', evt);
-      this.draggingStarted = true;
+
+    scroll() {
+      var evt = new Event('mousemove');
+      evt.clientX = this.currentMouseX;
+      evt.clientY = this.currentMouseY;
+      this.mouseMove(evt);
     }
-    this.fireEvent('drag', evt);
-    this.currentMouseX = evt.clientX;
-    this.currentMouseY = evt.clientY;
-  };
 
-  DraggableElement.prototype.mouseUp = function(evt) {
-    if (!this.draggingStarted) {
-      this.fireEvent('click', evt);
-    } else {
-      this.fireEvent('dragStop', evt);
+    fireEvent(name, evt) {
+      if (elementManager[name]) {
+        elementManager[name](evt);
+      }
     }
-    this.draggingStarted = false;
-    elementManager.draggingElement = null;
-  };
 
-  DraggableElement.prototype.scroll = function() {
-    var evt = new Event('mousemove');
-    evt.clientX = this.currentMouseX;
-    evt.clientY = this.currentMouseY;
-    this.mouseMove(evt);
-  };
-
-  DraggableElement.prototype.fireEvent = function(name, evt) {
-    if (elementManager[name]) {
-      elementManager[name](evt);
+    dragReset(evt) {
+      this.resetTarget = this.el;
     }
-  };
 
-  DraggableElement.prototype.dragReset = function(evt) {
-    this.resetTarget = this.el;
-  };
-
-
+  }
 
   /*-------------------------] Handle [--------------------------*/
 
+  class Handle extends DraggableElement {
 
-  function Handle (target, name) {
-    DraggableElement.call(this, target.el, 'div', 'handle handle-' + name);
-    this.name = name;
-    this.target = target;
-  };
+    constructor(target, name) {
+      super(target.el, 'div', 'handle handle-' + name);
+      this.name = name;
+      this.target = target;
+    }
 
-  Handle.prototype = Object.create(DraggableElement.prototype);
+    dragStart(evt) {
+      elementManager.setFocused(this.target);
+    }
 
-  Handle.prototype.dragStart = function(evt) {
-    elementManager.setFocused(this.target);
-  };
+    setHover(name) {
+      this.addEventListener('mouseover', function(evt) {
+        evt.stopPropagation();
+        if (!this.target.draggingStarted) {
+          statusBar.setState(name);
+        }
+      }.bind(this));
+      this.addEventListener('mouseout', function(evt) {
+        evt.stopPropagation();
+        if (!this.target.draggingStarted) {
+          statusBar.setState(nudgeManager.mode);
+        }
+      }.bind(this));
+    }
 
-  Handle.prototype.setHover = function(name) {
-    this.addEventListener('mouseover', function(evt) {
-      evt.stopPropagation();
-      if (!this.target.draggingStarted) {
-        statusBar.setState(name);
-      }
-    }.bind(this));
-    this.addEventListener('mouseout', function(evt) {
-      evt.stopPropagation();
-      if (!this.target.draggingStarted) {
-        statusBar.setState(nudgeManager.mode);
-      }
-    }.bind(this));
-  };
+    isConstrained(evt) {
+      return evt.shiftKey;
+    }
 
-  Handle.prototype.isConstrained = function(evt) {
-    return evt.shiftKey;
-  };
+  }
 
   /*-------------------------] RotationHandle [--------------------------*/
 
+  class RotationHandle extends Handle {
 
-  function RotationHandle (target) {
-    Handle.call(this, target, 'rotate');
+    static get SNAPPING() { return 22.5 };
 
-    //this.setup(target, 'rotate');
-    this.setHover('rotate');
-  };
-
-  RotationHandle.SNAPPING = 22.5;
-
-  // --- Inheritance
-
-  RotationHandle.prototype = Object.create(Handle.prototype);
-
-  RotationHandle.prototype.dragStart = function(evt) {
-    Handle.prototype.dragStart.apply(this, arguments);
-    this.startAngle = this.getAngleForMouseEvent(evt);
-    elementManager.pushState();
-  };
-
-  RotationHandle.prototype.drag = function(evt) {
-    var r = this.getAngleForMouseEvent(evt) - this.startAngle;
-    if (this.isConstrained(evt)) {
-      r = round(r / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
+    constructor(target) {
+      super(target, 'rotate');
+      //this.setup(target, 'rotate');
+      this.setHover('rotate');
     }
-    elementManager.rotate(r);
-    statusBar.update();
-  };
 
-  RotationHandle.prototype.getAngleForMouseEvent = function(evt) {
-    // TODO: don't have target?
-    var origin = this.target.getRotationOrigin();
-    return new Point(evt.clientX, evt.clientY).subtract(origin).getAngle();
-  };
+    dragStart(evt) {
+      Handle.prototype.dragStart.apply(this, arguments);
+      this.startAngle = this.getAngleForMouseEvent(evt);
+      elementManager.pushState();
+    }
+
+    drag(evt) {
+      var r = this.getAngleForMouseEvent(evt) - this.startAngle;
+      if (this.isConstrained(evt)) {
+        r = round(r / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
+      }
+      elementManager.rotate(r);
+      statusBar.update();
+    }
+
+    getAngleForMouseEvent(evt) {
+      // TODO: don't have target?
+      var origin = this.target.getRotationOrigin();
+      return new Point(evt.clientX, evt.clientY).subtract(origin).getAngle();
+    }
+
+  }
 
 
   /*-------------------------] SizingHandle [--------------------------*/
 
-  function SizingHandle (target, name, xProp, yProp) {
-    Handle.call(this, target, name);
+  class SizingHandle extends Handle {
 
-    //this.setup(target, name);
-    this.setHover('resize');
-    this.addClass('sizing-handle');
-    this.handle = new Element(target.el, 'div', 'handle-border handle-' + name + '-border');
-    this.xProp = xProp;
-    this.yProp = yProp;
-    this.xDir  = !xProp ? 0 : xProp === 'left' ? -1 : 1;
-    this.yDir  = !yProp ? 0 : yProp === 'top'  ? -1 : 1;
-  };
+    constructor(target, name, xProp, yProp) {
+      super(target, name);
 
-  // --- Inheritance
+      //this.setup(target, name);
+      this.setHover('resize');
+      this.addClass('sizing-handle');
+      this.handle = new Element(target.el, 'div', 'handle-border handle-' + name + '-border');
+      this.xProp = xProp;
+      this.yProp = yProp;
+      this.xDir  = !xProp ? 0 : xProp === 'left' ? -1 : 1;
+      this.yDir  = !yProp ? 0 : yProp === 'top'  ? -1 : 1;
+    }
 
-  SizingHandle.prototype = Object.create(Handle.prototype);
+    // --- Setup
 
-  // --- Setup
+    setAnchor(anchor) {
+      this.anchor = anchor;
+    }
 
-  SizingHandle.prototype.setAnchor = function(anchor) {
-    this.anchor = anchor;
-  };
+    destroy() {
+      this.handle.remove();
+      this.remove();
+    }
 
-  SizingHandle.prototype.destroy = function() {
-    this.handle.remove();
-    this.remove();
+    // --- Events
+
+    dragStart(evt) {
+      Handle.prototype.dragStart.apply(this, arguments);
+      elementManager.pushState();
+    }
+
+    drag(evt) {
+      elementManager.resize(evt.dragOffset, this.name, this.isConstrained(evt), true);
+    }
+
+    // --- State
+
+    isConstrained(evt) {
+      return Handle.prototype.isConstrained.call(this, evt) && this.isCorner();
+    }
+
+    isCorner() {
+      return !!this.xProp && !!this.yProp;
+    }
+
+
+    // --- Actions
+
+    applyConstraint(box, ratio) {
+      var w, h, xMult, yMult, min;
+      w = box.width;
+      h = box.height;
+      xMult = 1 * (ratio || 1);
+      yMult = 1;
+      min = Math.min(w, h);
+      if (this.name === 'nw' || this.name === 'sw') {
+        xMult = -1;
+      }
+      if (this.name === 'nw' || this.name === 'ne') {
+        yMult = -1;
+      }
+      box[this.xProp] = box[this.anchor.xProp] + (min * xMult);
+      box[this.yProp] = box[this.anchor.yProp] + (min * yMult);
+    }
+
+
+    // --- Calculations
+
+    /*
+    getCoords(box) {
+      return new Point(this.getX(box), this.getY(box));
+    }
+
+    getCoords(box, rotation) {
+      // TODO: next fix specificity issues!!!!!!!!!!!!!!!!!!!!!
+      var coords = new Point(this.getX(box), this.getY(box));
+      if (rotation) {
+        var center = box.getCenterCoords();
+        coords = coords.subtract(center).getRotated(rotation).add(center);
+      }
+      return coords;
+    }
+    */
+
+    getPosition(box, rotation) {
+      var coords = new Point(this.getX(box), this.getY(box));
+      if (rotation) {
+        var center = box.getCenterCoords();
+        coords = coords.subtract(center).getRotated(rotation).add(center);
+      }
+      return coords.add(box.getPosition());
+    }
+
+    /*
+     * TODO: remove?
+    getCoords() {
+      var coords, center, d;
+
+      coords = new Point(this.getX(), this.getY());
+      d = this.target.box;
+
+      if (d.rotation) {
+        center = new Point(d.width / 2, d.height / 2);
+        coords = center.add(coords.subtract(center).getRotated(d.rotation));
+      }
+
+      return coords;
+    }
+
+    getPosition() {
+      return this.target.box.getPosition().add(this.getCoords());
+    }
+    */
+
+    getX(box) {
+      switch (this.xProp) {
+        case 'left':  return 0;
+        case 'right': return box.width;
+      }
+    }
+
+    getY(box) {
+      switch (this.yProp) {
+        case 'top':    return 0;
+        case 'bottom': return box.height;
+      }
+    }
+
+    offsetToCenter(x, y) {
+      if (this.xProp === 'right')  x *= -1;
+      if (this.yProp === 'bottom') y *= -1;
+      return new Point(x, y);
+    }
+
   }
-
-  // --- Events
-
-  SizingHandle.prototype.dragStart = function(evt) {
-    Handle.prototype.dragStart.apply(this, arguments);
-    elementManager.pushState();
-  };
-
-  SizingHandle.prototype.drag = function(evt) {
-    elementManager.resize(evt.dragOffset, this.name, this.isConstrained(evt), true);
-  };
-
-  // --- State
-
-  SizingHandle.prototype.isConstrained = function(evt) {
-    return Handle.prototype.isConstrained.call(this, evt) && this.isCorner();
-  };
-
-  SizingHandle.prototype.isCorner = function() {
-    return !!this.xProp && !!this.yProp;
-  }
-
-
-  // --- Actions
-
-  SizingHandle.prototype.applyConstraint = function(box, ratio) {
-    var w, h, xMult, yMult, min;
-    w = box.width;
-    h = box.height;
-    xMult = 1 * (ratio || 1);
-    yMult = 1;
-    min = Math.min(w, h);
-    if (this.name === 'nw' || this.name === 'sw') {
-      xMult = -1;
-    }
-    if (this.name === 'nw' || this.name === 'ne') {
-      yMult = -1;
-    }
-    box[this.xProp] = box[this.anchor.xProp] + (min * xMult);
-    box[this.yProp] = box[this.anchor.yProp] + (min * yMult);
-  };
-
-
-  // --- Calculations
-
-  /*
-  SizingHandle.prototype.getCoords = function(box) {
-    return new Point(this.getX(box), this.getY(box));
-  };
-
-  SizingHandle.prototype.getCoords = function(box, rotation) {
-    // TODO: next fix specificity issues!!!!!!!!!!!!!!!!!!!!!
-    var coords = new Point(this.getX(box), this.getY(box));
-    if (rotation) {
-      var center = box.getCenterCoords();
-      coords = coords.subtract(center).getRotated(rotation).add(center);
-    }
-    return coords;
-  };
-  */
-
-  SizingHandle.prototype.getPosition = function(box, rotation) {
-    var coords = new Point(this.getX(box), this.getY(box));
-    if (rotation) {
-      var center = box.getCenterCoords();
-      coords = coords.subtract(center).getRotated(rotation).add(center);
-    }
-    return coords.add(box.getPosition());
-  };
-
-  /*
-   * TODO: remove?
-  SizingHandle.prototype.getCoords = function() {
-    var coords, center, d;
-
-    coords = new Point(this.getX(), this.getY());
-    d = this.target.box;
-
-    if (d.rotation) {
-      center = new Point(d.width / 2, d.height / 2);
-      coords = center.add(coords.subtract(center).getRotated(d.rotation));
-    }
-
-    return coords;
-  };
-
-  SizingHandle.prototype.getPosition = function() {
-    return this.target.box.getPosition().add(this.getCoords());
-  };
-  */
-
-  SizingHandle.prototype.getX = function(box) {
-    switch (this.xProp) {
-      case 'left':  return 0;
-      case 'right': return box.width;
-    }
-  };
-
-  SizingHandle.prototype.getY = function(box) {
-    switch (this.yProp) {
-      case 'top':    return 0;
-      case 'bottom': return box.height;
-    }
-  };
-
-  SizingHandle.prototype.offsetToCenter = function(x, y) {
-    if (this.xProp === 'right')  x *= -1;
-    if (this.yProp === 'bottom') y *= -1;
-    return new Point(x, y);
-  };
-
-
 
   /*-------------------------] PositionableElement [--------------------------*/
 
+  class PositionableElement extends DraggableElement {
 
-  function PositionableElement (el) {
-    DraggableElement.call(this, el);
+    // --- Constants
 
-    this.states = [];
-    this.setupElement(el);
-    this.setupEvents();
-    // TODO: rename?
-    this.setupAttributes();
-    this.setupParents();
-    this.createHandles();
-  };
+    //PositionableElement.BACKGROUND_POSITION_MATCH = /([-\d]+)(px|%).+?([-\d]+)(px|%)/;
 
-  // --- Inheritance
+    static get PEEKING_DIMENSIONS() { return 500 };
+    static get DBLCLICK_TIMEOUT()   { return 500 };
 
-  PositionableElement.prototype = Object.create(DraggableElement.prototype);
+    constructor(el) {
+      super(el);
 
-  // --- Constants
+      this.states = [];
+      this.setupElement(el);
+      this.setupEvents();
+      // TODO: rename?
+      this.setupAttributes();
+      this.setupParents();
+      this.createHandles();
+    }
 
-  //PositionableElement.BACKGROUND_POSITION_MATCH = /([-\d]+)(px|%).+?([-\d]+)(px|%)/;
+    // --- Setup
 
-  PositionableElement.PEEKING_DIMENSIONS = 500;
-  PositionableElement.DBLCLICK_TIMEOUT   = 500;
+    setupElement(el) {
+      //this.el = el;
+      this.addClass('positioned-element');
+      //this.setupDragging();
+    }
 
-  // --- Setup
+    destroy() {
+      this.unfocus();
+      this.removeClass('positioned-element');
+      this.removeAllListeners();
+      // TODO: why is one remove and the other destroy??
+      this.handles.rotate.remove();
+      this.handles.nw.destroy();
+      this.handles.ne.destroy();
+      this.handles.se.destroy();
+      this.handles.sw.destroy();
+      this.handles.n.destroy();
+      this.handles.e.destroy();
+      this.handles.s.destroy();
+      this.handles.w.destroy();
+    }
 
-  PositionableElement.prototype.setupElement = function(el) {
-    //this.el = el;
-    this.addClass('positioned-element');
-    //this.setupDragging();
-  };
-
-  PositionableElement.prototype.destroy = function() {
-    this.unfocus();
-    this.removeClass('positioned-element');
-    this.removeAllListeners();
-    // TODO: why is one remove and the other destroy??
-    this.handles.rotate.remove();
-    this.handles.nw.destroy();
-    this.handles.ne.destroy();
-    this.handles.se.destroy();
-    this.handles.sw.destroy();
-    this.handles.n.destroy();
-    this.handles.e.destroy();
-    this.handles.s.destroy();
-    this.handles.w.destroy();
-  };
-
-  PositionableElement.prototype.setupParents = function() {
-    var el = this.el, style;
-    this.positionedParents = [];
-    while(el = el.offsetParent) {
-      style = window.getComputedStyle(el);
-      if (style.position !== 'static') {
-        this.positionedParents.push(new Element(el));
+    setupParents() {
+      var el = this.el, style;
+      this.positionedParents = [];
+      while(el = el.offsetParent) {
+        style = window.getComputedStyle(el);
+        if (style.position !== 'static') {
+          this.positionedParents.push(new Element(el));
+        }
       }
     }
-  };
 
-  PositionableElement.prototype.ensurePositioned = function() {
-    var style = this.getComputedStyle();
-    if (style.position === 'static') {
-      this.el.style.position = 'absolute';
-    }
-  };
-
-  PositionableElement.prototype.setupEvents = function() {
-    this.addEventListener('dblclick', this.dblclick.bind(this));
-    this.addEventListener('mouseover', this.mouseover.bind(this));
-    this.addEventListener('contextmenu', this.contextmenu.bind(this));
-  };
-
-  PositionableElement.prototype.setupAttributes = function() {
-    //var rules, style;
-    var el, matcher;
-
-    el = this.el;
-    matcher = new CSSRuleMatcher(el);
-
-    this.box = new CSSBox(
-      matcher.getPosition('Left', el),
-      matcher.getPosition('Top', el),
-      matcher.getCSSValue('width', el),
-      matcher.getCSSValue('height', el)
-    );
-
-    this.zIndex = matcher.getCSSValue('zIndex');
-    this.transform = matcher.getTransform(el);
-
-    var image = matcher.getBackgroundImage();
-
-    if (image.url) {
-      this.spriteRecognizer = new SpriteRecognizer(image.url);
+    ensurePositioned() {
+      var style = this.getComputedStyle();
+      if (style.position === 'static') {
+        this.el.style.position = 'absolute';
+      }
     }
 
-    this.backgroundPosition = matcher.getBackgroundPosition(el);
+    setupEvents() {
+      this.addEventListener('dblclick', this.dblclick.bind(this));
+      this.addEventListener('mouseover', this.mouseover.bind(this));
+      this.addEventListener('contextmenu', this.contextmenu.bind(this));
+    }
 
-    // Get background recognizer
-    //match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
-    ////this.spriteRecognizer = new SpriteRecognizer(match[1]);
+    setupAttributes() {
+      //var rules, style;
+      var el, matcher;
+
+      el = this.el;
+      matcher = new CSSRuleMatcher(el);
+
+      this.box = new CSSBox(
+        matcher.getPosition('Left', el),
+        matcher.getPosition('Top', el),
+        matcher.getCSSValue('width', el),
+        matcher.getCSSValue('height', el)
+      );
+
+      this.zIndex = matcher.getZIndex();
+      this.transform = matcher.getTransform(el);
+
+      this.backgroundImage = matcher.getBackgroundImage(el);
+      //var image = matcher.getBackgroundImage();
+
+      //if (image.url) {
+        // TODO: move the recognizer into the background class!
+        //this.spriteRecognizer = new SpriteRecognizer(image.url);
+      //}
+
+      //this.backgroundPosition = matcher.getBackgroundPosition(el);
+
+      // Get background recognizer
+      //match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
+      ////this.spriteRecognizer = new SpriteRecognizer(match[1]);
+
+      /*
+        this.getInitialPosition(rules, style, 'Left'),
+        this.getInitialPosition(rules, style, 'Top'),
+        this.getCSSValue(rules, style, 'width', 'px'),
+        this.getCSSValue(rules, style, 'height', 'px'),
+        // not "length"?
+        this.getCSSValue(rules, style, 'zIndex'),
+        this.getTransform(rules, style)
+        */
+
+      // Ensure positioning first to make sure the rules are up to date.
+      // TODO: is this required? can't use one computed style for all here?
+      //this.ensurePositioned();
+
+      // TODO: remove reference to allow garbage collection
+      //style = this.getComputedStyle();
+      //rules = this.getCSSRules();
+
+      //this.getDimensions(rules, style);
+
+      //if (style.backgroundImage !== 'none') {
+        //this.getBackgroundAttributes(style);
+      //}
+    }
+
+    getDimensions(rules, style) {
+      //this.position = new CSSPoint(left, top);
+      //this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
+    }
 
     /*
-      this.getInitialPosition(rules, style, 'Left'),
-      this.getInitialPosition(rules, style, 'Top'),
-      this.getCSSValue(rules, style, 'width', 'px'),
-      this.getCSSValue(rules, style, 'height', 'px'),
-      // not "length"?
-      this.getCSSValue(rules, style, 'zIndex'),
-      this.getTransform(rules, style)
-      */
-
-    // Ensure positioning first to make sure the rules are up to date.
-    // TODO: is this required? can't use one computed style for all here?
-    //this.ensurePositioned();
-
-    // TODO: remove reference to allow garbage collection
-    //style = this.getComputedStyle();
-    //rules = this.getCSSRules();
-
-    //this.getDimensions(rules, style);
-
-    //if (style.backgroundImage !== 'none') {
-      //this.getBackgroundAttributes(style);
-    //}
-  };
-
-  PositionableElement.prototype.getDimensions = function(rules, style) {
-    //this.position = new CSSPoint(left, top);
-    //this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
-  };
-
-  /*
-  PositionableElement.prototype.getNumericValue = function(val) {
-    val = parseFloat(val);
-    return isNaN(val) ? 0 : val;
-  };
-
-  PositionableElement.prototype.getBackgroundPosition = function() {
-    var match, style = this.style;
-
-    // Get background recognizer
-    match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
-    this.spriteRecognizer = new SpriteRecognizer(match[1]);
-
-    // Get background position
-    match = style.backgroundPosition.match(PositionableElement.BACKGROUND_POSITION_MATCH);
-    if (match) {
-      this.backgroundPosition = new Point(parseInt(match[1]), parseInt(match[3]));
-    } else {
-      this.backgroundPosition = new Point(0, 0);
-    }
-  };
-  */
-
-  PositionableElement.prototype.createHandles = function() {
-    this.handles = {};
-    this.createSizingHandles();
-    this.handles.rotate = new RotationHandle(this);
-  };
-
-  PositionableElement.prototype.createSizingHandles = function() {
-    this.handles.nw = new SizingHandle(this, 'nw', 'left',  'top');
-    this.handles.ne = new SizingHandle(this, 'ne', 'right', 'top');
-    this.handles.se = new SizingHandle(this, 'se', 'right', 'bottom');
-    this.handles.sw = new SizingHandle(this, 'sw', 'left',  'bottom');
-    this.handles.n  = new SizingHandle(this, 'n', null,  'top');
-    this.handles.e  = new SizingHandle(this, 'e', 'right', null);
-    this.handles.s  = new SizingHandle(this, 's', null,  'bottom');
-    this.handles.w  = new SizingHandle(this, 'w', 'left', null);
-  };
-
-
-  // --- Events
-
-  PositionableElement.prototype.mouseDown = function(evt) {
-    DraggableElement.prototype.mouseDown.call(this, evt);
-  };
-
-  PositionableElement.prototype.mouseUp = function(evt) {
-    if (!this.draggingStarted && evt.shiftKey) {
-      elementManager.addFocused(this);
-    } else if (!this.draggingStarted) {
-      elementManager.setFocused(this, true);
-    }
-    DraggableElement.prototype.mouseUp.call(this, evt);
-  };
-
-  PositionableElement.prototype.mouseover = function(evt) {
-    statusBar.setState('position');
-  };
-
-  PositionableElement.prototype.dblclick = function(evt) {
-
-    if (!this.spriteRecognizer) {
-      return;
+    getNumericValue(val) {
+      val = parseFloat(val);
+      return isNaN(val) ? 0 : val;
     }
 
-    var point  = new Point(evt.clientX + window.scrollX, evt.clientY + window.scrollY);
-    var coords = this.box.getCoords(point, this.transform.rotation.deg).subtract(this.backgroundPosition.getPosition());
-    var sprite = this.spriteRecognizer.getSpriteBoundsForCoordinate(coords);
+    getBackgroundPosition() {
+      var match, style = this.style;
 
-    if (sprite) {
-      this.pushState();
-      this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
-      this.box.right  = this.box.left + sprite.getWidth();
-      // TODO: don't have target!
-      this.box.bottom = this.box.top  + sprite.getHeight();
+      // Get background recognizer
+      match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
+      this.spriteRecognizer = new SpriteRecognizer(match[1]);
+
+      // Get background position
+      match = style.backgroundPosition.match(PositionableElement.BACKGROUND_POSITION_MATCH);
+      if (match) {
+        this.backgroundPosition = new Point(parseInt(match[1]), parseInt(match[3]));
+      } else {
+        this.backgroundPosition = new Point(0, 0);
+      }
+    }
+    */
+
+    createHandles() {
+      this.handles = {};
+      this.createSizingHandles();
+      this.handles.rotate = new RotationHandle(this);
+    }
+
+    createSizingHandles() {
+      this.handles.nw = new SizingHandle(this, 'nw', 'left',  'top');
+      this.handles.ne = new SizingHandle(this, 'ne', 'right', 'top');
+      this.handles.se = new SizingHandle(this, 'se', 'right', 'bottom');
+      this.handles.sw = new SizingHandle(this, 'sw', 'left',  'bottom');
+      this.handles.n  = new SizingHandle(this, 'n', null,  'top');
+      this.handles.e  = new SizingHandle(this, 'e', 'right', null);
+      this.handles.s  = new SizingHandle(this, 's', null,  'bottom');
+      this.handles.w  = new SizingHandle(this, 'w', 'left', null);
+    }
+
+
+    // --- Events
+
+    mouseDown(evt) {
+      DraggableElement.prototype.mouseDown.call(this, evt);
+    }
+
+    mouseUp(evt) {
+      if (!this.draggingStarted && evt.shiftKey) {
+        elementManager.addFocused(this);
+      } else if (!this.draggingStarted) {
+        elementManager.setFocused(this, true);
+      }
+      DraggableElement.prototype.mouseUp.call(this, evt);
+    }
+
+    mouseover(evt) {
+      statusBar.setState('position');
+    }
+
+    dblclick(evt) {
+
+      if (!this.spriteRecognizer) {
+        return;
+      }
+
+      var point  = new Point(evt.clientX + window.scrollX, evt.clientY + window.scrollY);
+      var coords = this.box.getCoords(point, this.transform.getRotation()).subtract(this.backgroundImage.getPosition());
+      var sprite = this.spriteRecognizer.getSpriteBoundsForCoordinate(coords);
+
+      if (sprite) {
+        this.pushState();
+        this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
+        this.box.right  = this.box.left + sprite.setWidth();
+        // TODO: don't have target!
+        this.box.bottom = this.box.top  + sprite.getHeight();
+        this.render();
+        statusBar.update();
+      }
+    }
+
+    contextmenu(evt) {
+      if (evt.ctrlKey) {
+        this.handleCtrlDoubleClick(evt);
+        evt.preventDefault();
+      }
+    }
+
+    handleCtrlDoubleClick(evt) {
+      if (this.dblClickTimer) {
+        this.dblclick(evt)
+      }
+      this.dblClickTimer = setTimeout(function() {
+        this.dblClickTimer = null;
+      }.bind(this), PositionableElement.DBLCLICK_TIMEOUT);
+    }
+
+    isBackgroundDrag(evt) {
+      return evt.ctrlKey;
+    }
+
+    focus() {
+      this.addClass('positioned-element-focused');
+      this.positionedParents.forEach(function(el) {
+        el.addClass('positioned-parent-focused');
+      });
+    }
+
+    unfocus() {
+      this.removeClass('positioned-element-focused');
+      this.positionedParents.forEach(function(el) {
+        el.removeClass('positioned-parent-focused');
+      });
+    }
+
+
+
+    // --- Dragging
+
+    dragStart(evt) {
+      elementManager.setFocused(this);
+      elementManager.pushState();
+    }
+
+    drag(evt) {
+      if (this.isBackgroundDrag(evt)) {
+        elementManager.backgroundDrag(evt);
+      } else {
+        elementManager.positionDrag(evt);
+      }
+    }
+
+    isConstrained(evt) {
+      return evt.shiftKey;
+    }
+
+
+    // --- Resizing
+
+    getHandle(handleName) {
+      return this.handles[handleName];
+    }
+
+    getHandleAnchor(handleName) {
+      switch (handleName) {
+        case 'nw': return this.getHandle('se');
+        case 'ne': return this.getHandle('sw');
+        case 'se': return this.getHandle('nw');
+        case 'sw': return this.getHandle('ne');
+        case 'n':  return this.getHandle('s');
+        case 's':  return this.getHandle('n');
+        case 'e':  return this.getHandle('w');
+        case 'w':  return this.getHandle('e');
+      }
+    }
+
+    resize(vector, handleName, constrained, isAbsolute) {
+
+      var lastState = this.getLastState();
+      var lastBox = this.getLastState().box;
+      var lastRatio = lastBox.getRatio();
+      var rotation = this.transform.getRotation();
+      var handle = this.getHandle(handleName);
+
+      if (isAbsolute && rotation) {
+        vector = vector.getRotated(-rotation);
+      }
+
+      this.box[handle.xProp] = lastBox[handle.xProp] + vector.x;
+      this.box[handle.yProp] = lastBox[handle.yProp] + vector.y;
+
+      if (constrained) {
+        this.constrainRatio(lastBox, handle);
+      }
+
+      //box.calculateRotationOffset();
+
+      if (rotation) {
+        var anchor = this.getHandleAnchor(handleName);
+        // TODO: move into function?
+        var a1 = anchor.getPosition(lastBox, rotation);
+        var a2 = anchor.getPosition(this.box, rotation);
+        this.transform.setTranslation(lastState.transform.getTranslation().add(a1.subtract(a2)));
+      }
+
+      // TODO: render only bits?
       this.render();
       statusBar.update();
     }
-  };
 
-  PositionableElement.prototype.contextmenu = function(evt) {
-    if (evt.ctrlKey) {
-      this.handleCtrlDoubleClick(evt);
-      evt.preventDefault();
-    }
-  };
+    constrainRatio(lastBox, handle) {
+      var box      = this.box;
+      var anchor   = this.getHandleAnchor(handle.name);
+      var oldRatio = lastBox.getRatio();
+      var newRatio = this.box.getRatio();
 
-  PositionableElement.prototype.handleCtrlDoubleClick = function(evt) {
-    if (this.dblClickTimer) {
-      this.dblclick(evt)
-    }
-    this.dblClickTimer = setTimeout(function() {
-      this.dblClickTimer = null;
-    }.bind(this), PositionableElement.DBLCLICK_TIMEOUT);
-  };
-
-  PositionableElement.prototype.isBackgroundDrag = function(evt) {
-    return evt.ctrlKey;
-  };
-
-  PositionableElement.prototype.focus = function() {
-    this.addClass('positioned-element-focused');
-    this.positionedParents.forEach(function(el) {
-      el.addClass('positioned-parent-focused');
-    });
-  };
-
-  PositionableElement.prototype.unfocus = function() {
-    this.removeClass('positioned-element-focused');
-    this.positionedParents.forEach(function(el) {
-      el.removeClass('positioned-parent-focused');
-    });
-  };
-
-
-
-  // --- Dragging
-
-  PositionableElement.prototype.dragStart = function(evt) {
-    elementManager.setFocused(this);
-    elementManager.pushState();
-  };
-
-  PositionableElement.prototype.drag = function(evt) {
-    if (this.isBackgroundDrag(evt)) {
-      elementManager.backgroundDrag(evt);
-    } else {
-      elementManager.positionDrag(evt);
-    }
-  };
-
-  PositionableElement.prototype.isConstrained = function(evt) {
-    return evt.shiftKey;
-  };
-
-
-  // --- Resizing
-
-  PositionableElement.prototype.getHandle = function(handleName) {
-    return this.handles[handleName];
-  };
-
-  PositionableElement.prototype.getHandleAnchor = function(handleName) {
-    switch (handleName) {
-      case 'nw': return this.getHandle('se');
-      case 'ne': return this.getHandle('sw');
-      case 'se': return this.getHandle('nw');
-      case 'sw': return this.getHandle('ne');
-      case 'n':  return this.getHandle('s');
-      case 's':  return this.getHandle('n');
-      case 'e':  return this.getHandle('w');
-      case 'w':  return this.getHandle('e');
-    }
-  };
-
-  PositionableElement.prototype.resize = function(vector, handleName, constrained, isAbsolute) {
-
-    var lastState = this.getLastState();
-    var lastBox = this.getLastState().box;
-    var lastRatio = lastBox.getRatio();
-    var rotation = this.transform.rotation.deg;
-    var handle = this.getHandle(handleName);
-
-    if (isAbsolute && rotation) {
-      vector = vector.getRotated(-rotation);
+      if (newRatio < oldRatio) {
+        box[handle.yProp] = box[anchor.yProp] + box.width / oldRatio * handle.yDir;
+      } else if (newRatio > oldRatio) {
+        box[handle.xProp] = box[anchor.xProp] + box.height * oldRatio * handle.xDir;
+      }
     }
 
-    this.box[handle.xProp] = lastBox[handle.xProp] + vector.x;
-    this.box[handle.yProp] = lastBox[handle.yProp] + vector.y;
 
-    if (constrained) {
-      this.constrainRatio(lastBox, handle);
-    }
-
-    //box.calculateRotationOffset();
-
-    if (rotation) {
-      var anchor = this.getHandleAnchor(handleName);
-      // TODO: move into function?
-      var a1 = anchor.getPosition(lastBox, rotation);
-      var a2 = anchor.getPosition(this.box, rotation);
-      this.transform.translation = lastState.transform.translation.add(a1.subtract(a2));
-    }
-
-    // TODO: render only bits?
-    this.render();
-    statusBar.update();
-  };
-
-  PositionableElement.prototype.constrainRatio = function(lastBox, handle) {
-    var box      = this.box;
-    var anchor   = this.getHandleAnchor(handle.name);
-    var oldRatio = lastBox.getRatio();
-    var newRatio = this.box.getRatio();
-
-    if (newRatio < oldRatio) {
-      box[handle.yProp] = box[anchor.yProp] + box.width / oldRatio * handle.yDir;
-    } else if (newRatio > oldRatio) {
-      box[handle.xProp] = box[anchor.xProp] + box.height * oldRatio * handle.xDir;
-    }
-  };
-
-
-  PositionableElement.prototype.toggleSizingHandles = function(on) {
-    if (on) {
-      this.removeClass('resize-handles-hidden');
-    } else {
-      this.addClass('resize-handles-hidden');
-    }
-  };
-
-
-  // --- Rotation
-
-  PositionableElement.prototype.rotate = function(offset) {
-    var r = this.getLastRotation() + offset;
-    this.transform.rotation = r;
-    this.updateTransform();
-  };
-
-  /*
-  PositionableElement.prototype.setRotation = function(deg) {
-    this.transform.rotation = this.getLastRotation() + deg;
-    this.updateTransform();
-  };
-  */
-
-  // TODO: can this be removed somehow?
-  PositionableElement.prototype.getLastRotation = function() {
-    return this.getLastState().transform.rotation.deg;
-  };
-
-  // TODO: different origins?
-  PositionableElement.prototype.getRotationOrigin = function() {
-    return this.box.getCenterPosition();
-  };
-
-  // --- Position
-
-  PositionableElement.prototype.backgroundDrag = function(evt) {
-    var lastPostition, rotation, pos;
-
-    lastPosition = this.getLastState().backgroundPosition.getPosition();
-    rotation = this.transform.rotation.deg;
-
-    /*
-    if (rotation) {
-      last = last.getRotated(rotation);
-    }
-    */
-
-    pos = this.getDraggedPosition(evt, lastPosition);
-
-    /*
-    if (rotation) {
-      offset = offset.getRotated(-rotation);
-    }
-    */
-
-    this.setBackgroundPosition(pos);
-  };
-
-  PositionableElement.prototype.positionDrag = function(evt) {
-    var pos = this.getDraggedPosition(evt, this.getLastState().box.getPosition());
-    this.box.setPosition(pos);
-    this.updatePosition();
-    statusBar.update();
-  };
-
-  // TODO: rename?
-  PositionableElement.prototype.getDraggedPosition = function(evt, lastPosition) {
-    var drag, pos, absX, absY;
-
-    drag = evt.dragOffset;
-    pos  = lastPosition.add(drag);
-
-    if (this.isConstrained(evt)) {
-      absX = Math.abs(drag.x);
-      absY = Math.abs(drag.y);
-      if (absX < absY) {
-        pos.x = lastPosition.x;
+    toggleSizingHandles(on) {
+      if (on) {
+        this.removeClass('resize-handles-hidden');
       } else {
-        pos.y = lastPosition.y;
+        this.addClass('resize-handles-hidden');
       }
     }
 
-    return pos;
-  };
 
+    // --- Rotation
 
-  // --- History & State
-
-  PositionableElement.prototype.pushState = function() {
-    this.states.push({
-      box: this.box.clone(),
-      zIndex: this.zIndex.clone(),
-      transform: this.transform.clone(),
-      backgroundPosition: this.backgroundPosition.clone()
-    });
-  };
-
-  PositionableElement.prototype.getLastState = function() {
-    return this.states[this.states.length - 1];
-  };
-
-  PositionableElement.prototype.undo = function() {
-    var state = this.states.pop();
-    if (!state) return;
-    this.box = state.box;
-    this.zIndex = state.zIndex;
-    this.transform = state.transform;
-    //this.position = state.position;
-    this.backgroundPosition = state.backgroundPosition;
-    this.render();
-  };
-
-
-
-  // --- Peeking
-
-  PositionableElement.prototype.peek = function(on) {
-    if (on && this.backgroundPosition) {
-      this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
-      this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
-    } else {
-      this.updateSize();
+    rotate(offset) {
+      var r = this.getLastRotation() + offset;
+      this.transform.setRotation(r);
+      this.updateTransform();
     }
-  };
 
-
-
-  // --- Scrolling
-
-  PositionableElement.prototype.checkScrollBounds = function() {
-    var dim = this.getAbsoluteDimensions(), boundary;
-    if (dim.top < window.scrollY) {
-      window.scrollTo(window.scrollX, dim.top);
-    }
-    if (dim.left < window.scrollX) {
-      window.scrollTo(dim.left, window.scrollY);
-    }
-    boundary = window.scrollX + window.innerWidth;
-    if (dim.right > boundary) {
-      window.scrollTo(window.scrollX + (dim.right - boundary), window.scrollY);
-    }
-    boundary = window.scrollY + window.innerHeight;
-    if (dim.bottom > boundary) {
-      window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
-    }
-  };
-
-
-
-
-  // --- Transform
-
-  PositionableElement.prototype.setBackgroundPosition = function(p) {
-    this.backgroundPosition.setPosition(p);
-    this.updateBackgroundPosition();
-  };
-
-  // TODO: remove?
-  /*
-  PositionableElement.prototype.setPosition = function(point) {
-    // TODO: Remove all direct this. properties
-    this.position = point;
-    this.box.setPosition(point);
-    this.updatePosition();
-  };
-  */
-
-  PositionableElement.prototype.incrementBackgroundPosition = function(vector) {
-    if (!this.backgroundPosition) return;
-    if (this.box.rotation) {
-      vector = vector.getRotated(-this.box.rotation);
-    }
-    this.setBackgroundPosition(this.backgroundPosition.add(vector));
-  };
-
-  PositionableElement.prototype.incrementPosition = function(vector) {
-    this.box.addPosition(vector);
-    this.updatePosition();
-    //this.setPosition(this.position.add(vector));
-    this.checkScrollBounds();
-  };
-
-  PositionableElement.prototype.incrementZIndex = function(vector) {
-    // Positive Y is actually down, so decrement here.
-    if (vector.x > 0 || vector.y < 0) {
-      this.zIndex.addValue(1);
-    } else if (vector.x < 0 || vector.y > 0) {
-      this.zIndex.addValue(-1);
-    }
-    this.updateZIndex();
-  };
-
-  // --- Rendering
-
-  PositionableElement.prototype.render = function() {
-    // TODO: update separately instead of render??
-    this.updatePosition();
-    this.updateSize();
-    this.updateTransform();
-    this.updateBackgroundPosition();
-    this.updateZIndex();
-  };
-
-  PositionableElement.prototype.updatePosition = function() {
-    this.el.style.left = this.box.cssLeft;
-    this.el.style.top  = this.box.cssTop;
-  };
-
-  PositionableElement.prototype.updateSize = function(size) {
-    this.el.style.width  = this.box.cssWidth;
-    this.el.style.height = this.box.cssHeight;
-  };
-
-  // TODO: standing in for any transform now... fix this!
-  PositionableElement.prototype.updateTransform = function() {
     /*
-    var r = this.box.rotation, transforms = [];
-    if (this.box.cssTranslationLeft || this.box.cssTranslationTop) {
-      var tx = this.box.cssTranslationLeft || 0;
-      var ty = this.box.cssTranslationTop || 0;
-      transforms.push('translate('+ tx + ', '+ ty + ')');
+    setRotation(deg) {
+      this.transform.rotation = this.getLastRotation() + deg;
+      this.updateTransform();
     }
-    transforms.push('rotateZ('+ r +'deg)');
-    this.el.style.webkitTransform = transforms.join(' ');
     */
-    this.el.style.transform = this.transform;
-  };
 
-  PositionableElement.prototype.updateBackgroundPosition = function() {
-    if (this.backgroundPosition.isNull()) {
-      return;
+    // TODO: can this be removed somehow?
+    getLastRotation() {
+      return this.getLastState().transform.getRotation();
     }
-    this.el.style.backgroundPosition = this.backgroundPosition;
-  };
 
-  PositionableElement.prototype.updateZIndex = function() {
-    this.el.style.zIndex = this.zIndex;
-  };
-
-
-
-  // --- Calculations
-
-  PositionableElement.prototype.getElementCoordsForPoint = function(point) {
-    // Gets the coordinates relative to the element's
-    // x/y internal coordinate system, which may be rotated.
-    var dim = this.getAbsoluteDimensions();
-    var corner = new Point(dim.left, dim.top);
-    if (this.box.rotation) {
-      corner = this.box.getPositionForCoords(corner).add(this.getPositionOffset());
-      return point.subtract(corner).getRotated(-this.box.rotation);
-    } else {
-      return point.subtract(corner);
+    // TODO: different origins?
+    getRotationOrigin() {
+      return this.box.getCenterPosition();
     }
-  };
 
-  PositionableElement.prototype.getPositionOffset = function() {
-    // The offset between the element's position and it's actual
-    // rectangle's left/top coordinates, which can sometimes differ.
-    return this.box.getPosition().subtract(
-        new Point(this.box.left.px, this.box.top.px));
-  };
+    // --- Position
 
-  PositionableElement.prototype.getPositionFromRotatedHandle = function(anchor) {
-    var offsetX  = this.box.width / 2;
-    var offsetY  = this.box.height / 2;
-    var toCenter = anchor.offsetToCenter(offsetX, offsetY).getRotated(this.box.rotation);
-    var toCorner = new Point(-offsetX, -offsetY);
-    return anchor.startPosition.add(toCenter).add(toCorner);
-  };
+    backgroundDrag(evt) {
+      var lastPosition, rotation, pos;
 
-  PositionableElement.prototype.getHandleForSide = function(side) {
-    var offset;
-    switch(side) {
-      case 'top':    offset = 0; break;
-      case 'right':  offset = 1; break;
-      case 'bottom': offset = 2; break;
-      case 'left':   offset = 3; break;
+      lastPosition = this.getLastState().backgroundImage.getPosition();
+      rotation = this.transform.getRotation();
+
+      /*
+      if (rotation) {
+        last = last.getRotated(rotation);
+      }
+      */
+
+      pos = this.getDraggedPosition(evt, lastPosition);
+
+      /*
+      if (rotation) {
+        offset = offset.getRotated(-rotation);
+      }
+      */
+
+      this.setBackgroundPosition(pos);
     }
-    return [this.nw, this.ne, this.se, this.sw][(this.rotation / 90 | 0) + offset];
-  };
 
-  PositionableElement.prototype.getCenter = function() {
-    return this.box.getCenter();
-  };
-
-  PositionableElement.prototype.getAbsoluteCenter = function() {
-    return this.getAbsoluteDimensions().getCenter();
-  };
-
-  PositionableElement.prototype.getAbsoluteDimensions = function() {
-    var rect = this.el.getBoundingClientRect();
-    return new Rectangle(
-      rect.top + window.scrollY,
-      rect.right,
-      rect.bottom,
-      rect.left + window.scrollX
-    );
-  };
-
-  PositionableElement.prototype.getEdgeValue = function(side) {
-    var handle = this.getHandleForSide(side);
-    return handle.getPosition()[this.getAxisForSide(side)];
-  };
-
-  PositionableElement.prototype.getCenterAlignValue = function(type) {
-    var center = this.getCenter();
-    return type === 'vertical' ? center.x : center.y;
-  };
-
-  PositionableElement.prototype.alignToSide = function(side, val) {
-    // TODO ... can this be cleaned up? Do we really need "startPosition"?
-    var axis   = this.getAxisForSide(side);
-    var handle = this.getHandleForSide(side);
-    var handlePosition = handle.getPosition();
-    handlePosition[axis] = val;
-    handle.startPosition = handlePosition;
-    this.setPosition(this.getPositionFromRotatedHandle(handle));
-    this.render();
-  };
-
-  PositionableElement.prototype.alignToCenter = function(line, val) {
-    var axis = line === 'vertical' ? 'x' : 'y';
-    var center = this.getCenter().clone();
-    var offsetX  = this.box.getWidth() / 2;
-    var offsetY  = this.box.getHeight() / 2;
-    var toCorner = new Point(-offsetX, -offsetY);
-    center[axis] = val;
-    this.setPosition(center.add(toCorner));
-  };
-
-  PositionableElement.prototype.getAxisForSide = function(side) {
-    return side === 'top' || side === 'bottom' ? 'y' : 'x';
-  };
-
-
-  // --- Output
-
-  PositionableElement.prototype.getSelector = function() {
-    var type = settings.get(Settings.SELECTOR), classes;
-    if (type === Settings.SELECTOR_AUTO) {
-      type = this.el.id ? Settings.SELECTOR_ID : Settings.SELECTOR_FIRST;
+    positionDrag(evt) {
+      var pos = this.getDraggedPosition(evt, this.getLastState().box.getPosition());
+      this.box.setPosition(pos);
+      this.updatePosition();
+      statusBar.update();
     }
-    switch(type) {
-      case Settings.SELECTOR_NONE:    return '';
-      case Settings.SELECTOR_ID:      return '#' + this.el.id;
-      case Settings.SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
-      case Settings.SELECTOR_TAG:     return this.getTagName(this.el);
-      case Settings.SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(this.el);
-      case Settings.SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
-      case Settings.SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
+
+    // TODO: rename?
+    getDraggedPosition(evt, lastPosition) {
+      var drag, pos, absX, absY;
+
+      drag = evt.dragOffset;
+      pos  = lastPosition.add(drag);
+
+      if (this.isConstrained(evt)) {
+        absX = Math.abs(drag.x);
+        absY = Math.abs(drag.y);
+        if (absX < absY) {
+          pos.x = lastPosition.x;
+        } else {
+          pos.y = lastPosition.y;
+        }
+      }
+
+      return pos;
     }
-  };
 
-  PositionableElement.prototype.getAllClasses = function(list) {
-    return '.' + this.getFilteredClasses(list).join('.');
-  };
 
-  PositionableElement.prototype.getFirstClass = function(list) {
-    var first = this.getFilteredClasses(list)[0];
-    return first ? '.' + first : '[undefined element]';
-  };
+    // --- History & State
 
-  PositionableElement.prototype.getTagName = function(el) {
-    return el.tagName.toLowerCase();
-  };
+    pushState() {
+      this.states.push({
+        box: this.box.clone(),
+        zIndex: this.zIndex.clone(),
+        transform: this.transform.clone(),
+        backgroundImage: this.backgroundImage.clone()
+      });
+    }
 
-  PositionableElement.prototype.getTagNameWithNthIndex = function(el) {
-    var child = el, i = 1;
-    while ((child = child.previousSibling) != null ) {
-      // Count only element nodes.
-      if (child.nodeType == 1) {
-        i++;
+    getLastState() {
+      return this.states[this.states.length - 1];
+    }
+
+    undo() {
+      var state = this.states.pop();
+      if (!state) return;
+      this.box = state.box;
+      this.zIndex = state.zIndex;
+      this.transform = state.transform;
+      //this.position = state.position;
+      this.backgroundImage = state.backgroundImage;
+      this.render();
+    }
+
+
+
+    // --- Peeking
+
+    peek(on) {
+      if (on && !this.backgroundImage.isNull()) {
+        this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
+        this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
+      } else {
+        this.updateSize();
       }
     }
-    return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
-  };
 
-  PositionableElement.prototype.getLongestClass = function(list) {
-    return '.' + this.getFilteredClasses(list).reduce(function(a, b) {
-      return a.length > b.length ? a : b;
-    });
-  };
 
-  PositionableElement.prototype.getFilteredClasses = function(list) {
-    var filtered = [], i = 0;
-    while(name = list[i++]) {
-      if (!name.match(EXTENSION_CLASS_PREFIX)) {
-        filtered.push(name);
+
+    // --- Scrolling
+
+    checkScrollBounds() {
+      var dim = this.getAbsoluteDimensions(), boundary;
+      if (dim.top < window.scrollY) {
+        window.scrollTo(window.scrollX, dim.top);
+      }
+      if (dim.left < window.scrollX) {
+        window.scrollTo(dim.left, window.scrollY);
+      }
+      boundary = window.scrollX + window.innerWidth;
+      if (dim.right > boundary) {
+        window.scrollTo(window.scrollX + (dim.right - boundary), window.scrollY);
+      }
+      boundary = window.scrollY + window.innerHeight;
+      if (dim.bottom > boundary) {
+        window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
       }
     }
-    return filtered;
-  };
 
-  PositionableElement.prototype.getStyles = function(exclude) {
-    var lines = [];
 
-    // Set exclusion map;
-    this.exclude = exclude;
 
-    function add(l) {
-      lines = lines.concat(l);
+
+    // --- Transform
+
+    setBackgroundPosition(p) {
+      this.backgroundImage.setPosition(p);
+      this.updateBackgroundPosition();
     }
 
-    this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
-    this.selector = this.getSelector();
+    // TODO: remove?
+    /*
+    setPosition(point) {
+      // TODO: Remove all direct this. properties
+      this.position = point;
+      this.box.setPosition(point);
+      this.updatePosition();
+    }
+    */
 
-    if (this.isPositioned()) {
-      if (this.zIndex !== null) {
+    incrementBackgroundPosition(vector) {
+      if (this.backgroundImage.isNull()) {
+        return;
+      }
+      var rotation = this.transform.getRotation();
+      if (rotation) {
+        vector = vector.getRotated(-rotation);
+      }
+      this.setBackgroundPosition(this.backgroundImage.getPosition(vector).add(vector));
+    }
+
+    incrementPosition(vector) {
+      this.box.addPosition(vector);
+      this.updatePosition();
+      //this.setPosition(this.position.add(vector));
+      this.checkScrollBounds();
+    }
+
+    incrementRotation(vector) {
+      this.transform.addRotation(vector.y);
+      this.updateTransform();
+    }
+
+    incrementZIndex(vector) {
+      // Positive Y is actually down, so decrement here.
+      this.zIndex.add(vector.y);
+      this.updateZIndex();
+    }
+
+    // --- Rendering
+
+    render() {
+      // TODO: update separately instead of render??
+      this.updatePosition();
+      this.updateSize();
+      this.updateTransform();
+      this.updateBackgroundPosition();
+      this.updateZIndex();
+    }
+
+    updatePosition() {
+      this.el.style.left = this.box.cssLeft;
+      this.el.style.top  = this.box.cssTop;
+    }
+
+    updateSize(size) {
+      this.el.style.width  = this.box.cssWidth;
+      this.el.style.height = this.box.cssHeight;
+    }
+
+    // TODO: standing in for any transform now... fix this!
+    updateTransform() {
+      /*
+      var r = this.box.rotation, transforms = [];
+      if (this.box.cssTranslationLeft || this.box.cssTranslationTop) {
+        var tx = this.box.cssTranslationLeft || 0;
+        var ty = this.box.cssTranslationTop || 0;
+        transforms.push('translate('+ tx + ', '+ ty + ')');
+      }
+      transforms.push('rotateZ('+ r +'deg)');
+      this.el.style.webkitTransform = transforms.join(' ');
+      */
+      this.el.style.transform = this.transform;
+    }
+
+    updateBackgroundPosition() {
+      if (!this.backgroundImage.isNull()) {
+        this.el.style.backgroundPosition = this.backgroundImage.getPositionString();
+      }
+    }
+
+    updateZIndex() {
+      this.el.style.zIndex = this.zIndex;
+    }
+
+
+
+    // --- Calculations
+
+    getElementCoordsForPoint(point) {
+      // Gets the coordinates relative to the element's
+      // x/y internal coordinate system, which may be rotated.
+      var dim = this.getAbsoluteDimensions();
+      var corner = new Point(dim.left, dim.top);
+      var rotation = this.transform.getRotation();
+
+      if (rotation) {
+        corner = this.box.getPositionForCoords(corner).add(this.getPositionOffset());
+        return point.subtract(corner).getRotated(-rotation);
+      } else {
+        return point.subtract(corner);
+      }
+    }
+
+    getPositionOffset() {
+      // The offset between the element's position and it's actual
+      // rectangle's left/top coordinates, which can sometimes differ.
+      return this.box.getPosition().subtract(
+          new Point(this.box.left.px, this.box.top.px));
+    }
+
+    getPositionFromRotatedHandle(anchor) {
+      var offsetX  = this.box.width / 2;
+      var offsetY  = this.box.height / 2;
+      var toCenter = anchor.offsetToCenter(offsetX, offsetY).getRotated(this.transform.getRotation());
+      var toCorner = new Point(-offsetX, -offsetY);
+      return anchor.startPosition.add(toCenter).add(toCorner);
+    }
+
+    getHandleForSide(side) {
+      var offset;
+      switch(side) {
+        case 'top':    offset = 0; break;
+        case 'right':  offset = 1; break;
+        case 'bottom': offset = 2; break;
+        case 'left':   offset = 3; break;
+      }
+      return [this.nw, this.ne, this.se, this.sw][(this.transform.getRotation() / 90 | 0) + offset];
+    }
+
+    getCenter() {
+      return this.box.getCenter();
+    }
+
+    getAbsoluteCenter() {
+      return this.getAbsoluteDimensions().getCenter();
+    }
+
+    getAbsoluteDimensions() {
+      var rect = this.el.getBoundingClientRect();
+      return new Rectangle(
+        rect.top + window.scrollY,
+        rect.right,
+        rect.bottom,
+        rect.left + window.scrollX
+      );
+    }
+
+    getEdgeValue(side) {
+      var handle = this.getHandleForSide(side);
+      return handle.getPosition()[this.getAxisForSide(side)];
+    }
+
+    getCenterAlignValue(type) {
+      var center = this.getCenter();
+      return type === 'vertical' ? center.x : center.y;
+    }
+
+    alignToSide(side, val) {
+      // TODO ... can this be cleaned up? Do we really need "startPosition"?
+      var axis   = this.getAxisForSide(side);
+      var handle = this.getHandleForSide(side);
+      var handlePosition = handle.getPosition();
+      handlePosition[axis] = val;
+      handle.startPosition = handlePosition;
+      this.setPosition(this.getPositionFromRotatedHandle(handle));
+      this.render();
+    }
+
+    alignToCenter(line, val) {
+      var axis = line === 'vertical' ? 'x' : 'y';
+      var center = this.getCenter().clone();
+      var offsetX  = this.box.getWidth() / 2;
+      var offsetY  = this.box.getHeight() / 2;
+      var toCorner = new Point(-offsetX, -offsetY);
+      center[axis] = val;
+      this.setPosition(center.add(toCorner));
+    }
+
+    getAxisForSide(side) {
+      return side === 'top' || side === 'bottom' ? 'y' : 'x';
+    }
+
+
+    // --- Output
+
+    getSelector() {
+      var type = settings.get(Settings.SELECTOR), classes;
+      if (type === Settings.SELECTOR_AUTO) {
+        type = this.el.id ? Settings.SELECTOR_ID : Settings.SELECTOR_FIRST;
+      }
+      switch(type) {
+        case Settings.SELECTOR_NONE:    return '';
+        case Settings.SELECTOR_ID:      return '#' + this.el.id;
+        case Settings.SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
+        case Settings.SELECTOR_TAG:     return this.getTagName(this.el);
+        case Settings.SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(this.el);
+        case Settings.SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
+        case Settings.SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
+      }
+    }
+
+    getAllClasses(list) {
+      return '.' + this.getFilteredClasses(list).join('.');
+    }
+
+    getFirstClass(list) {
+      var first = this.getFilteredClasses(list)[0];
+      return first ? '.' + first : '[undefined element]';
+    }
+
+    getTagName(el) {
+      return el.tagName.toLowerCase();
+    }
+
+    getTagNameWithNthIndex(el) {
+      var child = el, i = 1;
+      while ((child = child.previousSibling) != null ) {
+        // Count only element nodes.
+        if (child.nodeType == 1) {
+          i++;
+        }
+      }
+      return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
+    }
+
+    getLongestClass(list) {
+      return '.' + this.getFilteredClasses(list).reduce(function(a, b) {
+        return a.length > b.length ? a : b;
+      });
+    }
+
+    getFilteredClasses(list) {
+      var filtered = [], i = 0;
+      while(name = list[i++]) {
+        if (!name.match(EXTENSION_CLASS_PREFIX)) {
+          filtered.push(name);
+        }
+      }
+      return filtered;
+    }
+
+    getStyles(exclude) {
+      var lines = [];
+
+      // Set exclusion map;
+      this.exclude = exclude;
+
+      function add(l) {
+        lines = lines.concat(l);
+      }
+
+      this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
+      this.selector = this.getSelector();
+
+      if (!this.zIndex.isNull()) {
         add(this.getStyleLines('z-index', this.zIndex));
       }
-      add(this.getStyleLines('left', round(this.position.x)));
-      add(this.getStyleLines('top', round(this.position.y)));
-    }
-    add(this.getStyleLines('width', this.box.getWidth(true)));
-    add(this.getStyleLines('height', this.box.getHeight(true)));
-    if (this.backgroundPosition) {
-      add(this.getStyleLines('background-position', this.backgroundPosition.x, this.backgroundPosition.y));
-    }
-    if (this.box.rotation) {
-      add(this.getStyleLines('rotation', this.getRoundedRotation()));
-    }
+      add(this.getStyleLines('left', this.box.cssLeft));
+      add(this.getStyleLines('top', this.box.cssTop));
+      add(this.getStyleLines('width', this.box.cssWidth));
+      add(this.getStyleLines('height', this.box.cssHeight));
+      if (!this.backgroundImage.isNull()) {
+        add(this.getStyleLines('background-position', this.backgroundImage.getPositionString()));
+      }
+      if (!this.transform.isNull()) {
+        add(this.getStyleLines('rotation', this.getRoundedRotation()));
+      }
 
-    // Clean exclusion map.
-    this.exclude = null;
+      // Clean exclusion map.
+      this.exclude = null;
 
-    if (this.selector && lines.length > 0) {
-      lines.unshift('\n' + this.selector + ' {');
-      return lines.join('\n' + this.tabCharacter) + '\n}';
-    } else {
-      return lines.join(' ');
-    }
-  };
-
-  PositionableElement.prototype.getStyleLines = function(prop, val1, val2) {
-    var isPx, lines = [], str = '';
-    if (this.canIgnoreStyle(prop, val1, val2)) {
-      return lines;
-    }
-    if (prop === 'rotation') {
-      lines.push(this.concatStyle('-webkit-transform', 'rotateZ(' + val1 + 'deg)'));
-      lines.push(this.concatStyle('-moz-transform', 'rotateZ(' + val1 + 'deg)'));
-      lines.push(this.concatStyle('-ms-transform', 'rotateZ(' + val1 + 'deg)'));
-      lines.push(this.concatStyle('transform', 'rotateZ(' + val1 + 'deg)'));
-      return lines;
-    }
-    if (prop === 'left' ||
-       prop === 'top' ||
-       prop === 'width' ||
-       prop === 'height' ||
-       prop === 'background-position') {
-      isPx = true;
-    }
-    str += val1;
-    if (isPx) {
-      str += 'px';
-    }
-    if (val2 !== undefined) {
-      str += ' ' + val2;
-      if (isPx) str += 'px';
-    }
-    lines.push(this.concatStyle(prop, str));
-    return lines;
-  };
-
-  PositionableElement.prototype.concatStyle = function(attr, value) {
-    return attr + ': ' + value + ';';
-  }
-
-  PositionableElement.prototype.canIgnoreStyle = function(prop, val1, val2) {
-    var excluded = this.exclude && this.exclude[prop];
-    if (settings.get(Settings.OUTPUT_CHANGED) && this.propertyIsUnchanged(prop, val1, val2)) {
-      return true;
-    }
-    if (excluded !== undefined) {
-      if (excluded && prop === 'background-position') {
-        return excluded.x === val1 && excluded.y === val2;
+      if (this.selector && lines.length > 0) {
+        lines.unshift('\n' + this.selector + ' {');
+        return lines.join('\n' + this.tabCharacter) + '\n}';
       } else {
-        return excluded === val1;
+        return lines.join(' ');
       }
     }
-    return false;
+
+    getStyleLines(prop, val1, val2) {
+      var isPx, lines = [], str = '';
+      if (this.canIgnoreStyle(prop, val1, val2)) {
+        return lines;
+      }
+      if (prop === 'rotation') {
+        lines.push(this.concatStyle('-webkit-transform', 'rotateZ(' + val1 + 'deg)'));
+        lines.push(this.concatStyle('-moz-transform', 'rotateZ(' + val1 + 'deg)'));
+        lines.push(this.concatStyle('-ms-transform', 'rotateZ(' + val1 + 'deg)'));
+        lines.push(this.concatStyle('transform', 'rotateZ(' + val1 + 'deg)'));
+        return lines;
+      }
+      if (prop === 'left' ||
+         prop === 'top' ||
+         prop === 'width' ||
+         prop === 'height' ||
+         prop === 'background-position') {
+        isPx = true;
+      }
+      str += val1;
+      if (isPx) {
+        str += 'px';
+      }
+      if (val2 !== undefined) {
+        str += ' ' + val2;
+        if (isPx) str += 'px';
+      }
+      lines.push(this.concatStyle(prop, str));
+      return lines;
+    }
+
+    concatStyle(attr, value) {
+      return attr + ': ' + value + ';';
+    }
+
+    canIgnoreStyle(prop, val1, val2) {
+      var excluded = this.exclude && this.exclude[prop];
+      if (settings.get(Settings.OUTPUT_CHANGED) && this.propertyIsUnchanged(prop, val1, val2)) {
+        return true;
+      }
+      if (excluded !== undefined) {
+        if (excluded && prop === 'background-position') {
+          return excluded.x === val1 && excluded.y === val2;
+        } else {
+          return excluded === val1;
+        }
+      }
+      return false;
+    }
+
+    propertyIsUnchanged(prop, val1, val2) {
+      var state = this.states[0];
+      if (!state) {
+        return true;
+      }
+      switch(prop) {
+        case 'z-index':
+          return val1 === state.zIndex;
+        case 'top':
+          return val1 === state.box.top;
+        case 'left':
+          return val1 === state.box.left;
+        case 'width':
+          return val1 === state.box.width;
+        case 'height':
+          return val1 === state.box.height;
+        case 'rotation':
+          return val1 === state.transform.getRotation();
+        case 'background-position':
+          var bip = state.backgroundImage.getPosition();
+          return val1 === bip.x && val2 === bip.y;
+      }
+      return false;
+    }
+
+    getExportedProperties() {
+      return {
+        'z-index': this.zIndex,
+        'top': round(this.position.y),
+        'left': round(this.position.x),
+        'width': this.box.getWidth(true),
+        'height': this.box.getHeight(true),
+        'rotation': this.getRoundedRotation(),
+        'background-position': this.backgroundImage.getPosition()
+      }
+    }
+
+    getTabCharacter(name) {
+      switch(name) {
+        case Settings.TABS_TWO_SPACES:  return '  ';
+        case Settings.TABS_FOUR_SPACES: return '    ';
+        case Settings.TABS_TAB:         return '\u0009';
+      }
+    }
+
+    getRoundedRotation() {
+      var r = this.transform.getRotation();
+      if (r % 1 !== 0.5) {
+        r = round(r);
+      }
+      if (r === 360) r = 0;
+      return r;
+    }
+
+    isPositioned() {
+      return this.style.position !== 'static';
+    }
+
   }
-
-  PositionableElement.prototype.propertyIsUnchanged = function(prop, val1, val2) {
-    var state = this.states[0];
-    if (!state) {
-      return true;
-    }
-    switch(prop) {
-      case 'z-index':
-        return val1 === state.zIndex;
-      case 'top':
-        return val1 === state.position.y;
-      case 'left':
-        return val1 === state.position.x;
-      case 'rotation':
-        return val1 === state.box.rotation;
-      case 'width':
-        return val1 === state.box.right - state.box.left;
-      case 'height':
-        return val1 === state.box.bottom - state.box.top;
-      case 'background-position':
-        var bp = state.backgroundPosition;
-        return val1 === bp.x && val2 === bp.y;
-    }
-    return false;
-  }
-
-  PositionableElement.prototype.getExportedProperties = function() {
-    return {
-      'z-index': this.zIndex,
-      'top': round(this.position.y),
-      'left': round(this.position.x),
-      'width': this.box.getWidth(true),
-      'height': this.box.getHeight(true),
-      'rotation': this.getRoundedRotation(),
-      'background-position': this.backgroundPosition
-    }
-  }
-
-  PositionableElement.prototype.getTabCharacter = function(name) {
-    switch(name) {
-      case Settings.TABS_TWO_SPACES:  return '  ';
-      case Settings.TABS_FOUR_SPACES: return '    ';
-      case Settings.TABS_TAB:         return '\u0009';
-    }
-  };
-
-  PositionableElement.prototype.getRoundedRotation = function() {
-    var r = this.box.rotation;
-    if (r % 1 !== 0.5) {
-      r = round(r);
-    }
-    if (r === 360) r = 0;
-    return r;
-  };
-
-  PositionableElement.prototype.isPositioned = function() {
-    return this.style.position !== 'static';
-  };
-
 
   /*-------------------------] PositionableElementManager [--------------------------*/
 
+  class PositionableElementManager {
 
+    constructor() {
 
-  function PositionableElementManager () {
+      this.focusedElements = [];
 
-    this.focusedElements = [];
+      this.draggingElement = null;
 
-    this.draggingElement = null;
+      this.delegateToDragging('mouseDown', dragSelection);
+      this.delegateToDragging('mouseMove', dragSelection);
+      this.delegateToDragging('mouseUp',   dragSelection);
 
-    this.delegateToDragging('mouseDown', dragSelection);
-    this.delegateToDragging('mouseMove', dragSelection);
-    this.delegateToDragging('mouseUp',   dragSelection);
+      // Scrolling
+      this.delegateToDragging('scroll');
 
-    // Scrolling
-    this.delegateToDragging('scroll');
+      this.delegateToDragging('drag');
+      this.delegateToDragging('dragStart');
+      this.delegateToDragging('dragStop');
+      this.delegateToDragging('dragReset');
 
-    this.delegateToDragging('drag');
-    this.delegateToDragging('dragStart');
-    this.delegateToDragging('dragStop');
-    this.delegateToDragging('dragReset');
+      // Peeking
+      this.delegateToFocused('peek');
 
-    // Peeking
-    this.delegateToFocused('peek');
+      // State
+      this.delegateToFocused('undo');
+      this.delegateToFocused('pushState');
+      this.delegateToFocused('toggleSizingHandles');
 
-    // State
-    this.delegateToFocused('undo');
-    this.delegateToFocused('pushState');
-    this.delegateToFocused('toggleSizingHandles');
+      // Position
+      this.delegateToFocused('positionDrag');
+      this.delegateToFocused('backgroundDrag');
 
-    // Position
-    this.delegateToFocused('positionDrag');
-    this.delegateToFocused('backgroundDrag');
+      // Nudging
+      this.delegateToFocused('incrementPosition');
+      this.delegateToFocused('incrementBackgroundPosition');
+      this.delegateToFocused('incrementRotation');
+      this.delegateToFocused('incrementZIndex');
 
-    // Nudging
-    this.delegateToFocused('incrementPosition');
-    this.delegateToFocused('incrementBackgroundPosition');
-    this.delegateToFocused('incrementZIndex');
+      // Resizing
+      this.delegateToFocused('resize');
 
-    // Resizing
-    this.delegateToFocused('resize');
+      // Rotation
+      this.delegateToFocused('rotate');
 
-    // Rotation
-    this.delegateToFocused('rotate');
-
-  };
-
-  // --- Setup
-
-  PositionableElementManager.prototype.startBuild = function() {
-    loadingAnimation.show(this.build.bind(this));
-  };
-
-  PositionableElementManager.prototype.build = function(fn) {
-
-    var els = [];
-    this.elements = [];
-
-    this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
-    this.excludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
-
-    try {
-      var query = this.includeSelector || '*';
-      query += ':not([class*="'+ EXTENSION_CLASS_PREFIX +'"])';
-      els = document.body.querySelectorAll(query);
-    } catch(e) {
-      throwError(e.message, false);
     }
 
-    for(var i = 0, el; el = els[i]; i++) {
-      if (this.elementIsIncluded(el)) {
-        //try {
-          this.elements.push(new PositionableElement(el));
-        //} catch(e) {
-          // Errors can be thrown here due to cross-origin restrictions.
-        //}
+    // --- Setup
+
+    startBuild() {
+      loadingAnimation.show(this.build.bind(this));
+    }
+
+    build(fn) {
+
+      var els = [];
+      this.elements = [];
+
+      this.includeSelector = settings.get(Settings.INCLUDE_ELEMENTS);
+      this.excludeSelector = settings.get(Settings.EXCLUDE_ELEMENTS);
+
+      try {
+        var query = this.includeSelector || '*';
+        query += ':not([class*="'+ EXTENSION_CLASS_PREFIX +'"])';
+        els = document.body.querySelectorAll(query);
+      } catch(e) {
+        throwError(e.message, false);
       }
+
+      for(var i = 0, el; el = els[i]; i++) {
+        if (this.elementIsIncluded(el)) {
+          //try {
+            this.elements.push(new PositionableElement(el));
+          //} catch(e) {
+            // Errors can be thrown here due to cross-origin restrictions.
+          //}
+        }
+      }
+      loadingAnimation.hide(this.finishBuild.bind(this));
     }
-    loadingAnimation.hide(this.finishBuild.bind(this));
-  };
 
-  PositionableElementManager.prototype.finishBuild = function() {
-    statusBar.activate();
-    this.active = true;
-  };
+    finishBuild() {
+      statusBar.activate();
+      this.active = true;
+    }
 
-  PositionableElementManager.prototype.refresh = function() {
-    this.destroyElements();
-    this.startBuild();
-  };
-
-  PositionableElementManager.prototype.destroyElements = function() {
-    this.elements.forEach(function(e) {
-      e.destroy();
-    }, this);
-  };
-
-  PositionableElementManager.prototype.toggleActive = function() {
-    if (this.active) {
+    refresh() {
       this.destroyElements();
-      statusBar.deactivate();
-      this.active = false;
-    } else {
       this.startBuild();
     }
-  };
 
-  PositionableElementManager.prototype.elementIsIncluded = function(el) {
-    if (this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
-      // Don't include elements that are explicitly excluded.
-      return false;
-    } else if (getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
-      // Don't include elements that are part of the extension itself.
-      return false;
-    } else if (el.style && el.style.background.match(/positionable-extension/)) {
-      // Don't include elements that are part of other chrome extensions.
-      return false;
-    } else if (this.includeSelector) {
-      // If there is an explicit selector active, then always include.
-      return true;
-    }
-    // Otherwise only include absolute or fixed position elements.
-    var style = window.getComputedStyle(el);
-    return style.position === 'absolute' || style.position === 'fixed';
-  };
-
-  PositionableElementManager.prototype.delegateToFocused = function(name, disallowWhenDragging) {
-    this[name] = function() {
-      if (disallowWhenDragging && this.draggingElement) return;
-      this.callOnEveryFocused(name, arguments);
-    }.bind(this);
-  };
-
-  PositionableElementManager.prototype.delegateToDragging = function(name, alternate) {
-    this[name] = function() {
-      if (this.draggingElement && this.draggingElement[name]) {
-        this.draggingElement[name].apply(this.draggingElement, arguments);
-      } else if (alternate) {
-        alternate[name].apply(alternate, arguments);
-      }
-    }.bind(this);
-  };
-
-  // --- Actions
-
-  PositionableElementManager.prototype.setFocused = function(element, force) {
-    var elements;
-    if (typeof element === 'function') {
-      elements = this.elements.filter(element);
-    } else if (force || !this.elementIsFocused(element)) {
-      elements = [element];
-    }
-    if (elements) {
-      this.unfocusAll();
-      elements.forEach(this.addFocused, this);
-    }
-    statusBar.update();
-  };
-
-  PositionableElementManager.prototype.addFocused = function(element) {
-    if (!this.elementIsFocused(element)) {
-      element.focus();
-      this.focusedElements.push(element);
-    }
-    statusBar.update();
-  };
-
-  PositionableElementManager.prototype.unfocusAll = function() {
-    this.focusedElements.forEach(function(el) {
-      el.unfocus();
-    }, this);
-    this.focusedElements = [];
-  };
-
-  PositionableElementManager.prototype.focusAll = function() {
-    this.elements.forEach(function(el) {
-      this.addFocused(el);
-    }, this);
-  };
-
-  PositionableElementManager.prototype.callOnEveryFocused = function(name, args) {
-    var el, i, len;
-    for(i = 0, len = this.focusedElements.length; i < len; i++) {
-      el = this.focusedElements[i];
-      el[name].apply(el, args);
-    }
-  };
-
-  PositionableElementManager.prototype.alignFocused = function(line, distribute) {
-    var elementsLines, alignmentLine, opposingLine, distributedOffset, isCenter, isMax;
-
-    isCenter = line === 'vertical' || line === 'horizontal';
-    isMax    = line === 'right' || line === 'bottom';
-
-    elementsLines = this.getElementsLines(line, isCenter);
-
-    alignmentLine = elementsLines[0].line;
-    opposingLine  = elementsLines[elementsLines.length - 1].line;
-
-    if (isMax && !distribute) {
-      // If the line is on the bottom or right, then we actually need to get the opposing line.
-      alignmentLine = opposingLine;
+    destroyElements() {
+      this.elements.forEach(function(e) {
+        e.destroy();
+      }, this);
     }
 
-    if (distribute) {
-
-      // THe distributed offset (amount to distribute each element evenly by) is equal
-      // to the total span between the edges of the first and last element, divided by
-      // one less than the total number of elements. In other words if there are 3 elements,
-      // the first stays at the leftmost edge, the last stays at the rightmost edge,
-      // and the middle one is positioned to the entire span divided by 2. Likewise,
-      // any subsequent "middle" elements are positioned to the entire span divided by
-      // total elements - 1, multiplied by their "number" as a middle element (1 for the
-      // first middle element -- or second element in the array, etc).
-      distributedOffset = (opposingLine - alignmentLine) / (elementsLines.length - 1);
-    }
-
-    this.pushState();
-
-    elementsLines.forEach(function(e, i) {
-      var value = alignmentLine;
-      if (distribute) {
-        value += (distributedOffset * i);
-      }
-      if (isCenter) {
-        e.el.alignToCenter(line, value);
+    toggleActive() {
+      if (this.active) {
+        this.destroyElements();
+        statusBar.deactivate();
+        this.active = false;
       } else {
-        e.el.alignToSide(line, value);
+        this.startBuild();
       }
-    }, this);
-  };
-
-  PositionableElementManager.prototype.alignMiddle = function(line) {
-    var minLines, maxLines;
-    if (line === 'vertical') {
-      minLines = this.getElementsLines('left', false);
-      maxLines = this.getElementsLines('right', false);
-    } else {
-      minLines = this.getElementsLines('top', false);
-      maxLines = this.getElementsLines('bottom', false);
     }
-    var minLine = minLines[0].line;
-    var maxLine = maxLines[maxLines.length - 1].line;
-    var average = (minLine + maxLine) / 2;
 
-    this.pushState();
-
-    minLines.forEach(function(e, i) {
-      e.el.alignToCenter(line, average);
-    }, this);
-  };
-
-  PositionableElementManager.prototype.getElementsLines = function(line, center) {
-    // Get the elements alongside their associated "line" values,
-    // which may be an edge or in the center.
-    var elementsLines = this.focusedElements.map(function(el) {
-      var obj = { el: el };
-      obj.line = center ? el.getCenterAlignValue(line) : el.getEdgeValue(line);
-      return obj;
-    });
-    // Need to sort the elements here by their edges,
-    // otherwise the order of focusing will take precedence.
-    elementsLines.sort(function(a, b) {
-      return a.line - b.line;
-    });
-
-    return elementsLines;
-  };
-
-
-
-  // --- Calculations
-
-  PositionableElementManager.prototype.elementIsFocused = function(element) {
-    return this.focusedElements.some(function(e) {
-      return e === element;
-    });
-  };
-
-  PositionableElementManager.prototype.getFocusedSize = function() {
-    return this.focusedElements.length;
-  };
-
-  PositionableElementManager.prototype.getAllFocused = function() {
-    return this.focusedElements;
-  };
-
-  PositionableElementManager.prototype.getFirstFocused = function() {
-    return this.focusedElements[0];
-  };
-
-  PositionableElementManager.prototype.temporarilyFocusDraggingElement = function() {
-    if (!this.draggingElement) return;
-    this.previouslyFocusedElements = this.focusedElements;
-    this.focusedElements = [this.getDraggingElement()];
-  };
-
-  PositionableElementManager.prototype.releasedFocusedDraggingElement = function() {
-    if (!this.previouslyFocusedElements) return;
-    this.dragReset();
-    this.focusedElements = this.previouslyFocusedElements;
-    this.previouslyFocusedElements = null;
-  };
-
-  PositionableElementManager.prototype.getDraggingElement = function() {
-    // Currently dragging element may be a handle.
-    var el = this.draggingElement;
-    return el.target || el;
-  };
-
-  // --- Output
-
-  PositionableElementManager.prototype.getFocusedElementStyles = function() {
-    var elements = this.focusedElements, exclude = this.getExclusionMap(elements);
-    var styles = elements.map(function(el) {
-      return el.getStyles(exclude);
-    });
-    return styles.join('\n\n');
-  };
-
-  PositionableElementManager.prototype.copy = function(evt) {
-    var styles = this.getFocusedElementStyles();
-    var hasStyles = styles.replace(/^\s+$/, '').length > 0;
-    evt.preventDefault();
-    evt.clipboardData.clearData();
-    evt.clipboardData.setData('text/plain', styles);
-    copyAnimation.animate(hasStyles);
-  };
-
-  PositionableElementManager.prototype.save = function(evt) {
-    var styles = this.getFocusedElementStyles();
-    var link = document.createElement('a');
-    link.href = 'data:text/css;base64,' + btoa(styles);
-    link.download = settings.get(Settings.DOWNLOAD_FILENAME);
-    link.click();
-  };
-
-  PositionableElementManager.prototype.getExclusionMap = function(elements) {
-    if (elements.length < 2 || !settings.get(Settings.OUTPUT_UNIQUE)) {
-      return;
+    elementIsIncluded(el) {
+      if (this.excludeSelector && el.webkitMatchesSelector(this.excludeSelector)) {
+        // Don't include elements that are explicitly excluded.
+        return false;
+      } else if (getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
+        // Don't include elements that are part of the extension itself.
+        return false;
+      } else if (el.style && el.style.background.match(/positionable-extension/)) {
+        // Don't include elements that are part of other chrome extensions.
+        return false;
+      } else if (this.includeSelector) {
+        // If there is an explicit selector active, then always include.
+        return true;
+      }
+      // Otherwise only include absolute or fixed position elements.
+      var style = window.getComputedStyle(el);
+      return style.position === 'absolute' || style.position === 'fixed';
     }
-    var map = elements[0].getExportedProperties();
-    elements.slice(1).forEach(function(el) {
-      map = hashIntersect(map, el.getExportedProperties());
-    }, this);
-    return map;
+
+    delegateToFocused(name, disallowWhenDragging) {
+      // TODO: can this be cleaner?
+      this[name] = function() {
+        if (disallowWhenDragging && this.draggingElement) return;
+        this.callOnEveryFocused(name, arguments);
+      }.bind(this);
+    }
+
+    delegateToDragging(name, alternate) {
+      // TODO: can this be cleaner?
+      this[name] = function() {
+        if (this.draggingElement && this.draggingElement[name]) {
+          this.draggingElement[name].apply(this.draggingElement, arguments);
+        } else if (alternate) {
+          alternate[name].apply(alternate, arguments);
+        }
+      }.bind(this);
+    }
+
+    // --- Actions
+
+    setFocused(element, force) {
+      var elements;
+      if (typeof element === 'function') {
+        elements = this.elements.filter(element);
+      } else if (force || !this.elementIsFocused(element)) {
+        elements = [element];
+      }
+      if (elements) {
+        this.unfocusAll();
+        elements.forEach(this.addFocused, this);
+      }
+      statusBar.update();
+    }
+
+    addFocused(element) {
+      if (!this.elementIsFocused(element)) {
+        element.focus();
+        this.focusedElements.push(element);
+      }
+      statusBar.update();
+    }
+
+    unfocusAll() {
+      this.focusedElements.forEach(function(el) {
+        el.unfocus();
+      }, this);
+      this.focusedElements = [];
+    }
+
+    focusAll() {
+      this.elements.forEach(function(el) {
+        this.addFocused(el);
+      }, this);
+    }
+
+    callOnEveryFocused(name, args) {
+      var el, i, len;
+      for(i = 0, len = this.focusedElements.length; i < len; i++) {
+        el = this.focusedElements[i];
+        el[name].apply(el, args);
+      }
+    }
+
+    alignFocused(line, distribute) {
+      var elementsLines, alignmentLine, opposingLine, distributedOffset, isCenter, isMax;
+
+      isCenter = line === 'vertical' || line === 'horizontal';
+      isMax    = line === 'right' || line === 'bottom';
+
+      elementsLines = this.getElementsLines(line, isCenter);
+
+      alignmentLine = elementsLines[0].line;
+      opposingLine  = elementsLines[elementsLines.length - 1].line;
+
+      if (isMax && !distribute) {
+        // If the line is on the bottom or right, then we actually need to get the opposing line.
+        alignmentLine = opposingLine;
+      }
+
+      if (distribute) {
+
+        // THe distributed offset (amount to distribute each element evenly by) is equal
+        // to the total span between the edges of the first and last element, divided by
+        // one less than the total number of elements. In other words if there are 3 elements,
+        // the first stays at the leftmost edge, the last stays at the rightmost edge,
+        // and the middle one is positioned to the entire span divided by 2. Likewise,
+        // any subsequent "middle" elements are positioned to the entire span divided by
+        // total elements - 1, multiplied by their "number" as a middle element (1 for the
+        // first middle element -- or second element in the array, etc).
+        distributedOffset = (opposingLine - alignmentLine) / (elementsLines.length - 1);
+      }
+
+      this.pushState();
+
+      elementsLines.forEach(function(e, i) {
+        var value = alignmentLine;
+        if (distribute) {
+          value += (distributedOffset * i);
+        }
+        if (isCenter) {
+          e.el.alignToCenter(line, value);
+        } else {
+          e.el.alignToSide(line, value);
+        }
+      }, this);
+    }
+
+    alignMiddle(line) {
+      var minLines, maxLines;
+      if (line === 'vertical') {
+        minLines = this.getElementsLines('left', false);
+        maxLines = this.getElementsLines('right', false);
+      } else {
+        minLines = this.getElementsLines('top', false);
+        maxLines = this.getElementsLines('bottom', false);
+      }
+      var minLine = minLines[0].line;
+      var maxLine = maxLines[maxLines.length - 1].line;
+      var average = (minLine + maxLine) / 2;
+
+      this.pushState();
+
+      minLines.forEach(function(e, i) {
+        e.el.alignToCenter(line, average);
+      }, this);
+    }
+
+    getElementsLines(line, center) {
+      // Get the elements alongside their associated "line" values,
+      // which may be an edge or in the center.
+      var elementsLines = this.focusedElements.map(function(el) {
+        var obj = { el: el }
+        obj.line = center ? el.getCenterAlignValue(line) : el.getEdgeValue(line);
+        return obj;
+      });
+      // Need to sort the elements here by their edges,
+      // otherwise the order of focusing will take precedence.
+      elementsLines.sort(function(a, b) {
+        return a.line - b.line;
+      });
+
+      return elementsLines;
+    }
+
+
+
+    // --- Calculations
+
+    elementIsFocused(element) {
+      return this.focusedElements.some(function(e) {
+        return e === element;
+      });
+    }
+
+    getFocusedSize() {
+      return this.focusedElements.length;
+    }
+
+    getAllFocused() {
+      return this.focusedElements;
+    }
+
+    getFirstFocused() {
+      return this.focusedElements[0];
+    }
+
+    temporarilyFocusDraggingElement() {
+      if (!this.draggingElement) return;
+      this.previouslyFocusedElements = this.focusedElements;
+      this.focusedElements = [this.getDraggingElement()];
+    }
+
+    releasedFocusedDraggingElement() {
+      if (!this.previouslyFocusedElements) return;
+      this.dragReset();
+      this.focusedElements = this.previouslyFocusedElements;
+      this.previouslyFocusedElements = null;
+    }
+
+    getDraggingElement() {
+      // Currently dragging element may be a handle.
+      var el = this.draggingElement;
+      return el.target || el;
+    }
+
+    // --- Output
+
+    getFocusedElementStyles() {
+      var elements = this.focusedElements, exclude = this.getExclusionMap(elements);
+      var styles = elements.map(function(el) {
+        return el.getStyles(exclude);
+      });
+      return styles.join('\n\n');
+    }
+
+    copy(evt) {
+      var styles = this.getFocusedElementStyles();
+      var hasStyles = styles.replace(/^\s+$/, '').length > 0;
+      evt.preventDefault();
+      evt.clipboardData.clearData();
+      evt.clipboardData.setData('text/plain', styles);
+      copyAnimation.animate(hasStyles);
+    }
+
+    save() {
+      var styles = this.getFocusedElementStyles();
+      var link = document.createElement('a');
+      link.href = 'data:text/css;base64,' + btoa(styles);
+      link.download = settings.get(Settings.DOWNLOAD_FILENAME);
+      link.click();
+    }
+
+    getExclusionMap(elements) {
+      if (elements.length < 2 || !settings.get(Settings.OUTPUT_UNIQUE)) {
+        return;
+      }
+      var map = elements[0].getExportedProperties();
+      elements.slice(1).forEach(function(el) {
+        map = hashIntersect(map, el.getExportedProperties());
+      }, this);
+      return map;
+    }
+
   }
 
   /*-------------------------] DragSelection [--------------------------*/
 
+  class DragSelection extends DraggableElement {
 
-  function DragSelection () {
-    DraggableElement.call(this, document.body, 'div', 'drag-selection');
-
-    this.buildSides();
-    this.box = new Rectangle();
-  };
-
-
-  DragSelection.prototype = Object.create(DraggableElement.prototype);
-
-  DragSelection.prototype.buildSides = function() {
-    new Element(this.el, 'div', 'drag-selection-border drag-selection-top');
-    new Element(this.el, 'div', 'drag-selection-border drag-selection-bottom');
-    new Element(this.el, 'div', 'drag-selection-border drag-selection-left');
-    new Element(this.el, 'div', 'drag-selection-border drag-selection-right');
-  };
-
-  // --- Events
-
-  DragSelection.prototype.dragStart = function(evt) {
-    this.from = new Point(evt.clientX, evt.clientY);
-    this.to   = this.from;
-    this.addClass('drag-selection-active');
-    this.render();
-  };
-
-  DragSelection.prototype.drag = function(evt) {
-    this.to = new Point(evt.clientX, evt.clientY);
-    this.render();
-  };
-
-  DragSelection.prototype.mouseUp = function(evt) {
-    this.removeClass('drag-selection-active');
-    this.getFocused();
-    DraggableElement.prototype.mouseUp.call(this, evt);
-    this.min = this.max = null;
-  };
-
-
-  DragSelection.prototype.mouseMove = function(evt) {
-    if (elementManager.draggingElement !== this) return;
-    DraggableElement.prototype.mouseMove.call(this, evt);
-  };
-
-  // --- Actions
-
-  DragSelection.prototype.getFocused = function() {
-    elementManager.setFocused(function(el) {
-      return this.contains(el.getAbsoluteCenter());
-    }.bind(this));
-  };
-
-  // --- Calculation
-
-
-  DragSelection.prototype.calculateBox = function() {
-    this.min = new Point(Math.min(this.from.x, this.to.x) + window.scrollX, Math.min(this.from.y, this.to.y) + window.scrollY);
-    this.max = new Point(Math.max(this.from.x, this.to.x) + window.scrollX, Math.max(this.from.y, this.to.y) + window.scrollY);
-  };
-
-  DragSelection.prototype.contains = function(point) {
-    if (!this.min || !this.max) {
-      return false;
+    constructor() {
+      super(document.body, 'div', 'drag-selection');
+      this.buildSides();
+      this.box = new Rectangle();
     }
-    return point.x >= this.min.x && point.x <= this.max.x && point.y >= this.min.y && point.y <= this.max.y;
-  };
 
-  // --- Rendering
+    buildSides() {
+      new Element(this.el, 'div', 'drag-selection-border drag-selection-top');
+      new Element(this.el, 'div', 'drag-selection-border drag-selection-bottom');
+      new Element(this.el, 'div', 'drag-selection-border drag-selection-left');
+      new Element(this.el, 'div', 'drag-selection-border drag-selection-right');
+    }
 
-  DragSelection.prototype.render = function() {
-    this.calculateBox();
-    var xMin = this.min.x - window.scrollX;
-    var yMin = this.min.y - window.scrollY;
-    var xMax = this.max.x - window.scrollX;
-    var yMax = this.max.y - window.scrollY;
-    this.el.style.left   = xMin + 'px';
-    this.el.style.top    = yMin + 'px';
-    this.el.style.right  = (window.innerWidth - xMax) + 'px';
-    this.el.style.bottom = (window.innerHeight - yMax) + 'px';
-  };
+    // --- Events
+
+    dragStart(evt) {
+      this.from = new Point(evt.clientX, evt.clientY);
+      this.to   = this.from;
+      this.addClass('drag-selection-active');
+      this.render();
+    }
+
+    drag(evt) {
+      this.to = new Point(evt.clientX, evt.clientY);
+      this.render();
+    }
+
+    mouseUp(evt) {
+      this.removeClass('drag-selection-active');
+      this.getFocused();
+      DraggableElement.prototype.mouseUp.call(this, evt);
+      this.min = this.max = null;
+    }
 
 
+    mouseMove(evt) {
+      if (elementManager.draggingElement !== this) return;
+      DraggableElement.prototype.mouseMove.call(this, evt);
+    }
+
+    // --- Actions
+
+    getFocused() {
+      elementManager.setFocused(function(el) {
+        return this.contains(el.getAbsoluteCenter());
+      }.bind(this));
+    }
+
+    // --- Calculation
+
+
+    calculateBox() {
+      this.min = new Point(Math.min(this.from.x, this.to.x) + window.scrollX, Math.min(this.from.y, this.to.y) + window.scrollY);
+      this.max = new Point(Math.max(this.from.x, this.to.x) + window.scrollX, Math.max(this.from.y, this.to.y) + window.scrollY);
+    }
+
+    contains(point) {
+      if (!this.min || !this.max) {
+        return false;
+      }
+      return point.x >= this.min.x && point.x <= this.max.x && point.y >= this.min.y && point.y <= this.max.y;
+    }
+
+    // --- Rendering
+
+    render() {
+      this.calculateBox();
+      var xMin = this.min.x - window.scrollX;
+      var yMin = this.min.y - window.scrollY;
+      var xMax = this.max.x - window.scrollX;
+      var yMax = this.max.y - window.scrollY;
+      this.el.style.left   = xMin + 'px';
+      this.el.style.top    = yMin + 'px';
+      this.el.style.right  = (window.innerWidth - xMax) + 'px';
+      this.el.style.bottom = (window.innerHeight - yMax) + 'px';
+    }
+
+  }
 
   /*-------------------------] StatusBar [--------------------------*/
 
+  class StatusBar extends DraggableElement {
 
-  function StatusBar () {
-    DraggableElement.call(this, document.body, 'div', 'status-bar');
+    static get FADE_DELAY() { return 200; }
 
-    this.build();
-    this.getPosition();
-  };
+    static get POSITION_ICON()  { return 'position';   }
+    static get RESIZE_ICON()    { return 'resize';     }
+    static get ROTATE_ICON()    { return 'rotate';     }
+    static get RESIZE_NW_ICON() { return 'resize-nw';  }
+    static get RESIZE_SE_ICON() { return 'resize-se';  }
+    static get SETTINGS_ICON()  { return 'settings';   }
+    static get BG_IMAGE_ICON()  { return 'background'; }
+    static get Z_INDEX_ICON()   { return 'layer';      }
+    static get MOUSE_ICON()     { return 'mouse';      }
+    static get KEYBOARD_ICON()  { return 'keyboard';   }
+    static get POINTER_ICON()   { return 'pointer';    }
+    static get DOWNLOAD_ICON()  { return 'download';   }
 
-  // --- Constants
+    static get ALIGN_TOP_ICON()        { return 'align-top';     }
+    static get ALIGN_LEFT_ICON()       { return 'align-left';    }
+    static get ALIGN_RIGHT_ICON()      { return 'align-right';   }
+    static get ALIGN_BOTTOM_ICON()     { return 'align-bottom';  }
+    static get ALIGN_VERTICAL_ICON()   { return 'align-vcenter'; }
+    static get ALIGN_HORIZONTAL_ICON() { return 'align-hcenter'; }
 
-  StatusBar.FADE_DELAY = 200;
+    static get DISTRIBUTE_TOP_ICON()        { return 'distribute-top';     }
+    static get DISTRIBUTE_LEFT_ICON()       { return 'distribute-left';    }
+    static get DISTRIBUTE_RIGHT_ICON()      { return 'distribute-right';   }
+    static get DISTRIBUTE_BOTTOM_ICON()     { return 'distribute-bottom';  }
+    static get DISTRIBUTE_VERTICAL_ICON()   { return 'distribute-vcenter'; }
+    static get DISTRIBUTE_HORIZONTAL_ICON() { return 'distribute-hcenter'; }
 
-  StatusBar.POSITION_ICON  = 'position';
-  StatusBar.RESIZE_ICON    = 'resize';
-  StatusBar.ROTATE_ICON    = 'rotate';
-  StatusBar.RESIZE_NW_ICON = 'resize-nw';
-  StatusBar.RESIZE_SE_ICON = 'resize-se';
-  StatusBar.SETTINGS_ICON  = 'settings';
-  StatusBar.BG_IMAGE_ICON  = 'background';
-  StatusBar.Z_INDEX_ICON   = 'layer';
-  StatusBar.MOUSE_ICON     = 'mouse';
-  StatusBar.KEYBOARD_ICON  = 'keyboard';
-  StatusBar.POINTER_ICON   = 'pointer';
-  StatusBar.DOWNLOAD_ICON  = 'download';
+    static get ARROW_KEY_ICON() { return 'arrow-key'; }
 
-  StatusBar.ALIGN_TOP_ICON        = 'align-top';
-  StatusBar.ALIGN_LEFT_ICON       = 'align-left';
-  StatusBar.ALIGN_RIGHT_ICON      = 'align-right';
-  StatusBar.ALIGN_BOTTOM_ICON     = 'align-bottom';
-  StatusBar.ALIGN_VERTICAL_ICON   = 'align-vcenter';
-  StatusBar.ALIGN_HORIZONTAL_ICON = 'align-hcenter';
+    static get SHIFT_CHAR()   { return '\u21e7'; }
+    static get CTRL_CHAR()    { return '\u2303'; }
+    static get OPTION_CHAR()  { return '\u2325'; }
+    static get COMMAND_CHAR() { return '\u2318'; }
 
-  StatusBar.DISTRIBUTE_TOP_ICON        = 'distribute-top';
-  StatusBar.DISTRIBUTE_LEFT_ICON       = 'distribute-left';
-  StatusBar.DISTRIBUTE_RIGHT_ICON      = 'distribute-right';
-  StatusBar.DISTRIBUTE_BOTTOM_ICON     = 'distribute-bottom';
-  StatusBar.DISTRIBUTE_VERTICAL_ICON   = 'distribute-vcenter';
-  StatusBar.DISTRIBUTE_HORIZONTAL_ICON = 'distribute-hcenter';
-
-  StatusBar.ARROW_KEY_ICON = 'arrow-key';
-
-  StatusBar.SHIFT   = '\u21e7';
-  StatusBar.CTRL    = '\u2303';
-  StatusBar.OPTION  = '\u2325';
-  StatusBar.COMMAND = '\u2318';
-
-  // --- Inheritance
-
-  StatusBar.prototype = Object.create(DraggableElement.prototype);
-
-  // --- Setup
-
-  StatusBar.prototype.build = function() {
-
-    this.areas = [];
-    this.inputs = [];
-
-    this.buildArea('Help');
-    this.buildArea('Start');
-    this.buildArea('Element');
-    this.buildArea('Settings');
-    this.buildArea('QuickStart');
-
-    this.createState('position', 'Move', StatusBar.POSITION_ICON);
-    this.createState('resize', 'Resize', StatusBar.RESIZE_ICON);
-    this.createState('resize-nw', 'Resize', StatusBar.RESIZE_NW_ICON);
-    this.createState('resize-se', 'Resize', StatusBar.RESIZE_SE_ICON);
-    this.createState('background-position', 'Background', StatusBar.BG_IMAGE_ICON);
-    this.createState('z-index', 'Z-Index', StatusBar.Z_INDEX_ICON);
-    this.createState('rotate', 'Rotate', StatusBar.ROTATE_ICON);
-
-    this.buildButton(StatusBar.SETTINGS_ICON, this.settingsArea);
-    this.addEventListener('dblclick', this.resetPosition.bind(this));
-
-    this.defaultArea = this.getStartArea();
-    this.resetArea();
-  };
-
-  StatusBar.prototype.buildButton = function(iconId, area) {
-    var button = new IconElement(this.el, iconId, area.name + '-button');
-    button.addEventListener('click', this.toggleArea.bind(this, area));
-  };
-
-  StatusBar.prototype.buildArea = function(upper) {
-    var camel = upper.slice(0, 1).toLowerCase() + upper.slice(1);
-    var lower = upper.toLowerCase();
-    var area = new Element(this.el, 'div', 'area '+ lower +'-area');
-    area.name = lower;
-    this[camel + 'Area'] = area;
-    this.areas.push(area);
-    this['build' + upper + 'Area'](area);
-  };
-
-  StatusBar.prototype.buildStartArea = function(area) {
-    this.buildStartBlock('mouse', function(block) {
-      new IconElement(block.el, StatusBar.MOUSE_ICON, 'start-icon');
-      new Element(block.el, 'div', 'start-help-text').html('Use the mouse to drag, resize, and rotate elements.');
-    });
-
-    this.buildStartBlock('keyboard', function(block) {
-      var bKey = this.buildInlineKeyIcon('b');
-      var sKey = this.buildInlineKeyIcon('s');
-      var mKey = this.buildInlineKeyIcon('m');
-      var text = 'Arrow keys nudge elements.<br>'+ bKey + sKey + mKey +' change nudge modes.';
-
-      new IconElement(block.el, StatusBar.KEYBOARD_ICON, 'start-icon');
-      new Element(block.el, 'div', 'start-help-text').html(text);
-
-    });
-
-    this.buildStartBlock('sprites', function(block) {
-      new IconElement(block.el, StatusBar.BG_IMAGE_ICON, 'start-icon');
-      new Element(block.el, 'div', 'start-help-text').html('Double click on a background image to fit sprite dimensions.');
-    });
-
-    this.buildStartBlock('output', function(block) {
-
-      var cmdKey = this.buildInlineKeyIcon(this.getCommandKey());
-      var cKey = this.buildInlineKeyIcon('c');
-      var sKey = this.buildInlineKeyIcon('s');
-      var text = cmdKey + cKey + ' Copy styles to clipboard<br>' + cmdKey + sKey +' Save styles to disk';
-
-      new IconElement(block.el, StatusBar.DOWNLOAD_ICON, 'start-icon');
-      new Element(block.el, 'div', 'start-help-text start-help-text-left').html(text);
-    });
-
-    new Element(this.startArea.el, 'div', 'start-horizontal-line');
-    new Element(this.startArea.el, 'div', 'start-vertical-line');
-
-    var hide = new Element(this.startArea.el, 'span', 'start-hide-link').html("Don't Show");
-    hide.addEventListener('click', this.skipStartArea.bind(this));
-  };
-
-  StatusBar.prototype.buildStartBlock = function(type, fn) {
-    var block = new Element(this.startArea.el, 'div', 'start-help');
-    fn.call(this, block);
-  };
-
-  StatusBar.prototype.buildInlineKeyIcon = function(key) {
-    var classes = ['', 'icon', 'key-icon', 'letter-key-icon', 'inline-key-icon'];
-    return '<span class="' + classes.join(' ' + EXTENSION_CLASS_PREFIX) + '">'+ key +'</span>';
-  };
-
-  StatusBar.prototype.buildQuickStartArea = function(area) {
-    new IconElement(area.el, StatusBar.POINTER_ICON, 'quickstart-icon');
-    new Element(area.el, 'div', 'quickstart-text').html('Select Element');
-  };
-
-  StatusBar.prototype.buildHelpArea = function(area) {
-
-
-    // Keyboard help area
-
-    var keyboardHelp = this.buildHelpBlock('keys', 'Keyboard');
-
-    this.buildHelpBox(keyboardHelp.el, 'arrow', function(box, text) {
-      var box = new Element(box.el, 'div', 'key-icon');
-      new IconElement(box.el, StatusBar.ARROW_KEY_ICON, 'arrow-key-icon');
-      text.html('Use the arrow keys to nudge the element.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'shift', function(box, text) {
-      new Element(box.el, 'div', 'key-icon shift-key-icon').html(StatusBar.SHIFT);
-      text.html('Shift: Constrain dragging / nudge multiplier / select multiple.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'ctrl', function(box, text) {
-      new Element(box.el, 'div', 'key-icon ctrl-key-icon').html(StatusBar.CTRL);
-      text.html('Ctrl: Move the background image when dragging.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'alt', function(box, text) {
-      new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.OPTION);
-      text.html('Option/Alt: Peek at the background image.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
-      new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.COMMAND);
-      text.html('Cmd/Win: While dragging, temporarily move a single element.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'b', function(box, text) {
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('b');
-      text.html('Toggle background image nudge.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 's', function(box, text) {
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
-      text.html('Toggle size nudge.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'm', function(box, text) {
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('m');
-      text.html('Toggle position (move) nudge.');
-    });
-
-    this.buildHelpBox(keyboardHelp.el, 'z', function(box, text) {
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
-      text.html('Toggle z-index nudge.');
-    });
-
-
-    // Mouse help area
-
-    var mouseHelp = this.buildHelpBlock('mouse', 'Mouse');
-
-    this.buildHelpBox(mouseHelp.el, 'position', function(box, text) {
-      new Element(box.el, 'div', 'help-element');
-      new IconElement(box.el, StatusBar.POSITION_ICON, 'help-icon position-help-icon');
-      text.html('Drag the middle of the element to move it around.');
-    });
-    this.buildHelpBox(mouseHelp.el, 'resize', function(box, text) {
-      new Element(box.el, 'div', 'help-element');
-      new Element(box.el, 'div', 'resize-help-icon resize-nw-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-n-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-ne-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-e-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-se-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-s-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-sw-help-icon');
-      new Element(box.el, 'div', 'resize-help-icon resize-w-help-icon');
-      text.html('Drag border handles to resize.');
-    });
-
-    this.buildHelpBox(mouseHelp.el, 'rotate', function(box, text) {
-      new Element(box.el, 'div', 'help-element');
-      new Element(box.el, 'div', 'rotate-handle');
-      text.html('Drag the rotate handle to rotate the element.');
-    });
-
-    this.buildHelpBox(mouseHelp.el, 'snapping', function(box, text) {
-      new Element(box.el, 'div', 'help-element');
-      new IconElement(box.el, StatusBar.BG_IMAGE_ICON, 'help-icon snapping-help-icon');
-      new IconElement(box.el, StatusBar.POINTER_ICON, 'help-icon snapping-help-pointer-icon');
-      text.html('Double click to snap element dimensions to a background sprite.');
-    });
-
-    this.buildHelpBox(mouseHelp.el, 'aligning', function(box, text) {
-      new Element(box.el, 'div', 'help-element multiple-select-help');
-      new IconElement(box.el, StatusBar.POINTER_ICON, 'help-icon aligning-pointer-icon');
-      new Element(box.el, 'div', 'icon help-icon aligning-box-one');
-      new Element(box.el, 'div', 'icon help-icon aligning-box-two');
-      text.html('Drag to select multiple elements.');
-    });
-
-
-    // Command help area
-
-    var commandHelp = this.buildHelpBlock('command', 'Commands');
-
-    this.buildHelpBox(commandHelp.el, 'undo', function(box, text) {
-      box.addClass('command-help-box');
-      new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
-      new Element(box.el, 'span', 'key-plus').html('+');
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
-      text.html('Undo');
-    });
-
-    this.buildHelpBox(commandHelp.el, 'select-all', function(box, text) {
-      box.addClass('command-help-box');
-      new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
-      new Element(box.el, 'span', 'key-plus').html('+');
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('a');
-      text.html('Select All');
-    });
-
-    this.buildHelpBox(commandHelp.el, 'copy', function(box, text) {
-      box.addClass('command-help-box');
-      new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
-      new Element(box.el, 'span', 'key-plus').html('+');
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('c');
-      text.html('Copy Styles');
-    });
-
-    this.buildHelpBox(commandHelp.el, 'save', function(box, text) {
-      box.addClass('command-help-box');
-      new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
-      new Element(box.el, 'span', 'key-plus').html('+');
-      new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
-      text.html('Save Styles');
-    });
-
-  };
-
-  StatusBar.prototype.buildHelpBlock = function(name, header) {
-    var block = new Element(this.helpArea.el, 'div', 'help-block '+ name +'-help-block');
-    if (header) {
-      new Element(block.el, 'h4', 'help-block-header').html(header);
+    constructor() {
+      super(document.body, 'div', 'status-bar');
+      this.build();
+      this.getPosition();
     }
-    return block;
-  };
 
-  StatusBar.prototype.buildHelpBox = function(el, name, fn) {
-    var help = new Element(el, 'div', 'help ' + name + '-help');
-    var box  = new Element(help.el, 'div', 'help-box ' + name + '-help-box');
-    var text = new Element(help.el, 'div', 'help-text ' + name + '-help-text');
-    fn.call(this, box, text);
-  };
+    build() {
 
-  StatusBar.prototype.buildElementArea = function(area) {
+      this.areas = [];
+      this.inputs = [];
 
-    this.singleElementArea = new Element(area.el, 'div', 'single-element-area');
-    this.elementHeader     = new Element(this.singleElementArea.el, 'h3', 'single-header');
+      this.buildArea('Help');
+      this.buildArea('Start');
+      this.buildArea('Element');
+      this.buildArea('Settings');
+      this.buildArea('QuickStart');
 
-    this.elementDetails  = new Element(this.singleElementArea.el, 'div', 'details');
-    this.detailsLeft     = new Element(this.elementDetails.el, 'span').title('Left');
-    this.detailsComma1   = new Element(this.elementDetails.el, 'span').html(', ');
-    this.detailsTop      = new Element(this.elementDetails.el, 'span').title('Top');
-    this.detailsComma2   = new Element(this.elementDetails.el, 'span').html(', ');
-    this.detailsZIndex   = new Element(this.elementDetails.el, 'span').title('Z-Index');
-    this.detailsDivider1 = new Element(this.elementDetails.el, 'span').html(' | ');
-    this.detailsWidth    = new Element(this.elementDetails.el, 'span').title('Width');
-    this.detailsComma3   = new Element(this.elementDetails.el, 'span').html(', ');
-    this.detailsHeight   = new Element(this.elementDetails.el, 'span').title('Height');
-    this.detailsDivider2 = new Element(this.elementDetails.el, 'span').html(' | ');
-    this.detailsRotation = new Element(this.elementDetails.el, 'span').title('Rotation (other transforms hidden)');
+      this.createState('position', 'Move', StatusBar.POSITION_ICON);
+      this.createState('resize', 'Resize', StatusBar.RESIZE_ICON);
+      this.createState('resize-nw', 'Resize', StatusBar.RESIZE_NW_ICON);
+      this.createState('resize-se', 'Resize', StatusBar.RESIZE_SE_ICON);
+      this.createState('background-position', 'Background', StatusBar.BG_IMAGE_ICON);
+      this.createState('z-index', 'Z-Index', StatusBar.Z_INDEX_ICON);
+      this.createState('rotate', 'Rotate', StatusBar.ROTATE_ICON);
 
-    this.multipleElementArea   = new Element(area.el, 'div', 'multiple-element-area');
-    this.multipleElementHeader = new Element(this.multipleElementArea.el, 'h3', 'multiple-header');
-    this.buildAlignActions(area);
+      this.buildButton(StatusBar.SETTINGS_ICON, this.settingsArea);
+      this.addEventListener('dblclick', this.resetPosition.bind(this));
 
-    this.elementStates  = new Element(area.el, 'div', 'element-states');
-    this.stateIcons = [];
-  };
-
-  StatusBar.prototype.buildAlignActions = function(area) {
-    this.elementActions = new Element(this.multipleElementArea.el, 'div', 'element-actions');
-
-    this.alignTop        = this.buildElementAlign('top', StatusBar.ALIGN_TOP_ICON, 'Align top edge');
-    this.alignHorizontal = this.buildElementAlign('horizontal', StatusBar.ALIGN_HORIZONTAL_ICON, 'Align horizontal center');
-    this.alignBottom     = this.buildElementAlign('bottom', StatusBar.ALIGN_BOTTOM_ICON, 'Align bottom edge');
-    this.alignLeft       = this.buildElementAlign('left', StatusBar.ALIGN_LEFT_ICON, 'Align left edge');
-    this.alignVertical   = this.buildElementAlign('vertical', StatusBar.ALIGN_VERTICAL_ICON, 'Align vertical center');
-    this.alignRight      = this.buildElementAlign('right', StatusBar.ALIGN_RIGHT_ICON, 'Align right edge');
-
-    this.distributeTop        = this.buildElementDistribute('top', StatusBar.DISTRIBUTE_TOP_ICON, 'Distribute top edge');
-    this.distributeHorizontal = this.buildElementDistribute('horizontal', StatusBar.DISTRIBUTE_HORIZONTAL_ICON, 'Distribute horizontal center');
-    this.distributeBottom     = this.buildElementDistribute('bottom', StatusBar.DISTRIBUTE_BOTTOM_ICON, 'Distribute bottom edge');
-    this.distributeLeft       = this.buildElementDistribute('left', StatusBar.DISTRIBUTE_LEFT_ICON, 'Distribute left edge');
-    this.distributeVertical   = this.buildElementDistribute('vertical', StatusBar.DISTRIBUTE_VERTICAL_ICON, 'Distribute vertical center');
-    this.distributeRight      = this.buildElementDistribute('right', StatusBar.DISTRIBUTE_RIGHT_ICON, 'Distribute right edge');
-
-  };
-
-  StatusBar.prototype.buildElementAlign = function(type, iconId, title) {
-    var method = type === 'horizontal' || type === 'vertical' ? 'alignMiddle' : 'alignFocused';
-    var action = new IconElement(this.elementActions.el, iconId, 'element-action');
-    action.el.title = title;
-    action.addEventListener('click', this.delegateElementAction(method, type));
-  };
-
-  StatusBar.prototype.buildElementDistribute = function(type, iconId, title) {
-    var action = new IconElement(this.elementActions.el, iconId, 'element-action');
-    action.el.title = title;
-    action.addEventListener('click', this.delegateElementAction('alignFocused', type, true));
-  };
-
-  StatusBar.prototype.buildSettingsArea = function(area) {
-
-    var header = new Element(this.settingsArea.el, 'h4', 'settings-header').html('Settings');
-
-    this.buildTextField(area, Settings.DOWNLOAD_FILENAME, 'Filename when saving:', 'filename');
-    this.buildTextField(area, Settings.EXCLUDE_ELEMENTS, 'Exclude elements matching:', 'CSS Selector');
-    this.buildTextField(area, Settings.INCLUDE_ELEMENTS, 'Include elements matching:', 'CSS Selector');
-
-    this.buildSelect(area, Settings.TABS, 'Tab style:', [
-      [Settings.TABS_TAB, 'Tab'],
-      [Settings.TABS_TWO_SPACES, 'Two Spaces'],
-      [Settings.TABS_FOUR_SPACES, 'Four Spaces']
-    ]);
-
-    this.buildSelect(area, Settings.SELECTOR, 'Output Selector:', [
-      [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
-      [Settings.SELECTOR_NONE, 'None', 'No selector used. Styles will be inline.', 'width: 200px; height: 200px;...'],
-      [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
-      [Settings.SELECTOR_FIRST, 'First Class', 'First class name found will be used', '.first { ... }'],
-      [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
-      [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
-      [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
-      [Settings.SELECTOR_TAG_NTH, 'Tag:nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
-    ]);
-
-    this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
-    this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
-
-    var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
-    var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Clear All');
-    var help  = new Element(header.el, 'span', 'settings-help-link').html('Help');
-
-    reset.addEventListener('click', this.clearSettings.bind(this));
-    save.addEventListener('click', this.saveSettings.bind(this));
-    help.addEventListener('click', this.setArea.bind(this, this.helpArea));
-
-    area.addEventListener('mousedown', this.filterClicks.bind(this));
-    area.addEventListener('mouseup', this.filterClicks.bind(this));
-    area.addEventListener('keydown', this.filterKeyboardInput.bind(this));
-  };
-
-  StatusBar.prototype.buildTextField = function(area, name, label, placeholder) {
-    this.buildFormControl(area, name, label, function(block) {
-      var input = new Element(block.el, 'input', 'setting-input setting-text-input');
-      input.el.type = 'text';
-      input.el.placeholder = placeholder;
-      input.el.value = settings.get(name);
-      this.inputs.push(input);
-      return input;
-    });
-  };
-
-  StatusBar.prototype.buildCheckboxField = function(area, name, label) {
-    this.buildFormControl(area, name, label, function(block) {
-      var input = new Element(block.el, 'input', 'setting-input setting-text-input');
-      input.el.type = 'checkbox';
-      input.el.checked = !!settings.get(name);
-      this.inputs.push(input);
-      return input;
-    });
-  };
-
-  StatusBar.prototype.buildSelect = function(area, name, label, options) {
-    var select;
-    this.buildFormControl(area, name, label, function(block) {
-      select = new Element(block.el, 'select', 'setting-input');
-      if (options[0].length > 2) {
-        // Associated descriptions exist so create the elements
-        this[name + 'Description'] = new Element(block.el, 'div', 'setting-description');
-        this[name + 'Example'] = new Element(block.el, 'div', 'setting-example');
-      }
-      options.forEach(function(o) {
-        var option = new Element(select.el, 'option', 'setting-option');
-        option.el.value = o[0];
-        option.el.textContent = o[1];
-        if (o[2]) {
-          option.el.dataset.description = o[2];
-          option.el.dataset.example = o[3];
-        }
-        if (settings.get(name) === option.el.value) {
-          option.el.selected = true;
-        }
-      });
-      return select;
-    });
-    this.checkLinkedDescription(select.el);
-  };
-
-  StatusBar.prototype.buildFormControl = function(area, name, label, fn) {
-    var field = new Element(area.el, 'fieldset', 'setting-field');
-    var label = new Element(field.el, 'label', 'setting-label').html(label);
-    var block = new Element(field.el, 'div', 'setting-block');
-    var input = fn.call(this, block);
-    input.id('setting-' + name);
-    input.el.name = name;
-    label.el.htmlFor = input.el.id;
-    input.el.dataset.name = name;
-    input.addEventListener('change', this.inputChanged.bind(this));
-  };
-
-  StatusBar.prototype.setFormControl = function(control) {
-    var el = control.el;
-    var value = settings.get(el.name);
-    if (el.type === 'checkbox') {
-      el.checked = value;
-    } else {
-      el.value = value;
-    }
-  }
-
-  StatusBar.prototype.createState = function(name, text, iconId) {
-    var state = new Element(this.elementStates.el, 'div', 'element-state ' + name + '-state');
-    state.name = name;
-    new IconElement(state.el, iconId, 'element-state-icon');
-    new Element(state.el, 'p', 'element-state-text').html(text);
-    this.stateIcons.push(state);
-  };
-
-
-  // --- Util
-
-  StatusBar.prototype.getCommandKey = function() {
-    return navigator.platform.match(/Mac/) ? StatusBar.COMMAND : StatusBar.CTRL;
-  };
-
-  // --- Events
-
-  StatusBar.prototype.inputChanged = function(evt) {
-    var target = evt.target;
-    settings.set(target.dataset.name, target.value);
-    if (target.selectedIndex !== undefined) {
-      this.checkLinkedDescription(target);
-    }
-  };
-
-  StatusBar.prototype.filterClicks = function(evt) {
-    evt.stopPropagation();
-  };
-
-  StatusBar.prototype.filterKeyboardInput = function(evt) {
-    evt.stopPropagation();
-    if (evt.keyCode === EventManager.ENTER) {
-      this.saveSettings();
-    }
-  };
-
-  // --- Actions
-
-  StatusBar.prototype.setState = function(name) {
-    this.stateIcons.forEach(function(i) {
-      if (i.name === name) {
-        i.addClass('element-active-state');
-      } else {
-        i.removeClass('element-active-state');
-      }
-    });
-  };
-
-  StatusBar.prototype.checkLinkedDescription = function(select) {
-    var name = select.dataset.name;
-    var option = select.options[select.selectedIndex];
-    var description = this[name + 'Description'];
-    var example = this[name + 'Example'];
-    if (description && example) {
-      description.html(option.dataset.description);
-      example.html(option.dataset.example);
-    }
-  };
-
-  StatusBar.prototype.setArea = function(area) {
-    if (this.currentArea === area) return;
-    this.areas.forEach(function(a) {
-      var className = 'status-bar-' + a.name + '-active';
-      if (a === area) {
-        this.addClass(className);
-        a.addClass('active-area');
-      } else {
-        this.removeClass(className);
-        a.removeClass('active-area');
-      }
-    }, this);
-    this.currentArea = area;
-    if (area === this.elementArea) {
-      this.defaultArea = this.elementArea;
-    }
-    if (area === this.settingsArea) {
-      this.inputs[0].el.focus();
-      // Forcing focus can make the scrolling go haywire,
-      // so need to actively reset the scrolling here.
-      this.resetScroll();
-    } else {
-      document.activeElement.blur();
-    }
-  };
-
-  StatusBar.prototype.toggleArea = function(area) {
-    if (this.currentArea !== area) {
-      this.setArea(area);
-    } else {
+      this.defaultArea = this.getStartArea();
       this.resetArea();
     }
-  };
 
-  StatusBar.prototype.clearSettings = function() {
-    if (confirm('Really clear all settings?')) {
-      settings.clear();
-      this.inputs.forEach(this.setFormControl, this);
+    buildButton(iconId, area) {
+      var button = new IconElement(this.el, iconId, area.name + '-button');
+      button.addEventListener('click', this.toggleArea.bind(this, area));
+    }
+
+    buildArea(upper) {
+      var camel = upper.slice(0, 1).toLowerCase() + upper.slice(1);
+      var lower = upper.toLowerCase();
+      var area = new Element(this.el, 'div', 'area '+ lower +'-area');
+      area.name = lower;
+      this[camel + 'Area'] = area;
+      this.areas.push(area);
+      this['build' + upper + 'Area'](area);
+    }
+
+    buildStartArea(area) {
+      this.buildStartBlock('mouse', function(block) {
+        new IconElement(block.el, StatusBar.MOUSE_ICON, 'start-icon');
+        new Element(block.el, 'div', 'start-help-text').html('Use the mouse to drag, resize, and rotate elements.');
+      });
+
+      this.buildStartBlock('keyboard', function(block) {
+        var bKey = this.buildInlineKeyIcon('b');
+        var sKey = this.buildInlineKeyIcon('s');
+        var mKey = this.buildInlineKeyIcon('m');
+        var text = 'Arrow keys nudge elements.<br>'+ bKey + sKey + mKey +' change nudge modes.';
+
+        new IconElement(block.el, StatusBar.KEYBOARD_ICON, 'start-icon');
+        new Element(block.el, 'div', 'start-help-text').html(text);
+
+      });
+
+      this.buildStartBlock('sprites', function(block) {
+        new IconElement(block.el, StatusBar.BG_IMAGE_ICON, 'start-icon');
+        new Element(block.el, 'div', 'start-help-text').html('Double click on a background image to fit sprite dimensions.');
+      });
+
+      this.buildStartBlock('output', function(block) {
+
+        var cmdKey = this.buildInlineKeyIcon(this.getCommandKey());
+        var cKey = this.buildInlineKeyIcon('c');
+        var sKey = this.buildInlineKeyIcon('s');
+        var text = cmdKey + cKey + ' Copy styles to clipboard<br>' + cmdKey + sKey +' Save styles to disk';
+
+        new IconElement(block.el, StatusBar.DOWNLOAD_ICON, 'start-icon');
+        new Element(block.el, 'div', 'start-help-text start-help-text-left').html(text);
+      });
+
+      new Element(this.startArea.el, 'div', 'start-horizontal-line');
+      new Element(this.startArea.el, 'div', 'start-vertical-line');
+
+      var hide = new Element(this.startArea.el, 'span', 'start-hide-link').html("Don't Show");
+      hide.addEventListener('click', this.skipStartArea.bind(this));
+    }
+
+    buildStartBlock(type, fn) {
+      var block = new Element(this.startArea.el, 'div', 'start-help');
+      fn.call(this, block);
+    }
+
+    buildInlineKeyIcon(key) {
+      var classes = ['', 'icon', 'key-icon', 'letter-key-icon', 'inline-key-icon'];
+      return '<span class="' + classes.join(' ' + EXTENSION_CLASS_PREFIX) + '">'+ key +'</span>';
+    }
+
+    buildQuickStartArea(area) {
+      new IconElement(area.el, StatusBar.POINTER_ICON, 'quickstart-icon');
+      new Element(area.el, 'div', 'quickstart-text').html('Select Element');
+    }
+
+    buildHelpArea(area) {
+
+
+      // Keyboard help area
+
+      var keyboardHelp = this.buildHelpBlock('keys', 'Keyboard');
+
+      this.buildHelpBox(keyboardHelp.el, 'arrow', function(box, text) {
+        var box = new Element(box.el, 'div', 'key-icon');
+        new IconElement(box.el, StatusBar.ARROW_KEY_ICON, 'arrow-key-icon');
+        text.html('Use the arrow keys to nudge the element.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'shift', function(box, text) {
+        new Element(box.el, 'div', 'key-icon shift-key-icon').html(StatusBar.SHIFT_CHAR);
+        text.html('Shift: Constrain dragging / nudge multiplier / select multiple.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'ctrl', function(box, text) {
+        new Element(box.el, 'div', 'key-icon ctrl-key-icon').html(StatusBar.CTRL_CHAR);
+        text.html('Ctrl: Move the background image when dragging.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'alt', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.OPTION_CHAR);
+        text.html('Option/Alt: Peek at the background image.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(StatusBar.COMMAND_CHAR);
+        text.html('Cmd/Win: While dragging, temporarily move a single element.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'b', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('b');
+        text.html('Toggle background image nudge.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 's', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
+        text.html('Toggle size nudge.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'm', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('m');
+        text.html('Toggle position (move) nudge.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'r', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('r');
+        text.html('Toggle rotation nudge.');
+      });
+
+      this.buildHelpBox(keyboardHelp.el, 'z', function(box, text) {
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
+        text.html('Toggle z-index nudge.');
+      });
+
+
+      // Mouse help area
+
+      var mouseHelp = this.buildHelpBlock('mouse', 'Mouse');
+
+      this.buildHelpBox(mouseHelp.el, 'position', function(box, text) {
+        new Element(box.el, 'div', 'help-element');
+        new IconElement(box.el, StatusBar.POSITION_ICON, 'help-icon position-help-icon');
+        text.html('Drag the middle of the element to move it around.');
+      });
+      this.buildHelpBox(mouseHelp.el, 'resize', function(box, text) {
+        new Element(box.el, 'div', 'help-element');
+        new Element(box.el, 'div', 'resize-help-icon resize-nw-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-n-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-ne-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-e-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-se-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-s-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-sw-help-icon');
+        new Element(box.el, 'div', 'resize-help-icon resize-w-help-icon');
+        text.html('Drag border handles to resize.');
+      });
+
+      this.buildHelpBox(mouseHelp.el, 'rotate', function(box, text) {
+        new Element(box.el, 'div', 'help-element');
+        new Element(box.el, 'div', 'rotate-handle');
+        text.html('Drag the rotate handle to rotate the element.');
+      });
+
+      this.buildHelpBox(mouseHelp.el, 'snapping', function(box, text) {
+        new Element(box.el, 'div', 'help-element');
+        new IconElement(box.el, StatusBar.BG_IMAGE_ICON, 'help-icon snapping-help-icon');
+        new IconElement(box.el, StatusBar.POINTER_ICON, 'help-icon snapping-help-pointer-icon');
+        text.html('Double click to snap element dimensions to a background sprite.');
+      });
+
+      this.buildHelpBox(mouseHelp.el, 'aligning', function(box, text) {
+        new Element(box.el, 'div', 'help-element multiple-select-help');
+        new IconElement(box.el, StatusBar.POINTER_ICON, 'help-icon aligning-pointer-icon');
+        new Element(box.el, 'div', 'icon help-icon aligning-box-one');
+        new Element(box.el, 'div', 'icon help-icon aligning-box-two');
+        text.html('Drag to select multiple elements.');
+      });
+
+
+      // Command help area
+
+      var commandHelp = this.buildHelpBlock('command', 'Commands');
+
+      this.buildHelpBox(commandHelp.el, 'undo', function(box, text) {
+        box.addClass('command-help-box');
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'span', 'key-plus').html('+');
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
+        text.html('Undo');
+      });
+
+      this.buildHelpBox(commandHelp.el, 'select-all', function(box, text) {
+        box.addClass('command-help-box');
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'span', 'key-plus').html('+');
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('a');
+        text.html('Select All');
+      });
+
+      this.buildHelpBox(commandHelp.el, 'copy', function(box, text) {
+        box.addClass('command-help-box');
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'span', 'key-plus').html('+');
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('c');
+        text.html('Copy Styles');
+      });
+
+      this.buildHelpBox(commandHelp.el, 'save', function(box, text) {
+        box.addClass('command-help-box');
+        new Element(box.el, 'div', 'key-icon alt-key-icon').html(this.getCommandKey());
+        new Element(box.el, 'span', 'key-plus').html('+');
+        new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
+        text.html('Save Styles');
+      });
+
+    }
+
+    buildHelpBlock(name, header) {
+      var block = new Element(this.helpArea.el, 'div', 'help-block '+ name +'-help-block');
+      if (header) {
+        new Element(block.el, 'h4', 'help-block-header').html(header);
+      }
+      return block;
+    }
+
+    buildHelpBox(el, name, fn) {
+      var help = new Element(el, 'div', 'help ' + name + '-help');
+      var box  = new Element(help.el, 'div', 'help-box ' + name + '-help-box');
+      var text = new Element(help.el, 'div', 'help-text ' + name + '-help-text');
+      fn.call(this, box, text);
+    }
+
+    buildElementArea(area) {
+
+      this.singleElementArea = new Element(area.el, 'div', 'single-element-area');
+      this.elementHeader     = new Element(this.singleElementArea.el, 'h3', 'single-header');
+
+      this.elementDetails  = new Element(this.singleElementArea.el, 'div', 'details');
+      this.detailsLeft     = new Element(this.elementDetails.el, 'span').title('Left');
+      this.detailsComma1   = new Element(this.elementDetails.el, 'span').html(', ');
+      this.detailsTop      = new Element(this.elementDetails.el, 'span').title('Top');
+      this.detailsComma2   = new Element(this.elementDetails.el, 'span').html(', ');
+      this.detailsZIndex   = new Element(this.elementDetails.el, 'span').title('Z-Index');
+      this.detailsDivider1 = new Element(this.elementDetails.el, 'span').html(' | ');
+      this.detailsWidth    = new Element(this.elementDetails.el, 'span').title('Width');
+      this.detailsComma3   = new Element(this.elementDetails.el, 'span').html(', ');
+      this.detailsHeight   = new Element(this.elementDetails.el, 'span').title('Height');
+      this.detailsDivider2 = new Element(this.elementDetails.el, 'span').html(' | ');
+      this.detailsRotation = new Element(this.elementDetails.el, 'span').title('Rotation (other transforms hidden)');
+
+      this.multipleElementArea   = new Element(area.el, 'div', 'multiple-element-area');
+      this.multipleElementHeader = new Element(this.multipleElementArea.el, 'h3', 'multiple-header');
+      this.buildAlignActions(area);
+
+      this.elementStates  = new Element(area.el, 'div', 'element-states');
+      this.stateIcons = [];
+    }
+
+    buildAlignActions(area) {
+      this.elementActions = new Element(this.multipleElementArea.el, 'div', 'element-actions');
+
+      this.alignTop        = this.buildElementAlign('top', StatusBar.ALIGN_TOP_ICON, 'Align top edge');
+      this.alignHorizontal = this.buildElementAlign('horizontal', StatusBar.ALIGN_HORIZONTAL_ICON, 'Align horizontal center');
+      this.alignBottom     = this.buildElementAlign('bottom', StatusBar.ALIGN_BOTTOM_ICON, 'Align bottom edge');
+      this.alignLeft       = this.buildElementAlign('left', StatusBar.ALIGN_LEFT_ICON, 'Align left edge');
+      this.alignVertical   = this.buildElementAlign('vertical', StatusBar.ALIGN_VERTICAL_ICON, 'Align vertical center');
+      this.alignRight      = this.buildElementAlign('right', StatusBar.ALIGN_RIGHT_ICON, 'Align right edge');
+
+      this.distributeTop        = this.buildElementDistribute('top', StatusBar.DISTRIBUTE_TOP_ICON, 'Distribute top edge');
+      this.distributeHorizontal = this.buildElementDistribute('horizontal', StatusBar.DISTRIBUTE_HORIZONTAL_ICON, 'Distribute horizontal center');
+      this.distributeBottom     = this.buildElementDistribute('bottom', StatusBar.DISTRIBUTE_BOTTOM_ICON, 'Distribute bottom edge');
+      this.distributeLeft       = this.buildElementDistribute('left', StatusBar.DISTRIBUTE_LEFT_ICON, 'Distribute left edge');
+      this.distributeVertical   = this.buildElementDistribute('vertical', StatusBar.DISTRIBUTE_VERTICAL_ICON, 'Distribute vertical center');
+      this.distributeRight      = this.buildElementDistribute('right', StatusBar.DISTRIBUTE_RIGHT_ICON, 'Distribute right edge');
+
+    }
+
+    buildElementAlign(type, iconId, title) {
+      var method = type === 'horizontal' || type === 'vertical' ? 'alignMiddle' : 'alignFocused';
+      var action = new IconElement(this.elementActions.el, iconId, 'element-action');
+      action.el.title = title;
+      action.addEventListener('click', this.delegateElementAction(method, type));
+    }
+
+    buildElementDistribute(type, iconId, title) {
+      var action = new IconElement(this.elementActions.el, iconId, 'element-action');
+      action.el.title = title;
+      action.addEventListener('click', this.delegateElementAction('alignFocused', type, true));
+    }
+
+    buildSettingsArea(area) {
+
+      var header = new Element(this.settingsArea.el, 'h4', 'settings-header').html('Settings');
+
+      this.buildTextField(area, Settings.DOWNLOAD_FILENAME, 'Filename when saving:', 'filename');
+      this.buildTextField(area, Settings.EXCLUDE_ELEMENTS, 'Exclude elements matching:', 'CSS Selector');
+      this.buildTextField(area, Settings.INCLUDE_ELEMENTS, 'Include elements matching:', 'CSS Selector');
+
+      this.buildSelect(area, Settings.TABS, 'Tab style:', [
+        [Settings.TABS_TAB, 'Tab'],
+        [Settings.TABS_TWO_SPACES, 'Two Spaces'],
+        [Settings.TABS_FOUR_SPACES, 'Four Spaces']
+      ]);
+
+      this.buildSelect(area, Settings.SELECTOR, 'Output Selector:', [
+        [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
+        [Settings.SELECTOR_NONE, 'None', 'No selector used. Styles will be inline.', 'width: 200px; height: 200px;...'],
+        [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
+        [Settings.SELECTOR_FIRST, 'First Class', 'First class name found will be used', '.first { ... }'],
+        [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
+        [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
+        [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
+        [Settings.SELECTOR_TAG_NTH, 'Tag:nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
+      ]);
+
+      this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
+      this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
+
+      var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
+      var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Clear All');
+      var help  = new Element(header.el, 'span', 'settings-help-link').html('Help');
+
+      reset.addEventListener('click', this.clearSettings.bind(this));
+      save.addEventListener('click', this.saveSettings.bind(this));
+      help.addEventListener('click', this.setArea.bind(this, this.helpArea));
+
+      area.addEventListener('mousedown', this.filterClicks.bind(this));
+      area.addEventListener('mouseup', this.filterClicks.bind(this));
+      area.addEventListener('keydown', this.filterKeyboardInput.bind(this));
+    }
+
+    buildTextField(area, name, label, placeholder) {
+      this.buildFormControl(area, name, label, function(block) {
+        var input = new Element(block.el, 'input', 'setting-input setting-text-input');
+        input.el.type = 'text';
+        input.el.placeholder = placeholder;
+        input.el.value = settings.get(name);
+        this.inputs.push(input);
+        return input;
+      });
+    }
+
+    buildCheckboxField(area, name, label) {
+      this.buildFormControl(area, name, label, function(block) {
+        var input = new Element(block.el, 'input', 'setting-input setting-text-input');
+        input.el.type = 'checkbox';
+        input.el.checked = !!settings.get(name);
+        this.inputs.push(input);
+        return input;
+      });
+    }
+
+    buildSelect(area, name, label, options) {
+      var select;
+      this.buildFormControl(area, name, label, function(block) {
+        select = new Element(block.el, 'select', 'setting-input');
+        if (options[0].length > 2) {
+          // Associated descriptions exist so create the elements
+          this[name + 'Description'] = new Element(block.el, 'div', 'setting-description');
+          this[name + 'Example'] = new Element(block.el, 'div', 'setting-example');
+        }
+        options.forEach(function(o) {
+          var option = new Element(select.el, 'option', 'setting-option');
+          option.el.value = o[0];
+          option.el.textContent = o[1];
+          if (o[2]) {
+            option.el.dataset.description = o[2];
+            option.el.dataset.example = o[3];
+          }
+          if (settings.get(name) === option.el.value) {
+            option.el.selected = true;
+          }
+        });
+        return select;
+      });
+      this.checkLinkedDescription(select.el);
+    }
+
+    buildFormControl(area, name, label, fn) {
+      var field = new Element(area.el, 'fieldset', 'setting-field');
+      var label = new Element(field.el, 'label', 'setting-label').html(label);
+      var block = new Element(field.el, 'div', 'setting-block');
+      var input = fn.call(this, block);
+      input.el.id = 'setting-' + name;
+      input.el.name = name;
+      label.el.htmlFor = input.el.id;
+      input.el.dataset.name = name;
+      input.addEventListener('change', this.inputChanged.bind(this));
+    }
+
+    setFormControl(control) {
+      var el = control.el;
+      var value = settings.get(el.name);
+      if (el.type === 'checkbox') {
+        el.checked = value;
+      } else {
+        el.value = value;
+      }
+    }
+
+    createState(name, text, iconId) {
+      var state = new Element(this.elementStates.el, 'div', 'element-state ' + name + '-state');
+      state.name = name;
+      new IconElement(state.el, iconId, 'element-state-icon');
+      new Element(state.el, 'p', 'element-state-text').html(text);
+      this.stateIcons.push(state);
+    }
+
+
+    // --- Util
+
+    getCommandKey() {
+      return navigator.platform.match(/Mac/) ? StatusBar.COMMAND : StatusBar.CTRL;
+    }
+
+    // --- Events
+
+    inputChanged(evt) {
+      var target = evt.target;
+      settings.set(target.dataset.name, target.value);
+      if (target.selectedIndex !== undefined) {
+        this.checkLinkedDescription(target);
+      }
+    }
+
+    filterClicks(evt) {
+      evt.stopPropagation();
+    }
+
+    filterKeyboardInput(evt) {
+      evt.stopPropagation();
+      if (evt.keyCode === KeyEventManager.ENTER) {
+        this.saveSettings();
+      }
+    }
+
+    // --- Actions
+
+    setState(name) {
+      this.stateIcons.forEach(function(i) {
+        if (i.name === name) {
+          i.addClass('element-active-state');
+        } else {
+          i.removeClass('element-active-state');
+        }
+      });
+    }
+
+    checkLinkedDescription(select) {
+      var name = select.dataset.name;
+      var option = select.options[select.selectedIndex];
+      var description = this[name + 'Description'];
+      var example = this[name + 'Example'];
+      if (description && example) {
+        description.html(option.dataset.description);
+        example.html(option.dataset.example);
+      }
+    }
+
+    setArea(area) {
+      if (this.currentArea === area) return;
+      this.areas.forEach(function(a) {
+        var className = 'status-bar-' + a.name + '-active';
+        if (a === area) {
+          this.addClass(className);
+          a.addClass('active-area');
+        } else {
+          this.removeClass(className);
+          a.removeClass('active-area');
+        }
+      }, this);
+      this.currentArea = area;
+      if (area === this.elementArea) {
+        this.defaultArea = this.elementArea;
+      }
+      if (area === this.settingsArea) {
+        this.inputs[0].el.focus();
+        // Forcing focus can make the scrolling go haywire,
+        // so need to actively reset the scrolling here.
+        this.resetScroll();
+      } else {
+        document.activeElement.blur();
+      }
+    }
+
+    toggleArea(area) {
+      if (this.currentArea !== area) {
+        this.setArea(area);
+      } else {
+        this.resetArea();
+      }
+    }
+
+    clearSettings() {
+      if (confirm('Really clear all settings?')) {
+        settings.clear();
+        this.inputs.forEach(this.setFormControl, this);
+        this.setArea(this.defaultArea);
+        this.checkSelectorUpdate();
+      }
+    }
+
+    saveSettings() {
       this.setArea(this.defaultArea);
       this.checkSelectorUpdate();
     }
-  };
 
-  StatusBar.prototype.saveSettings = function() {
-    this.setArea(this.defaultArea);
-    this.checkSelectorUpdate();
-  };
-
-  StatusBar.prototype.checkSelectorUpdate = function() {
-    if (this.selectorsChanged()) {
-      window.currentElementManager.refresh();
-      settings.update(Settings.INCLUDE_ELEMENTS);
-      settings.update(Settings.EXCLUDE_ELEMENTS);
-    }
-  };
-
-  StatusBar.prototype.selectorsChanged = function() {
-    return settings.hasChanged(Settings.INCLUDE_ELEMENTS) || settings.hasChanged(Settings.EXCLUDE_ELEMENTS);
-  };
-
-  StatusBar.prototype.resetArea = function(area) {
-    this.setArea(this.defaultArea);
-  };
-
-  StatusBar.prototype.getStartArea = function() {
-    if (settings.get(Settings.SHOW_QUICK_START)) {
-      return this.quickStartArea;
-    } else {
-      return this.startArea;
-    }
-  };
-
-  StatusBar.prototype.showElementArea = function() {
-    this.setArea(this.elementArea);
-  };
-
-  StatusBar.prototype.skipStartArea = function() {
-    settings.set(Settings.SHOW_QUICK_START, '1');
-    this.defaultArea = this.getStartArea();
-    this.resetArea();
-  };
-
-  StatusBar.prototype.delegateElementAction = function(action) {
-    var args = Array.prototype.slice.call(arguments, 1);
-    return function () {
-      elementManager[action].apply(elementManager, args);
-    }
-  };
-
-  StatusBar.prototype.activate = function() {
-    if (this.active) return;
-    this.show();
-    this.addClass('status-bar-active');
-    this.active = true;
-  };
-
-  StatusBar.prototype.deactivate = function() {
-    if (!this.active) return;
-    this.active = false;
-    this.removeClass('status-bar-active');
-    setTimeout(function() {
-      this.hide();
-    }.bind(this), StatusBar.FADE_DELAY);
-  };
-
-  // --- Transform
-
-  StatusBar.prototype.resetPosition = function() {
-    this.position = this.defaultPostion;
-    this.updatePosition();
-  };
-
-  StatusBar.prototype.setSelectorText = function(str) {
-    var html;
-    if (!str) {
-      str = '[Inline Selector]';
-      var className = EXTENSION_CLASS_PREFIX + 'inline-selector';
-      html = '<span class="'+ className +'">' + str + '</span>';
-    }
-    this.elementHeader.html(html || str);
-    this.elementHeader.el.title = str;
-  };
-
-  StatusBar.prototype.setElementDetails = function(el) {
-    this.detailsLeft.html(el.box.cssLeft);
-    this.detailsTop.html(el.box.cssTop);
-
-    if (el.zIndex.isNull()) {
-      this.detailsZIndex.hide();
-      this.detailsComma2.hide();
-    } else {
-      this.detailsZIndex.html(el.zIndex);
-      this.detailsZIndex.show(false);
-      this.detailsComma2.show(false);
+    checkSelectorUpdate() {
+      if (this.selectorsChanged()) {
+        window.currentElementManager.refresh();
+        settings.update(Settings.INCLUDE_ELEMENTS);
+        settings.update(Settings.EXCLUDE_ELEMENTS);
+      }
     }
 
-    this.detailsWidth.html(el.box.cssWidth);
-    this.detailsHeight.html(el.box.cssHeight);
-
-    //var rotation = el.getRoundedRotation();
-    if (el.transform.rotation.deg) {
-      this.detailsRotation.html(el.transform.rotation);
-      this.detailsDivider2.show(false);
-    } else {
-      this.detailsDivider2.hide();
+    selectorsChanged() {
+      return settings.hasChanged(Settings.INCLUDE_ELEMENTS) || settings.hasChanged(Settings.EXCLUDE_ELEMENTS);
     }
 
-  };
-
-  StatusBar.prototype.setMultipleText = function(str) {
-    this.multipleElementHeader.html(str);
-  };
-
-  StatusBar.prototype.update = function() {
-    var size = elementManager.getFocusedSize();
-    if (size === 0) {
-      this.setArea(this.quickStartArea);
-      return;
-    } else if (size === 1) {
-      this.setSingle(elementManager.getFirstFocused());
-    } else {
-      this.setMultiple(elementManager.getAllFocused());
+    resetArea(area) {
+      this.setArea(this.defaultArea);
     }
-    this.setState(nudgeManager.mode);
-    this.showElementArea();
-  };
 
-  StatusBar.prototype.setSingle = function(el) {
-    this.setSelectorText(el.getSelector());
-    this.setElementDetails(el);
-    this.singleElementArea.show();
-    this.multipleElementArea.hide();
-  };
+    getStartArea() {
+      if (settings.get(Settings.SHOW_QUICK_START)) {
+        return this.quickStartArea;
+      } else {
+        return this.startArea;
+      }
+    }
 
-  StatusBar.prototype.setMultiple = function(els) {
-    this.setMultipleText(els.length + ' elements selected');
-    this.singleElementArea.hide();
-    this.multipleElementArea.show();
-  };
+    showElementArea() {
+      this.setArea(this.elementArea);
+    }
+
+    skipStartArea() {
+      settings.set(Settings.SHOW_QUICK_START, '1');
+      this.defaultArea = this.getStartArea();
+      this.resetArea();
+    }
+
+    delegateElementAction(action) {
+      var args = Array.prototype.slice.call(arguments, 1);
+      return function () {
+        elementManager[action].apply(elementManager, args);
+      }
+    }
+
+    activate() {
+      if (this.active) return;
+      this.show();
+      this.addClass('status-bar-active');
+      this.active = true;
+    }
+
+    deactivate() {
+      if (!this.active) return;
+      this.active = false;
+      this.removeClass('status-bar-active');
+      setTimeout(function() {
+        this.hide();
+      }.bind(this), StatusBar.FADE_DELAY);
+    }
+
+    // --- Transform
+
+    resetPosition() {
+      this.position = this.defaultPostion;
+      this.updatePosition();
+    }
+
+    setSelectorText(str) {
+      var html;
+      if (!str) {
+        str = '[Inline Selector]';
+        var className = EXTENSION_CLASS_PREFIX + 'inline-selector';
+        html = '<span class="'+ className +'">' + str + '</span>';
+      }
+      this.elementHeader.html(html || str);
+      this.elementHeader.el.title = str;
+    }
+
+    setElementDetails(el) {
+      this.detailsLeft.html(el.box.cssLeft);
+      this.detailsTop.html(el.box.cssTop);
+
+      if (el.zIndex.isNull()) {
+        this.detailsZIndex.hide();
+        this.detailsComma2.hide();
+      } else {
+        this.detailsZIndex.html(el.zIndex);
+        this.detailsZIndex.show(false);
+        this.detailsComma2.show(false);
+      }
+
+      this.detailsWidth.html(el.box.cssWidth);
+      this.detailsHeight.html(el.box.cssHeight);
+
+      //var rotation = el.getRoundedRotation();
+      if (el.transform.getRotation()) {
+        this.detailsRotation.html(el.transform.getRotationString());
+        this.detailsRotation.show(false);
+        this.detailsDivider2.show(false);
+      } else {
+        this.detailsRotation.hide();
+        this.detailsDivider2.hide();
+      }
+
+    }
+
+    setMultipleText(str) {
+      this.multipleElementHeader.html(str);
+    }
+
+    update() {
+      var size = elementManager.getFocusedSize();
+      if (size === 0) {
+        this.setArea(this.quickStartArea);
+        return;
+      } else if (size === 1) {
+        this.setSingle(elementManager.getFirstFocused());
+      } else {
+        this.setMultiple(elementManager.getAllFocused());
+      }
+      this.setState(nudgeManager.mode);
+      this.showElementArea();
+    }
+
+    setSingle(el) {
+      this.setSelectorText(el.getSelector());
+      this.setElementDetails(el);
+      this.singleElementArea.show();
+      this.multipleElementArea.hide();
+    }
+
+    setMultiple(els) {
+      this.setMultipleText(els.length + ' elements selected');
+      this.singleElementArea.hide();
+      this.multipleElementArea.show();
+    }
 
 
-  // --- Events
+    // --- Events
 
-  StatusBar.prototype.dragStart = function(evt) {
-    this.lastPosition = this.position;
-  };
+    dragStart(evt) {
+      this.lastPosition = this.position;
+    }
 
-  StatusBar.prototype.drag = function(evt) {
-    this.position = new Point(this.lastPosition.x + evt.dragOffset.x, this.lastPosition.y - evt.dragOffset.y);
-    this.updatePosition();
-  };
+    drag(evt) {
+      this.position = new Point(this.lastPosition.x + evt.dragOffset.x, this.lastPosition.y - evt.dragOffset.y);
+      this.updatePosition();
+    }
 
-  // --- Compute
+    // --- Compute
 
-  StatusBar.prototype.getPosition = function() {
-    var style = window.getComputedStyle(this.el);
-    this.position = new Point(parseInt(style.left), parseInt(style.bottom));
-    this.defaultPostion = this.position;
-  };
+    getPosition() {
+      var style = window.getComputedStyle(this.el);
+      this.position = new Point(parseInt(style.left), parseInt(style.bottom));
+      this.defaultPostion = this.position;
+    }
 
-  // --- Update
+    // --- Update
 
-  StatusBar.prototype.updatePosition = function() {
-    this.el.style.left   = this.position.x + 'px';
-    this.el.style.bottom = this.position.y + 'px';
-  };
+    updatePosition() {
+      this.el.style.left   = this.position.x + 'px';
+      this.el.style.bottom = this.position.y + 'px';
+    }
 
+  }
 
   /*-------------------------] Settings [--------------------------*/
 
-  function Settings () {
-    this.changed  = {};
-    this.defaults = {};
-    this.defaults[Settings.TABS]     = Settings.TABS_TWO_SPACES;
-    this.defaults[Settings.SELECTOR] = Settings.SELECTOR_AUTO;
-    this.defaults[Settings.OUTPUT_UNIQUE] = true;
-    this.defaults[Settings.DOWNLOAD_FILENAME] = 'styles.css';
-  };
+  class Settings {
 
-  Settings.TABS              = 'tabs';
-  Settings.OUTPUT            = 'output';
-  Settings.SELECTOR          = 'selector';
-  Settings.INCLUDE_ELEMENTS  = 'include-elements';
-  Settings.EXCLUDE_ELEMENTS  = 'exclude-elements';
-  Settings.DOWNLOAD_FILENAME = 'download-filename';
+    static get TABS()              { return 'tabs';              }
+    static get OUTPUT()            { return 'output';            }
+    static get SELECTOR()          { return 'selector';          }
+    static get INCLUDE_ELEMENTS()  { return 'include-elements';  }
+    static get EXCLUDE_ELEMENTS()  { return 'exclude-elements';  }
+    static get DOWNLOAD_FILENAME() { return 'download-filename'; }
 
-  Settings.SELECTOR_ID      = 'id';
-  Settings.SELECTOR_ALL     = 'all';
-  Settings.SELECTOR_TAG     = 'tag';
-  Settings.SELECTOR_TAG_NTH = 'tag-nth';
-  Settings.SELECTOR_AUTO    = 'auto';
-  Settings.SELECTOR_FIRST   = 'first';
-  Settings.SELECTOR_NONE    = 'inline';
-  Settings.SELECTOR_LONGEST = 'longest';
+    static get SELECTOR_ID()      { return 'id';      }
+    static get SELECTOR_ALL()     { return 'all';     }
+    static get SELECTOR_TAG()     { return 'tag';     }
+    static get SELECTOR_TAG_NTH() { return 'tag-nth'; }
+    static get SELECTOR_AUTO()    { return 'auto';    }
+    static get SELECTOR_FIRST()   { return 'first';   }
+    static get SELECTOR_NONE()    { return 'inline';  }
+    static get SELECTOR_LONGEST() { return 'longest'; }
 
-  Settings.OUTPUT_UNIQUE  = 'unique';
-  Settings.OUTPUT_CHANGED = 'changed';
+    static get OUTPUT_UNIQUE()  { return 'unique';  }
+    static get OUTPUT_CHANGED() { return 'changed'; }
 
-  Settings.TABS_TWO_SPACES  = 'two';
-  Settings.TABS_FOUR_SPACES = 'four';
-  Settings.TABS_TAB         = 'tab';
+    static get TABS_TWO_SPACES()  { return 'two';  }
+    static get TABS_FOUR_SPACES() { return 'four'; }
+    static get TABS_TAB()         { return 'tab';  }
 
-  Settings.prototype.get = function(name) {
-    return localStorage[name] || this.defaults[name] || '';
-  };
-
-  Settings.prototype.set = function(name, value) {
-    if (value !== this.get(name)) {
-      this.changed[name] = true;
+    constructor() {
+      this.changed  = {};
+      this.defaults = {};
+      this.defaults[Settings.TABS]     = Settings.TABS_TWO_SPACES;
+      this.defaults[Settings.SELECTOR] = Settings.SELECTOR_AUTO;
+      this.defaults[Settings.OUTPUT_UNIQUE] = true;
+      this.defaults[Settings.DOWNLOAD_FILENAME] = 'styles.css';
     }
-    localStorage[name] = value;
-  };
 
-  Settings.prototype.hasChanged = function(name) {
-    return !!this.changed[name];
-  };
+    get(name) {
+      return localStorage[name] || this.defaults[name] || '';
+    }
 
-  Settings.prototype.update = function(name) {
-    this.changed[name] = false;
-  };
-
-  Settings.prototype.clear = function() {
-    for (key in localStorage) {
-      if (localStorage[key]) {
-        this.changed[key] = true;
+    set(name, value) {
+      if (value !== this.get(name)) {
+        this.changed[name] = true;
       }
+      localStorage[name] = value;
     }
-    localStorage.clear();
-  };
 
+    hasChanged(name) {
+      return !!this.changed[name];
+    }
+
+    update(name) {
+      this.changed[name] = false;
+    }
+
+    clear() {
+      for (key in localStorage) {
+        if (localStorage[key]) {
+          this.changed[key] = true;
+        }
+      }
+      localStorage.clear();
+    }
+
+  }
 
   /*-------------------------] Animation [--------------------------*/
 
+  class Animation {
 
-  function Animation() {};
+    defer(fn) {
+      setTimeout(fn.bind(this), 0);
+    }
 
-  Animation.prototype.defer = function(fn) {
-    setTimeout(fn.bind(this), 0);
-  };
+  }
 
   /*-------------------------] LoadingAnimation [--------------------------*/
 
-  function LoadingAnimation () {
-    this.build();
-  };
+  class LoadingAnimation extends Animation {
 
-  // --- Inheritance
+    static get VISIBLE_DELAY() { return 250; }
 
-  LoadingAnimation.prototype = Object.create(Animation.prototype);
-
-  // --- Constants
-
-  LoadingAnimation.VISIBLE_DELAY = 250;
-
-
-  // --- Setup
-
-  LoadingAnimation.prototype.build = function() {
-
-    this.box   = new Element(document.body, 'div', 'loading'),
-    this.shade = new Element(document.body, 'div', 'loading-shade');
-    this.spin  = new Element(this.box.el, 'div', 'loading-spin');
-
-    for(var i = 1; i <= 12; i++) {
-      new Element(this.spin.el, 'div', 'loading-bar loading-bar-' + i);
+    constructor() {
+      super();
+      this.build();
     }
-  };
 
-  // --- Actions
+    // --- Setup
 
-  LoadingAnimation.prototype.show = function(fn) {
-    this.box.show();
-    this.shade.show();
-    this.defer(function() {
-      this.box.afterTransition(fn);
-      this.box.addClass('loading-active');
-      this.shade.addClass('loading-shade-active');
-    });
-  };
+    build() {
 
-  LoadingAnimation.prototype.hide = function(fn) {
-    this.defer(function() {
-      var box = this.box, shade = this.shade;
-      box.afterTransition(function() {
-        box.hide();
-        shade.hide();
-        fn();
+      this.box   = new Element(document.body, 'div', 'loading'),
+      this.shade = new Element(document.body, 'div', 'loading-shade');
+      this.spin  = new Element(this.box.el, 'div', 'loading-spin');
+
+      for(var i = 1; i <= 12; i++) {
+        new Element(this.spin.el, 'div', 'loading-bar loading-bar-' + i);
+      }
+    }
+
+    // --- Actions
+
+    show(fn) {
+      this.box.show();
+      this.shade.show();
+      this.defer(function() {
+        this.box.afterTransition(fn);
+        this.box.addClass('loading-active');
+        this.shade.addClass('loading-shade-active');
       });
-      box.removeClass('loading-active');
-      shade.removeClass('loading-shade-active');
-    });
-  };
+    }
+
+    hide(fn) {
+      this.defer(function() {
+        var box = this.box, shade = this.shade;
+        box.afterTransition(function() {
+          box.hide();
+          shade.hide();
+          fn();
+        });
+        box.removeClass('loading-active');
+        shade.removeClass('loading-shade-active');
+      });
+    }
+
+  }
 
   /*-------------------------] CopyAnimation [--------------------------*/
 
-  function CopyAnimation () {
-    this.build();
-  };
+  class CopyAnimation extends Animation {
 
-  CopyAnimation.COPIED_TEXT = 'Copied!';
-  CopyAnimation.NOT_COPIED_TEXT = 'No Styles';
+    static get COPIED_TEXT()     { return 'Copied!';   }
+    static get NOT_COPIED_TEXT() { return 'No Styles'; }
 
-  // --- Inheritance
+    static get IN_CLASS()      { return 'copy-animation-in'; }
+    static get TEXT_IN_CLASS() { return 'copy-animation-text-in'; }
 
-  CopyAnimation.prototype = Object.create(Animation.prototype);
+    constructor() {
+      super();
+      this.build();
+    }
 
-  // --- Constants
+    // --- Setup
 
-  CopyAnimation.IN_CLASS = 'copy-animation-in';
-  CopyAnimation.TEXT_IN_CLASS = 'copy-animation-text-in';
+    build() {
+      this.box  = new Element(document.body, 'div', 'copy-animation');
+      this.text = new Element(this.box.el, 'div', 'copy-animation-text');
+    }
 
-  // --- Setup
+    // --- Actions
 
-  CopyAnimation.prototype.build = function() {
-    this.box  = new Element(document.body, 'div', 'copy-animation');
-    this.text = new Element(this.box.el, 'div', 'copy-animation-text');
-  };
+    setText(text) {
+      this.text.html(text);
+    }
 
-  // --- Actions
+    animate(copied) {
 
-  CopyAnimation.prototype.setText = function(text) {
-    this.text.html(text);
+      this.setText(copied ? CopyAnimation.COPIED_TEXT : CopyAnimation.NOT_COPIED_TEXT);
+      this.reset();
+      this.box.show();
+
+      this.defer(function() {
+
+        this.box.addClass(CopyAnimation.IN_CLASS);
+        this.text.addClass(CopyAnimation.TEXT_IN_CLASS);
+
+        // TODO: cleaner??
+        this.finished = function() {
+          this.box.el.removeEventListener('webkitAnimationEnd', this.finished);
+          this.reset();
+        }.bind(this);
+        this.box.addEventListener('webkitAnimationEnd', this.finished);
+      });
+    }
+
+    reset() {
+      this.box.show(false);
+      this.box.removeClass(CopyAnimation.IN_CLASS);
+      this.text.removeClass(CopyAnimation.TEXT_IN_CLASS);
+    }
+
   }
-
-  CopyAnimation.prototype.animate = function(copied) {
-
-    this.setText(copied ? CopyAnimation.COPIED_TEXT : CopyAnimation.NOT_COPIED_TEXT);
-    this.reset();
-    this.box.show();
-
-    this.defer(function() {
-
-      this.box.addClass(CopyAnimation.IN_CLASS);
-      this.text.addClass(CopyAnimation.TEXT_IN_CLASS);
-
-      this.finished = function() {
-        this.box.el.removeEventListener('webkitAnimationEnd', this.finished);
-        this.reset();
-      }.bind(this);
-      this.box.addEventListener('webkitAnimationEnd', this.finished);
-    });
-  };
-
-  CopyAnimation.prototype.reset = function() {
-    this.box.show(false);
-    this.box.removeClass(CopyAnimation.IN_CLASS);
-    this.text.removeClass(CopyAnimation.TEXT_IN_CLASS);
-  };
-
 
   /*-------------------------] SpriteRecognizer [--------------------------*/
 
-  function SpriteRecognizer (url) {
-    this.map = {};
-    this.loadPixelData(url);
-  };
+  class SpriteRecognizer {
 
-  SpriteRecognizer.ORIGIN_REG = new RegExp('^' + window.location.origin.replace(/([\/.])/g, '\\$1'));
-  SpriteRecognizer.EXTENSION_REG = /^chrome-extension:\/\//;
+    static get ORIGIN_REG()    { return new RegExp('^' + window.location.origin.replace(/([\/.])/g, '\\$1')); }
+    static get EXTENSION_REG() { return /^chrome-extension:\/\//; }
 
-  SpriteRecognizer.prototype.loadPixelData = function(url) {
-    var xDomain = !SpriteRecognizer.ORIGIN_REG.test(url);
-    var extension = SpriteRecognizer.EXTENSION_REG.test(url);
-    if (extension) {
-      return;
+    constructor(url) {
+      this.map = {};
+      this.loadPixelData(url);
     }
-    if (xDomain) {
-      this.loadXDomainImage(url);
-    } else {
-      this.loadImage(url);
-    }
-  };
 
-  SpriteRecognizer.prototype.loadImage = function(obj) {
-    if (obj.error) {
-      throwError('Positionable: "' + obj.url + '" could not be loaded!');
-    }
-    var url = obj;
-    var img = new Image();
-    img.addEventListener('load', this.handleImageLoaded.bind(this));
-    img.src = url;
-  };
-
-  SpriteRecognizer.prototype.loadXDomainImage = function(url) {
-    // The background page is the only context in which pixel data from X-Domain
-    // images can be loaded so call out to it and tell it to load the data for this url.
-    var message = { message: 'convert_image_url_to_data_url', url: url };
-    chrome.runtime.sendMessage(message, this.loadImage.bind(this));
-  };
-
-  SpriteRecognizer.prototype.handleImageLoaded = function(evt) {
-    var img = evt.target, canvas, context;
-    canvas = document.createElement('canvas');
-    canvas.setAttribute('width', img.width);
-    canvas.setAttribute('height', img.height);
-    context = canvas.getContext('2d');
-    context.drawImage(img, 0, 0);
-    this.pixelData = context.getImageData(0, 0, img.width, img.height).data;
-    this.width = img.width;
-    this.height = img.height;
-  };
-
-  SpriteRecognizer.prototype.getSpriteBoundsForCoordinate = function(pixel) {
-    pixel = pixel.round();
-    var cached, alpha = this.getAlphaForPixel(pixel);
-    // No sprite detected
-    if (!alpha) {
-      return;
-    }
-    cached = this.map[this.getKey(pixel)];
-    if (cached) {
-      return cached;
-    }
-    this.queue = [];
-    this.rect = new Rectangle(pixel.y, pixel.x, pixel.y, pixel.x);
-    do {
-      this.testAdjacentPixels(pixel);
-    } while(pixel = this.queue.shift());
-    return this.rect;
-  };
-
-  SpriteRecognizer.prototype.testAdjacentPixels = function(pixel) {
-    this.testPixel(new Point(pixel.x, pixel.y - 1)); // Top
-    this.testPixel(new Point(pixel.x + 1, pixel.y)); // Right
-    this.testPixel(new Point(pixel.x, pixel.y + 1)); // Bottom
-    this.testPixel(new Point(pixel.x - 1, pixel.y)); // Left
-  };
-
-  SpriteRecognizer.prototype.testPixel = function(pixel) {
-    var key = this.getKey(pixel);
-    if (this.map[key] === undefined) {
-      // If we have a pixel, then move on and test the adjacent ones.
-      if (this.getAlphaForPixel(pixel)) {
-        this.rect.top    = Math.min(this.rect.top, pixel.y);
-        this.rect.left   = Math.min(this.rect.left, pixel.x);
-        this.rect.right  = Math.max(this.rect.right, pixel.x);
-        this.rect.bottom = Math.max(this.rect.bottom, pixel.y);
-        this.queue.push(pixel);
-        this.map[key] = this.rect;
+    loadPixelData(url) {
+      var xDomain = !SpriteRecognizer.ORIGIN_REG.test(url);
+      var extension = SpriteRecognizer.EXTENSION_REG.test(url);
+      if (extension) {
+        return;
+      }
+      if (xDomain) {
+        this.loadXDomainImage(url);
       } else {
-        this.map[key] = null;
+        this.loadImage(url);
       }
     }
-  };
 
-  SpriteRecognizer.prototype.getKey = function(pixel) {
-    return pixel.x + ',' + pixel.y;
-  };
+    loadImage(obj) {
+      if (obj.error) {
+        throwError('Positionable: "' + obj.url + '" could not be loaded!');
+      }
+      var url = obj;
+      var img = new Image();
+      img.addEventListener('load', this.handleImageLoaded.bind(this));
+      img.src = url;
+    }
 
-  SpriteRecognizer.prototype.getAlphaForPixel = function(pixel) {
-    return !!this.pixelData[((this.width * pixel.y) + pixel.x) * 4 + 3];
-  };
+    loadXDomainImage(url) {
+      // The background page is the only context in which pixel data from X-Domain
+      // images can be loaded so call out to it and tell it to load the data for this url.
+      var message = { message: 'convert_image_url_to_data_url', url: url };
+      chrome.runtime.sendMessage(message, this.loadImage.bind(this));
+    }
 
+    handleImageLoaded(evt) {
+      var img = evt.target, canvas, context;
+      canvas = document.createElement('canvas');
+      canvas.setAttribute('width', img.width);
+      canvas.setAttribute('height', img.height);
+      context = canvas.getContext('2d');
+      context.drawImage(img, 0, 0);
+      this.pixelData = context.getImageData(0, 0, img.width, img.height).data;
+      this.width = img.width;
+      this.height = img.height;
+    }
 
+    getSpriteBoundsForCoordinate(pixel) {
+      pixel = pixel.round();
+      var cached, alpha = this.getAlphaForPixel(pixel);
+      // No sprite detected
+      if (!alpha) {
+        return;
+      }
+      cached = this.map[this.getKey(pixel)];
+      if (cached) {
+        return cached;
+      }
+      this.queue = [];
+      this.rect = new Rectangle(pixel.y, pixel.x, pixel.y, pixel.x);
+      do {
+        this.testAdjacentPixels(pixel);
+      } while(pixel = this.queue.shift());
+      return this.rect;
+    }
+
+    testAdjacentPixels(pixel) {
+      this.testPixel(new Point(pixel.x, pixel.y - 1)); // Top
+      this.testPixel(new Point(pixel.x + 1, pixel.y)); // Right
+      this.testPixel(new Point(pixel.x, pixel.y + 1)); // Bottom
+      this.testPixel(new Point(pixel.x - 1, pixel.y)); // Left
+    }
+
+    testPixel(pixel) {
+      var key = this.getKey(pixel);
+      if (this.map[key] === undefined) {
+        // If we have a pixel, then move on and test the adjacent ones.
+        if (this.getAlphaForPixel(pixel)) {
+          this.rect.top    = Math.min(this.rect.top, pixel.y);
+          this.rect.left   = Math.min(this.rect.left, pixel.x);
+          this.rect.right  = Math.max(this.rect.right, pixel.x);
+          this.rect.bottom = Math.max(this.rect.bottom, pixel.y);
+          this.queue.push(pixel);
+          this.map[key] = this.rect;
+        } else {
+          this.map[key] = null;
+        }
+      }
+    }
+
+    getKey(pixel) {
+      return pixel.x + ',' + pixel.y;
+    }
+
+    getAlphaForPixel(pixel) {
+      return !!this.pixelData[((this.width * pixel.y) + pixel.x) * 4 + 3];
+    }
+
+  }
 
   /*-------------------------] Point [--------------------------*/
 
+  class Point {
 
-  function Point (x, y) {
-    this.x = x || 0;
-    this.y = y || 0;
-  };
+    static get DEGREES_IN_RADIANS() { return 180 / Math.PI; }
 
-  Point.DEGREES_IN_RADIANS = 180 / Math.PI;
+    static degToRad(deg) {
+      return deg / Point.DEGREES_IN_RADIANS;
+    }
 
+    static radToDeg(rad) {
+      var deg = rad * Point.DEGREES_IN_RADIANS;
+      while(deg < 0) deg += 360;
+      return deg;
+    }
 
-  Point.degToRad = function(deg) {
-    return deg / Point.DEGREES_IN_RADIANS;
-  };
+    constructor(x, y) {
+      this.x = x || 0;
+      this.y = y || 0;
+    }
 
-  Point.radToDeg = function(rad) {
-    var deg = rad * Point.DEGREES_IN_RADIANS;
-    while(deg < 0) deg += 360;
-    return deg;
-  };
+  /*
+    static vector(deg, len) {
 
-/*
-  Point.vector = function(deg, len) {
+    }
+    */
 
-  };
-  */
+    add(p) {
+      return new Point(this.x + p.x, this.y + p.y);
+    }
 
-  Point.prototype.add = function(p) {
-    return new Point(this.x + p.x, this.y + p.y);
-  };
+    subtract(p) {
+      return new Point(this.x - p.x, this.y - p.y);
+    }
 
-  Point.prototype.subtract = function(p) {
-    return new Point(this.x - p.x, this.y - p.y);
-  };
+    multiply(n) {
+      return Point.vector(this.getAngle(), this.getLength() * n);
+    }
 
-  Point.prototype.multiply = function(n) {
-    return Point.vector(this.getAngle(), this.getLength() * n);
-  };
+    getAngle() {
+      return Point.radToDeg(Math.atan2(this.y, this.x));
+    }
 
-  Point.prototype.getAngle = function() {
-    return Point.radToDeg(Math.atan2(this.y, this.x));
-  };
-
-/*
-  Point.prototype.getRotated = function(deg) {
-    var rad = Point.degToRad(deg);
-
-
-  Point.prototype.setAngle = function(deg) {
-    return Point.vector(deg, this.getLength());
-  };
-  */
-
-  Point.prototype.getRotated = function(deg) {
-    var rad = Point.degToRad(deg);
-    var x = this.x * Math.cos(rad) - this.y * Math.sin(rad);
-    var y = this.x * Math.sin(rad) + this.y * Math.cos(rad);
-    return new Point(x, y);
-  };
-
-  Point.prototype.getLength = function() {
-    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
-  };
-
-  Point.prototype.clone = function() {
-    return new Point(this.x, this.y);
-  };
-
-  Point.prototype.round = function() {
-    return new Point(round(this.x), round(this.y));
-  };
+  /*
+    getRotated(deg) {
+      var rad = Point.degToRad(deg);
 
 
-/*
-  Point.vectorOLD = function(deg, len) {
-    var rad = Point.degToRad(deg);
-    return new Point(Math.cos(rad) * len, Math.sin(rad) * len);
-  };
+    setAngle(deg) {
+      return Point.vector(deg, this.getLength());
+    }
+    */
 
-  Point.prototype.getAngleOLD = function() {
-    return Point.radToDeg(Math.atan2(this.y, this.x));
-  };
+    getRotated(deg) {
+      var rad = Point.degToRad(deg);
+      var x = this.x * Math.cos(rad) - this.y * Math.sin(rad);
+      var y = this.x * Math.sin(rad) + this.y * Math.cos(rad);
+      return new Point(x, y);
+    }
 
-  Point.prototype.setAngleOLD = function(deg) {
-    return Point.vectorOLD(deg, this.getLengthOLD());
-  };
+    getLength() {
+      return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+    }
 
-  Point.prototype.getRotatedOLD = function(deg) {
-    return this.setAngleOLD(this.getAngleOLD() + deg);
-  };
+    clone() {
+      return new Point(this.x, this.y);
+    }
 
-  Point.prototype.getLengthOLD = function() {
-    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
-  };
-  */
-
-
-
+    round() {
+      return new Point(round(this.x), round(this.y));
+    }
 
 
+  /*
+    Point.vectorOLD(deg, len) {
+      var rad = Point.degToRad(deg);
+      return new Point(Math.cos(rad) * len, Math.sin(rad) * len);
+    }
 
+    getAngleOLD() {
+      return Point.radToDeg(Math.atan2(this.y, this.x));
+    }
 
+    setAngleOLD(deg) {
+      return Point.vectorOLD(deg, this.getLengthOLD());
+    }
 
+    getRotatedOLD(deg) {
+      return this.setAngleOLD(this.getAngleOLD() + deg);
+    }
 
+    getLengthOLD() {
+      return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
+    }
+    */
 
-
-
-
-
-
-
-
-
-
+  }
 
   /*-------------------------] Rectangle [--------------------------*/
 
-  function Rectangle (top, right, bottom, left, rotation) {
-    this.top      = top    || 0;
-    this.right    = right  || 0;
-    this.bottom   = bottom || 0;
-    this.left     = left   || 0;
-    this.rotation = rotation || 0;
-  };
+  // TODO: can't this be merged with CSSBOX somehow?
+  class Rectangle {
 
-  Rectangle.prototype.getWidth = function(r) {
-    var w = this.right - this.left;
-    return r ? round(w) : w;
-  };
-
-  Rectangle.prototype.getHeight = function(r) {
-    var h = this.bottom - this.top;
-    return r ? round(h) : h;
-  };
-
-  Rectangle.prototype.setPosition = function(point) {
-    var offset = point.subtract(new Point(this.left, this.top));
-    this.left   += offset.x;
-    this.top    += offset.y;
-    this.bottom += offset.y;
-    this.right  += offset.x;
-  };
-
-  Rectangle.prototype.add = function(prop, amount) {
-    if (!prop) return;
-    amount = this.constrainProperty(prop, this[prop] + amount);
-    this[prop] = amount;
-  };
-
-  Rectangle.prototype.constrainProperty = function(prop, amount) {
-    switch(prop) {
-      case 'left':   return Math.min(amount, this.right - 1);
-      case 'right':  return Math.max(amount, this.left + 1);
-      case 'top':    return Math.min(amount, this.bottom - 1);
-      case 'bottom': return Math.max(amount, this.top + 1);
+    constructor(top, right, bottom, left, rotation) {
+      this.top      = top    || 0;
+      this.right    = right  || 0;
+      this.bottom   = bottom || 0;
+      this.left     = left   || 0;
+      this.rotation = rotation || 0;
     }
-  };
 
-  Rectangle.prototype.getCenter = function() {
-    return new Point(this.left + (this.getWidth() / 2), this.top + (this.getHeight() / 2));
-  };
+    getWidth(r) {
+      var w = this.right - this.left;
+      return r ? round(w) : w;
+    }
 
-  Rectangle.prototype.getRatio = function() {
-    return this.getWidth() / this.getHeight();
-  };
+    getHeight(r) {
+      var h = this.bottom - this.top;
+      return r ? round(h) : h;
+    }
 
-  // The rotated position for a given un-rotated coordinate.
-  Rectangle.prototype.getPositionForCoords = function(coord) {
-    if (!this.rotation) return coord;
-    var center = this.getCenter();
-    return coord.subtract(center).getRotated(this.rotation).add(center);
-  };
+    setPosition(point) {
+      var offset = point.subtract(new Point(this.left, this.top));
+      this.left   += offset.x;
+      this.top    += offset.y;
+      this.bottom += offset.y;
+      this.right  += offset.x;
+    }
 
-  // The un-rotated coords for a given rotated position.
-  // TODO: consolidate this with CSSBox
-  Rectangle.prototype.getCoordsForPosition = function(position) {
-    if (!this.rotation) return position;
-    var center = this.getCenter();
-    return position.subtract(center).getRotated(-this.rotation).add(center);
-  };
+    add(prop, amount) {
+      if (!prop) return;
+      amount = this.constrainProperty(prop, this[prop] + amount);
+      this[prop] = amount;
+    }
 
-  Rectangle.prototype.clone = function() {
-    return new Rectangle(this.top, this.right, this.bottom, this.left, this.rotation);
-  };
+    constrainProperty(prop, amount) {
+      switch(prop) {
+        case 'left':   return Math.min(amount, this.right - 1);
+        case 'right':  return Math.max(amount, this.left + 1);
+        case 'top':    return Math.min(amount, this.bottom - 1);
+        case 'bottom': return Math.max(amount, this.top + 1);
+      }
+    }
+
+    getCenter() {
+      return new Point(this.left + (this.getWidth() / 2), this.top + (this.getHeight() / 2));
+    }
+
+    getRatio() {
+      return this.getWidth() / this.getHeight();
+    }
+
+    // The rotated position for a given un-rotated coordinate.
+    getPositionForCoords(coord) {
+      if (!this.rotation) {
+        return coord;
+      }
+      var center = this.getCenter();
+      return coord.subtract(center).getRotated(this.rotation).add(center);
+    }
+
+    // The un-rotated coords for a given rotated position.
+    // TODO: consolidate this with CSSBox
+    getCoordsForPosition(position) {
+      if (!this.rotation) return position;
+      var center = this.getCenter();
+      return position.subtract(center).getRotated(-this.rotation).add(center);
+    }
+
+    clone() {
+      return new Rectangle(this.top, this.right, this.bottom, this.left, this.rotation);
+    }
+
+  }
 
   /*-------------------------] CSSPoint [--------------------------*/
 
-  function CSSPoint (cssLeft, cssTop) {
-    this.cssLeft = cssLeft || new CSSValue(null);
-    this.cssTop  = cssTop || new CSSValue(null);
+  class CSSPoint {
+
+    constructor(cssLeft, cssTop) {
+      this.cssLeft = cssLeft || new CSSValue(null);
+      this.cssTop  = cssTop || new CSSValue(null);
+    }
+
+    isNull() {
+      return this.cssLeft.isNull() && this.cssTop.isNull();
+    }
+
+    getPosition() {
+      return new Point(this.cssLeft.px, this.cssTop.px);
+    }
+
+    setPosition(p) {
+      this.cssLeft.px = p.x;
+      this.cssTop.px = p.y;
+    }
+
+    toString() {
+      return [this.cssLeft, this.cssTop].join(' ');
+    }
+
+    clone() {
+      return new CSSPoint(this.cssLeft.clone(), this.cssTop.clone());
+    }
+
   }
-
-  CSSPoint.prototype.isNull = function() {
-    return this.cssLeft.isNull() && this.cssTop.isNull();
-  };
-
-  CSSPoint.prototype.getPosition = function() {
-    return new Point(this.cssLeft.px, this.cssTop.px);
-  };
-
-  CSSPoint.prototype.setPosition = function(p) {
-    this.cssLeft.px = p.x;
-    this.cssTop.px = p.y;
-  };
-
-  CSSPoint.prototype.toString = function() {
-    return [this.cssLeft, this.cssTop].join(' ');
-  };
-
-  CSSPoint.prototype.clone = function() {
-    return new CSSPoint(this.cssLeft.clone(), this.cssTop.clone());
-  };
 
   /*-------------------------] CSSBox [--------------------------*/
 
   // TODO: can this supersede rectangle?
-  function CSSBox (cssLeft, cssTop, cssWidth, cssHeight) {
-    this.cssLeft   = cssLeft;
-    this.cssTop    = cssTop;
-    this.cssWidth  = cssWidth;
-    this.cssHeight = cssHeight;
-  }
+  class CSSBox {
 
-/*
-  function setupCSSAccessors(klass, props) {
-    props.forEach(function(prop) {
-      var cssProp = 'css' + prop.charAt(0).toUpperCase() + prop.slice(1);
-      Object.defineProperty(klass, prop, {
+    constructor(cssLeft, cssTop, cssWidth, cssHeight) {
+      this.cssLeft   = cssLeft;
+      this.cssTop    = cssTop;
+      this.cssWidth  = cssWidth;
+      this.cssHeight = cssHeight;
+    }
 
-        get: function() {
-          return this[cssProp].px;
-        },
+  /*
+    function setupCSSAccessors(klass, props) {
+      props.forEach(function(prop) {
+        var cssProp = 'css' + prop.charAt(0).toUpperCase() + prop.slice(1);
+        Object.defineProperty(klass, prop, {
 
-        set: function(val) {
-          this[cssProp].px = val;
-        }
+          get: function() {
+            return this[cssProp].px;
+          },
 
+          set: function(val) {
+            this[cssProp].px = val;
+          }
+
+        });
       });
-    });
-  }
-  */
+    }
+    */
 
-  //setupCSSAccessors(CSSBox, ['left', 'top', 'width', 'height', 'zIndex', 'rotation']);
-
-  CSSBox.prototype = {
+    //setupCSSAccessors(CSSBox, ['left', 'top', 'width', 'height', 'zIndex', 'rotation']);
 
     // Basic dimensions
 
     get left () {
       return this.cssLeft.px;
-    },
+    }
 
     set left (val) {
       var px = Math.min(val, this.right - 1)
       this.cssWidth.px += this.cssLeft.px - px;
       this.cssLeft.px = px;
-    },
+    }
 
     get top () {
       return this.cssTop.px;
-    },
+    }
 
     set top (val) {
       var px = Math.min(val, this.bottom - 1)
       this.cssHeight.px += this.cssTop.px - px;
       this.cssTop.px = px;
-    },
+    }
 
     get width () {
       return this.cssWidth.px;
-    },
+    }
 
     set width (val) {
       this.cssWidth.px = Math.max(val, 1);
-    },
+    }
 
     get height () {
       return this.cssHeight.px;
-    },
+    }
 
     set height (val) {
       this.cssHeight.px = Math.max(val, 1);
-    },
+    }
 
     // Translation TODO: accessors or "get"? it's confusing
     // TODO: move this into CSSTranform or something
 
     /*
-    setTranslation: function (vector) {
+    setTranslation(vector) {
       if (!this.cssTranslationLeft) {
         this.cssTranslationLeft = new CSSValue(0, 'px');
       }
@@ -3518,7 +3547,7 @@
       }
       this.cssTranslationLeft.setValue(vector.x);
       this.cssTranslationTop.setValue(vector.y);
-    },
+    }
     */
 
     // Basic rotation accessors
@@ -3526,46 +3555,46 @@
     /*
     get rotation () {
       return this.cssTransform.rotation.getValue();
-    },
+    }
 
     set rotation (val) {
       return this.cssTransform.rotation.setValue(val);
-    },
+    }
     */
 
     // Computed dimensions
 
     get right () {
       return this.cssLeft.px + this.cssWidth.px;
-    },
+    }
 
     set right (val) {
       this.cssWidth.px = Math.max(1, val - this.cssLeft.px);
-    },
+    }
 
     get bottom () {
       return this.cssTop.px + this.cssHeight.px;
-    },
+    }
 
     set bottom (val) {
       this.cssHeight.px = Math.max(1, val - this.cssTop.px);
-    },
+    }
 
-    getPosition: function () {
+    getPosition() {
       return new Point(this.left, this.top);
-    },
+    }
 
-    setPosition: function (vector) {
+    setPosition(vector) {
       this.cssLeft.px = vector.x;
       this.cssTop.px  = vector.y;
-    },
+    }
 
-    addPosition: function(vector) {
-      this.cssLeft.addValue(vector.x);
-      this.cssTop.addValue(vector.y);
-    },
+    addPosition(vector) {
+      this.cssLeft.add(vector.x);
+      this.cssTop.add(vector.y);
+    }
 
-    getCoords: function(p, rotation) {
+    getCoords(p, rotation) {
       var center;
 
       p = p.subtract(this.getPosition());
@@ -3576,24 +3605,24 @@
       }
 
       return p;
-    },
+    }
 
-    getCenterCoords: function() {
+    getCenterCoords() {
       return new Point(this.width / 2, this.height / 2);
-    },
+    }
 
-    getCenterPosition: function() {
+    getCenterPosition() {
       return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
-    },
+    }
 
     // TODO: vague
-    getCenter: function() {
+    getCenter() {
       return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
-    },
+    }
 
     /*
     // TODO: rename??
-    calculateRotationOffset: function() {
+    calculateRotationOffset() {
       if (!this.rotation) {
         return;
       }
@@ -3609,26 +3638,26 @@
       var toCenter = anchor.offsetToCenter(offsetX, offsetY).getRotated(this.box.rotation);
       var toCorner = new Point(-offsetX, -offsetY);
       return anchor.startPosition.add(toCenter).add(toCorner);
-    },
+    }
     */
 
     /*
     // Returns coordinates in the box's XY coordinate
     // frame for a given non-rotated XY position.
-    getCoordsForPosition: function(pos) {
+    getCoordsForPosition(pos) {
       if (!this.rotation) return pos;
       var center = this.getCenter();
       return pos.subtract(center).getRotated(this.rotation).add(center);
-    },
+    }
     */
 
-    getRatio: function() {
+    getRatio() {
       return this.width / this.height;
-    },
+    }
 
     // TODO: better name for this?
     /*
-    adjustSide: function(prop, amount) {
+    adjustSide(prop, amount) {
       if (!prop || !amount) {
         return;
       }
@@ -3640,19 +3669,19 @@
       }
 
       this[prop] = amount;
-    },
+    }
 
-    constrainProperty: function(prop, amount) {
+    constrainProperty(prop, amount) {
       switch(prop) {
         case 'left':   return Math.min(amount, this.right - 1);
         case 'right':  return Math.max(amount, this.left + 1);
         case 'top':    return Math.min(amount, this.bottom - 1);
         case 'bottom': return Math.max(amount, this.top + 1);
       }
-    },
+    }
     */
 
-    clone: function() {
+    clone() {
       return new CSSBox(
         this.cssLeft.clone(),
         this.cssTop.clone(),
@@ -3665,169 +3694,162 @@
 
   /*-------------------------] CSSRuleMatcher [--------------------------*/
 
-  function CSSRuleMatcher(el) {
-    this.computedStyles = window.getComputedStyle(el);
-    this.matchedRules = this.getMatchedRules(el);
-  }
+  class CSSRuleMatcher {
 
-  CSSRuleMatcher.prototype.getMatchedRules = function (el) {
-    // Note: This API is deprecated and may be removed.
-    try {
-      return window.getMatchedCSSRules(el);
-    } catch (e) {
-      return null;
+    constructor(el) {
+      this.computedStyles = window.getComputedStyle(el);
+      this.matchedRules = this.getMatchedRules(el);
     }
-  };
 
-  CSSRuleMatcher.prototype.getPosition = function(prop, el) {
-    var val = this.getCSSValue(prop.toLowerCase(), el);
-    return val;
+    getMatchedRules(el) {
+      // Note: This API is deprecated and may be removed.
+      try {
+        return window.getMatchedCSSRules(el);
+      } catch (e) {
+        return null;
+      }
+    }
 
-    /*
-     * TODO: check this is necessary?
-    if (!val.isAuto()) {
-      // If the element is already explictly positioned, then
-      // trust those values first as they are the ones that will
-      // be directly manipulated.
+    getPosition(prop, el) {
+      var val = this.getCSSValue(prop.toLowerCase(), el);
       return val;
-    }
 
-    var px = this.el['offset' + prop] -
-             CSSValue.parseValue(style['margin' + prop]) -
-             CSSValue.parseValue(style['padding' + prop]) -
-             CSSValue.parseValue(style['border' + prop + 'Width']);
-
-    return new CSSValue(px);
-    */
-  }
-
-  CSSRuleMatcher.prototype.getCSSValue = function(prop, el) {
-    // Normal percentages are relative to their parent nodes.
-    if (el) {
-      var parent = el.parentNode, percentComponent;
-      switch (prop) {
-        case 'left':   percentComponent = 'width';  break;
-        case 'top':    percentComponent = 'height'; break;
-        case 'width':  percentComponent = 'width';  break;
-        case 'height': percentComponent = 'height'; break;
+      /*
+       * TODO: check this is necessary?
+      if (!val.isAuto()) {
+        // If the element is already explictly positioned, then
+        // trust those values first as they are the ones that will
+        // be directly manipulated.
+        return val;
       }
-      if (!percentComponent) {
-        // TODO: make sure nothing slips by
-        throw new Error('FUCK');
+
+      var px = this.el['offset' + prop] -
+               CSSValue.parseValue(style['margin' + prop]) -
+               CSSValue.parseValue(style['padding' + prop]) -
+               CSSValue.parseValue(style['border' + prop + 'Width']);
+
+      return new CSSValue(px);
+      */
+    }
+
+    getCSSValue(prop, el) {
+      return CSSValue.parse(this.getProperty(prop), prop, el.parentNode);
+
+      /* TODO: handle these
+      if (str === 'auto' || str === '') {
+        // TODO: test "auto"
+        return new CSSValue(null);
+      } else if (str === 'center') {
+        // TODO: other values??
+        return new CSSValue(50, '%', percentTarget, percentComponent);
       }
-      return CSSValue.parse(this.getProperty(prop), el.parentNode, percentComponent);
+      */
+
+      // Normal percentages are relative to their parent nodes.
+      /*
+      var str = this.getProperty(prop);
+      var val = CSSValue.parseValue(str);
+      var unit = CSSValue.parseUnit(str);
+      console.info('umm', str, val, prop);
+      */
+
     }
 
-    return CSSValue.parse(this.getProperty(prop));
-  };
-
-  CSSRuleMatcher.prototype.getTransform = function(el) {
-    var str = this.getProperty('transform');
-    if (!str || str === 'none') {
-      return new CSSCompositeTransform();
-    } else if (str.match(/matrix/)) {
-      return CSSMatrixTransform.parse(str);
-    } else {
-      return CSSCompositeTransform.parse(str, el);
-    }
-  };
-
-  CSSRuleMatcher.prototype.getBackgroundImage = function() {
-    // Must use computed styles here,
-    // otherwise the url may not include the host.
-    return CSSUrl.parse(this.computedStyles['backgroundImage']);
-  };
-
-  CSSRuleMatcher.prototype.getBackgroundPosition = function(el) {
-    var str = this.getProperty('backgroundPosition'), positions, xy, x, y;
-
-    if (str === 'initial') {
-      return new CSSPoint();
+    getZIndex() {
+      return CSSValue.parseZIndex(this.getProperty('zIndex'));
     }
 
-    positions = str.split(',');
-
-    if (positions.length > 1) {
-      throwError('Only one background image allowed per element');
+    getTransform(el) {
+      var str = this.getProperty('transform');
+      if (!str || str === 'none') {
+        return new CSSCompositeTransform();
+      } else if (str.match(/matrix/)) {
+        return CSSMatrixTransform.parse(str);
+      } else {
+        return CSSCompositeTransform.parse(str, el);
+      }
     }
 
-    xy = positions[0].split(' ');
+    getBackgroundImage(el) {
+      // Must use computed styles here,
+      // otherwise the url may not include the host.
+      var backgroundImage = this.computedStyles['backgroundImage'];
 
-    x = CSSValue.parse(xy[0], el, 'width');
-    y = CSSValue.parse(xy[1], el, 'height');
+      var backgroundPosition = this.getProperty('backgroundPosition');
 
-    // Background percentages are relative to the element itself.
-    // TODO: this won't work with percentages unless we have the
-    // size of the element AND the image to work with... this is
-    // getting silly, so let's move the work that CSSValue is
-    // doing into somewhere else and have CSSValue call out to
-    // it when it needs it instead.
-    return new CSSPoint(x, y);
-  };
+      return BackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
+    }
+
+    getBackgroundPosition(el) {
+    }
 
 
-  CSSRuleMatcher.prototype.getProperty = function(prop) {
-    var str;
+    getProperty(prop) {
+      var str;
 
-    // Attempt to get value from matched rules.
-    if (this.matchedRules) {
-      for (var rules = this.matchedRules, i = rules.length - 1, rule; rule = rules[i]; i--) {
-        str = rule.style[prop];
-        if (str) {
-          break;
+      // Attempt to get value from matched rules.
+      if (this.matchedRules) {
+        for (var rules = this.matchedRules, i = rules.length - 1, rule; rule = rules[i]; i--) {
+          str = rule.style[prop];
+          if (str) {
+            break;
+          }
         }
       }
+
+      // Fall back to computed values.
+      if (!str) {
+        str = this.computedStyles[prop];
+      }
+
+      return str;
     }
 
-    // Fall back to computed values.
-    if (!str) {
-      str = this.computedStyles[prop];
-    }
-
-    return str;
-  };
+  }
 
   /*-------------------------] CSSCompositeTransform [--------------------------*/
 
-  function CSSCompositeTransform (functions) {
-    this.functions = functions || [];
-  }
+  class CSSCompositeTransform {
 
-  CSSCompositeTransform.parse = function (str, el) {
-    var functions = str.split(' ').map(function(f) {
-      return CSSCompositeTransformFunction.parse(f, el);
-    });
-    return new CSSCompositeTransform(functions);
-  };
+    constructor(functions) {
+      this.functions = functions || [];
+    }
 
-  CSSCompositeTransform.prototype = {
+    static parse(str, el) {
+      var functions = str.split(' ').map(function(f) {
+        return CSSCompositeTransformFunction.parse(f, el);
+      });
+      return new CSSCompositeTransform(functions);
+    }
 
-    // TODO: this seems better as getRotation()
-
-    get rotation () {
+    getRotation() {
       var func = this.getRotationFunction();
-      return func ? func.values[0] : new CSSValue(null);
-    },
+      return func ? func.values[0].deg : 0;
+    }
 
-    set rotation (deg) {
+    setRotation(deg) {
       var func = this.getRotationFunction();
       if (func) {
         func.values[0].deg = deg;
       } else {
-        var values = [new CSSValue(deg, 'deg')];
+        var values = [new CSSDegreeValue(deg)];
         this.functions.push(new CSSCompositeTransformFunction('rotate', values));
       }
-    },
+    }
 
-    get translation () {
+    addRotation(amt) {
+      this.setRotation(this.getRotation() + amt);
+    }
+
+    getTranslation () {
       var func = this.getTranslationFunction();
       if (func) {
         return new Point(func.values[0].px, func.values[1].px);
       }
       return new Point(0, 0);
-    },
+    }
 
-    set translation (p) {
+    setTranslation (p) {
       var func = this.getTranslationFunction();
       if (func) {
         func.values[0].px = p.x;
@@ -3835,29 +3857,38 @@
       } else {
         // Translation respects subpixel values, so override precision here.
         // TODO: standardize precision for translation and make sure it works when one exists already
-        var values = [new CSSValue(p.x, 'px', 2), new CSSValue(p.y, 'px', 2)];
+        var values = [new CSSPixelValue(p.x), new CSSPixelValue(p.y)];
         // Ensure that translate comes first, otherwise anchors will not work.
         this.functions.unshift(new CSSCompositeTransformFunction('translate', values));
       }
-    },
+    }
 
-    getRotationFunction: function() {
+    getRotationFunction() {
       return this.functions.find(function(f) {
         return f.name === CSSCompositeTransformFunction.ROTATE;
       });
-    },
+    }
 
-    getTranslationFunction: function() {
+    getTranslationFunction() {
       return this.functions.find(function(f) {
         return f.name === CSSCompositeTransformFunction.TRANSLATE;
       });
-    },
+    }
 
-    toString: function () {
+    isNull() {
+      return this.functions.length === 0;
+    }
+
+    toString() {
       return this.functions.join(' ');
-    },
+    }
 
-    clone: function () {
+    getRotationString() {
+      var func = this.getRotationFunction();
+      return func ? func.values[0].toString() : '';
+    }
+
+    clone() {
       var functions = this.functions.map(function(f) {
         if (f.canMutate()) {
           return f.clone();
@@ -3867,8 +3898,7 @@
       return new CSSCompositeTransform(functions);
     }
 
-  };
-
+  }
   /*-------------------------] CSSCompositeTransformFunction [--------------------------*/
 
     /*
@@ -3880,263 +3910,448 @@
         val = Point.radToDeg(val);
       } else if (unit === 'turn') {
         val *= 360;
-      };
+      }
       return val;
     }
     return 0;
     */
 
-  function CSSCompositeTransformFunction (name, values) {
-    this.name = name;
-    this.values = values;
-  }
+  class CSSCompositeTransformFunction {
 
-  // transform: matrix(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
-  // transform: translate(12px, 50%);
-  // transform: translateX(2em);
-  // transform: translateY(3in);
-  // transform: scale(2, 0.5);
-  // transform: scaleX(2);
-  // transform: scaleY(0.5);
-  // transform: rotate(0.5turn);
-  // transform: skew(30deg, 20deg);
-  // transform: skewX(30deg);
-  // transform: skewY(1.07rad);
+    constructor(name, values) {
+      this.name = name;
+      this.values = values;
+    }
+
+    // transform: matrix(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+    // transform: translate(12px, 50%);
+    // transform: translateX(2em);
+    // transform: translateY(3in);
+    // transform: scale(2, 0.5);
+    // transform: scaleX(2);
+    // transform: scaleY(0.5);
+    // transform: rotate(0.5turn);
+    // transform: skew(30deg, 20deg);
+    // transform: skewX(30deg);
+    // transform: skewY(1.07rad);
+
+    static parse(str, el) {
+      var match, name, values;
+
+      // TODO: needs toLowerCase??
+      match = str.match(CSSCompositeTransformFunction.COMPOSITE_FUNCTION_REG);
+
+      if (!match) {
+        throwError('Value not allowed: "'+ str +'". Only 2d transforms are supported.');
+      }
+
+      name   = match[1];
+      // TODO: needs space after comma?
+      values = match[2].split(',').map(function(s) {
+        // Percentages in translate functions are relative to the element itself.
+        var val = CSSValue.parse(s, name, el);
+        if (val.unit === '%') {
+          // Won't support percentages here as they would have to take scale
+          // operations into account as well, which is too complex to handle.
+          throwError('Percent values are not allowed in translate operarations.');
+        }
+        return val;
+      });
+
+      return new CSSCompositeTransformFunction(name, values);
+    }
+
+    toString() {
+      return this.name + '(' + this.values.join(',') + ')';
+    }
+
+    canMutate() {
+      return this.name === 'rotate' ||
+             this.name === 'translate' ||
+             this.name === 'translateX' ||
+             this.name === 'translateY';
+    }
+
+    clone() {
+      var values = this.values.map(function(v) {
+        return v.clone();
+      });
+      return new CSSCompositeTransformFunction(this.name, values);
+    }
+
+  }
 
   CSSCompositeTransformFunction.ROTATE = 'rotate';
   CSSCompositeTransformFunction.TRANSLATE = 'translate';
   CSSCompositeTransformFunction.COMPOSITE_FUNCTION_REG = /^(rotate|(?:translate|scale|skew)[XY]?)\((.+)\)$/;
 
-  CSSCompositeTransformFunction.parse = function (str, el) {
-    var match, name, values;
-
-    // TODO: needs toLowerCase??
-    match = str.match(CSSCompositeTransformFunction.COMPOSITE_FUNCTION_REG);
-
-    if (!match) {
-      throwError('Value not allowed: "'+ str +'". Only 2d transforms are supported.');
-    }
-
-    name   = match[1];
-    // TODO: needs space after comma?
-    values = match[2].split(',').map(function(s) {
-      // Percentages in translate functions are relative to the element itself.
-      var val = CSSValue.parse(s, el);
-      if (val.unit === '%') {
-        // Won't support percentages here as they would have to take scale
-        // operations into account as well, which is too complex to handle.
-        throwError('Percent values are not allowed in translate operarations.');
-      }
-      return val;
-    });
-
-    return new CSSCompositeTransformFunction(name, values);
-  };
-
-  CSSCompositeTransformFunction.prototype.toString = function () {
-    return this.name + '(' + this.values.join(',') + ')';
-  };
-
-  CSSCompositeTransformFunction.prototype.canMutate = function () {
-    return this.name === 'rotate' ||
-           this.name === 'translate' ||
-           this.name === 'translateX' ||
-           this.name === 'translateY';
-  };
-
-  CSSCompositeTransformFunction.prototype.clone = function () {
-    var values = this.values.map(function(v) {
-      return v.clone();
-    });
-    return new CSSCompositeTransformFunction(this.name, values);
-  };
 
   /*-------------------------] CSSMatrixTransform [--------------------------*/
 
-  function CSSMatrixTransform () {
-  }
+  class CSSMatrixTransform {
 
-  CSSMatrixTransform.parse = function() {
-    // TODO: this
-    var match = matrix.match(/[-.\d]+/g);
-    if (match) {
-      a = parseFloat(match[0]);
-      b = parseFloat(match[1]);
-      return new Point(a, b).getAngle();
+    static parse() {
+      // TODO: this
+      var match = matrix.match(/[-.\d]+/g);
+      if (match) {
+        a = parseFloat(match[0]);
+        b = parseFloat(match[1]);
+        return new Point(a, b).getAngle();
+      }
+      return 0;
     }
-    return 0;
-  };
 
-  CSSMatrixTransform.prototype.clone = function() {
-    // TODO: this
-  };
+    clone() {
+      // TODO: this
+    }
 
-  /*-------------------------] CSSUrl [--------------------------*/
-
-  function CSSUrl (url) {
-    this.url = url;
   }
-
-  CSSUrl.MATCH_REG = /url\([\u0027\u0022]?(.+?)[\u0022\u0027]?\)/i;
-
-  CSSUrl.parse = function(str) {
-    var match = str.match(CSSUrl.MATCH_REG);
-    return new CSSUrl(match ? match[1] : null);
-  };
 
   /*-------------------------] CSSValue [--------------------------*/
 
-  function CSSValue (val, unit, precision, percentTarget, percentComponent) {
-    this.val       = val;
-    this.unit      = unit;
-    this.precision = precision || this.getDefaultPrecisionForUnit();
-    if (percentTarget && percentComponent && unit === '%') {
-      this.percentTarget = percentTarget;
-      this.percentComponent = percentComponent;
-    }
-  }
+  class CSSValue {
 
-  CSSValue.parse = function(str, percentTarget, percentComponent) {
-
-    if (str === 'auto' || str === '') {
-      return new CSSValue(null);
-    } else if (str === 'center') {
-      // TODO: other values??
-      return new CSSValue(50, '%', percentTarget, percentComponent);
+    constructor(val, unit, precision) {
+      this.val       = val;
+      this.unit      = unit;
+      this.precision = precision || 0;
     }
 
-    var val = parseFloat(str) || 0;
-    var unit = str.match(/px|%|deg|rad|v(w|h|min|max)$/)[0];
+    static parse (str, prop, percentTarget) {
 
-    return new CSSValue(val, unit, null, percentTarget, percentComponent);
-  };
+      if (str === 'auto') {
+        return new CSSValue();
+      }
 
+      var val   = parseFloat(str) || 0;
+      var match = str.match(/px|%|deg|rad|turn|v(w|h|min|max)$/);
+      var unit  = match ? match[0] : null;
 
-  CSSValue.prototype = {
+      // START: put this somewhere
+      switch (unit) {
+        case '%':    return CSSPercentValue.fromProperty(prop, val, percentTarget);
+        case 'vw':   return new CSSViewportValue(val, unit);
+        case 'vh':   return new CSSViewportValue(val, unit);
+        case 'vmin': return new CSSViewportValue(val, unit);
+        case 'vmax': return new CSSViewportValue(val, unit);
+        case 'deg':  return new CSSDegreeValue(val);
+        case 'rad':  return new CSSRadianValue(val);
+        case 'turn': return new CSSTurnValue(val);
+        case 'px':   return new CSSPixelValue(val);
+        default:
+          console.info('gotch');
+          throwError('UHOHOHOHHO', val, unit);
+      }
+    }
 
-    get px() {
-      return this.getValue();
-    },
+    // TODO: more unitless props?
+    static parseZIndex (str) {
+      if (str === 'auto') {
+        return new CSSValue();
+      }
+      return new CSSValue(parseInt(str, 10));
+    }
 
-    set px(val) {
-      this.setValue(val);
-    },
+    add(amt) {
+      if (this.isNull()) {
+        this.val = 0;
+      }
+      this.val += amt;
+    }
 
-    get deg() {
-      return this.getValue();
-    },
+    isNull() {
+      return this.val == null;
+    }
 
-    set deg(val) {
-      this.setValue(val);
-    },
+    clone() {
+      return new CSSValue(this.val, this.unit, this.precision);
+    }
 
-    toString: function() {
+    toString() {
       if (this.isNull()) {
         return '';
       }
+      // z-index values do not have a unit
+      if (!this.unit) {
+        return this.val;
+      }
       return round(this.val, this.precision) + this.unit;
-    },
+    }
+  }
 
-    clone: function() {
-      return new CSSValue(this.val, this.unit, this.precision, this.percentTarget, this.percentComponent);
-    },
+  /*-------------------------] CSSPixelValue [--------------------------*/
 
-    isNull: function() {
-      return this.val == null;
-    },
+  class CSSPixelValue extends CSSValue {
 
-    getDefaultPrecisionForUnit: function() {
-      return this.unit === null ||
-             this.unit === 'px' ||
-             this.unit === 'deg' ? 0 : 2;
-    },
+    constructor(val) {
+      super(val, 'px');
+    }
 
-    getValue: function() {
-      // TODO: percent!
-      switch (this.unit) {
-        case 'vw':
-          return this.viewportToPixel(this.val, window.innerWidth);
-        case 'vh':
-          return this.viewportToPixel(this.val, window.innerHeight);
-        case 'vmin':
-          return this.viewportToPixel(this.val, Math.min(window.innerWidth, window.innerHeight));
-        case 'vmax':
-          return this.viewportToPixel(this.val, Math.max(window.innerWidth, window.innerHeight));
-        case '%':
-          return this.percentToPixel(this.val);
-        case 'rad':
-          return Point.radToDeg(this.val);
-      }
+    get px() {
       return this.val;
-    },
+    }
 
-    setValue: function(val) {
-      var val;
-      switch (this.unit) {
-        case 'vw':
-          val = this.pixelToViewport(val, window.innerWidth);
-          break;
-        case 'vh':
-          val = this.pixelToViewport(val, window.innerHeight);
-          break;
-        case 'vmin':
-          val = this.pixelToViewport(val, Math.min(window.innerWidth, window.innerHeight));
-          break;
-        case 'vmax':
-          val = this.pixelToViewport(val, Math.max(window.innerWidth, window.innerHeight));
-          break;
-        case '%':
-          val = this.pixelToPercent(val);
-          break;
-        case 'rad':
-          val = Point.degToRad(val);
-          break;
+    set px(val) {
+      this.val = val;
+    }
+
+    clone() {
+      return new CSSPixelValue(this.val);
+    }
+
+  }
+
+  /*-------------------------] CSSDegreeValue [--------------------------*/
+
+  class CSSDegreeValue extends CSSValue {
+
+    constructor(val) {
+      super(val, 'deg');
+    }
+
+    get deg() {
+      return this.val;
+    }
+
+    set deg(val) {
+      this.val = val;
+    }
+
+    clone() {
+      return new CSSDegreeValue(this.val);
+    }
+
+  }
+
+  /*-------------------------] CSSRadianValue [--------------------------*/
+
+  class CSSRadianValue extends CSSValue {
+
+    constructor(val) {
+      super(val, 'rad', 2);
+    }
+
+    get deg() {
+      return Point.radToDeg(this.val);
+    }
+
+    set deg(val) {
+      this.val = Point.degToRad(val);
+    }
+
+    clone() {
+      return new CSSRadianValue(this.val);
+    }
+
+  }
+
+  /*-------------------------] CSSTurnValue [--------------------------*/
+
+  class CSSTurnValue extends CSSValue {
+
+    constructor(val) {
+      super(val, 'turn', 2);
+    }
+
+    get deg() {
+      return this.val * 360;
+    }
+
+    set deg(val) {
+      this.val = val / 360;
+    }
+
+    clone() {
+      return new CSSTurnValue(this.val);
+    }
+
+  }
+
+  /*-------------------------] CSSPercentValue [--------------------------*/
+
+  class CSSPercentValue extends CSSValue {
+
+    static fromProperty(prop, val, el) {
+      switch (prop) {
+        case 'left':
+        case 'width':
+          return new CSSPercentValue(val, el.parentNode, 'width');
+        case 'top':
+        case 'height':
+          return new CSSPercentValue(val, el.parentNode, 'height');
+        case 'backgroundLeft':
+          return new CSSBackgroundPercentValue(val, el, 'width');
+        case 'backgroundTop':
+          return new CSSBackgroundPercentValue(val, el, 'height');
         default:
-          val = val;
-      }
-      this.val = val;
-    },
-
-    addValue: function(amt) {
-      var precision, mult, val;
-      if (amt === 0) {
-        return;
-      }
-      precision = this.precision;
-      if (precision === 0) {
-        val = this.val + amt;
-      } else {
-        mult = Math.pow(10, -precision);
-        val = round(this.val + amt * mult, precision);
-      }
-      this.val = val;
-    },
-
-    viewportToPixel: function(val, dim) {
-      return val * dim / 100;
-    },
-
-    pixelToViewport: function(px, dim) {
-      return px / dim * 100;
-    },
-
-    percentToPixel: function(pct) {
-      return pct / 100 * this.getPercentTargetComponent();
-    },
-
-    pixelToPercent: function(px) {
-      return px / this.getPercentTargetComponent() * 100;
-    },
-
-    getPercentTargetComponent: function() {
-      if (this.percentComponent === 'width') {
-        return this.percentTarget.clientWidth;
-      } else if (this.percentComponent === 'height') {
-        return this.percentTarget.clientHeight;
+          // TODO: ok to remove?
+          throwError('NOOO');
       }
     }
 
-  };
+    constructor(val, target, mode) {
+      super(val, '%', 2);
+      this.target = target;
+      this.mode   = mode;
+    }
+
+    get px() {
+      return this.val / 100 * this.getTargetValue();
+    }
+
+    set px(px) {
+      this.val = px / this.getTargetValue() * 100;
+    }
+
+    getTargetValue() {
+      return this.mode === 'width' ?
+        this.target.clientWidth :
+        this.target.clientHeight;
+    }
+
+    clone() {
+      return new CSSPercentValue(this.val, this.target, this.mode);
+    }
+
+  }
+
+  /*-------------------------] CSSBackgroundPercentValue [--------------------------*/
+
+  class CSSBackgroundPercentValue extends CSSPercentValue {
+
+    constructor(val, target, mode, img) {
+      super(val, target, mode);
+      this.img = img;
+    }
+
+    setImage(img) {
+      this.img = img;
+    }
+
+    getTargetValue() {
+      return this.mode === 'width' ?
+        this.target.clientWidth - this.img.width :
+        this.target.clientHeight - this.img.height;
+    }
+
+    clone() {
+      return new CSSBackgroundPercentValue(this.val, this.target, this.mode, this.img);
+    }
+
+  }
+
+  /*-------------------------] CSSViewportValue [--------------------------*/
+
+  class CSSViewportValue extends CSSValue {
+
+    constructor(val, unit) {
+      super(val, unit, 2);
+    }
+
+    get px() {
+      return this.val * this.getViewportValue() / 100;
+    }
+
+    set px(px) {
+      this.val = px / this.getViewportValue() * 100;
+    }
+
+    getViewportValue() {
+      switch (this.unit) {
+        case 'vw':   return window.innerWidth;
+        case 'vh':   return window.innerHeight;
+        case 'vmin': return Math.min(window.innerWidth, window.innerHeight);
+        case 'vmax': return Math.max(window.innerWidth, window.innerHeight);
+      }
+    }
+
+    clone() {
+      return new CSSViewportValue(this.val, this.unit);
+    }
+
+  }
+
+  /*-------------------------] CSSBackground [--------------------------*/
+
+  // TODO: MOVE
+  class BackgroundImage {
+
+    static get URL_REG() { return /url\(["']?(.+?)["']?\)/i };
+
+    static fromStyles(backgroundImage, backgroundPosition, el) {
+      var cssLeft, cssTop, positions, components, urlMatch, img;
+
+      urlMatch = backgroundImage.match(BackgroundImage.URL_REG);
+      if (urlMatch) {
+        img = new Image();
+        img.src = urlMatch[1];
+      }
+
+      if (backgroundPosition === 'initial') {
+        cssLeft = new CSSValue();
+        cssTop  = new CSSValue();
+      }
+
+      positions = backgroundPosition.split(',');
+
+      if (positions.length > 1) {
+        throwError('Only one background image allowed per element');
+      }
+
+      components = backgroundPosition.split(' ');
+
+      cssLeft = this.getPositionComponent(components[0], 'backgroundLeft', el, img);
+      cssTop  = this.getPositionComponent(components[1], 'backgroundTop', el, img);
+
+      return new BackgroundImage(img, cssLeft, cssTop);
+      //x = CSSValue.parse(xy[0], el, 'width');
+      //y = CSSValue.parse(xy[1], el, 'height');
+
+      // Background percentages are relative to the element itself.
+      // TODO: this won't work with percentages unless we have the
+      // size of the element AND the image to work with... this is
+      // getting silly, so let's move the work that CSSValue is
+      // doing into somewhere else and have CSSValue call out to
+      // it when it needs it instead.
+      //return new CSSPoint(x, y);
+    }
+
+    static getPositionComponent(str, prop, el, img) {
+      var val = CSSValue.parse(str, prop, el);
+      if (val instanceof CSSBackgroundPercentValue) {
+        val.setImage(img);
+      }
+      return val;
+    }
+
+    constructor(img, cssLeft, cssTop) {
+      this.img     = img;
+      this.cssLeft = cssLeft;
+      this.cssTop  = cssTop;
+    }
+
+    getPosition() {
+      return new Point(this.cssLeft.px, this.cssTop.px);
+    }
+
+    setPosition(p) {
+      this.cssLeft.px = p.x;
+      this.cssTop.px  = p.y;
+    }
+
+    getPositionString() {
+      return [this.cssLeft, this.cssTop].join(' ');
+    }
+
+    isNull() {
+      return !this.img;
+    }
+
+    clone() {
+      return new BackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone());
+    }
+
+  }
 
   /*-------------------------] Init [--------------------------*/
 
@@ -4148,12 +4363,11 @@
   var settings         = new Settings();
   var statusBar        = new StatusBar();
   var dragSelection    = new DragSelection();
-  var nudgeManager     = new NudgeManager();
   var elementManager   = new PositionableElementManager();
-  var eventManager     = new EventManager();
+  var nudgeManager     = new NudgeManager();
+  var keyEventManager  = new KeyEventManager();
   var copyAnimation    = new CopyAnimation();
   var loadingAnimation = new LoadingAnimation();
-
 
   elementManager.startBuild();
   window.currentElementManager = elementManager;
