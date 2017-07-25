@@ -29,7 +29,6 @@
 
 // TODO: not sure if I'm liking the accessors... they're too mysterious
 
-
 (function() {
 
   var EXTENSION_CLASS_PREFIX = 'positionable-extension-';
@@ -1531,7 +1530,8 @@
         case 'bottom': offset = 2; break;
         case 'left':   offset = 3; break;
       }
-      return [this.nw, this.ne, this.se, this.sw][(this.transform.getRotation() / 90 | 0) + offset];
+      // TODO: could this be nicer?
+      return [this.handles.nw, this.handles.ne, this.handles.se, this.handles.sw][(this.transform.getRotation() / 90 | 0) + offset];
     }
 
     getCenter() {
