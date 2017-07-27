@@ -26,7 +26,12 @@
 // - test background-image: none
 // - resize while flipping between sizing modes (jumps?)
 // - position drag then hit ctrl to background drag (jumps?)
+// - make sure static elements are changed to absolute
 // - test command key on windows
+// - test element comes to foreground when focused
+// - test undefined top/left/width/height values
+// - test element gains focus on all handle drags
+// - test dragging does not follow links
 
 // TODO: not sure if I'm liking the accessors... they're too mysterious
 
@@ -290,14 +295,8 @@
 
     setupHandlers() {
 
-      this.delegateEventToElementManager('mouseDown');
-      this.delegateEventToElementManager('mouseMove');
-      this.delegateEventToElementManager('mouseUp');
-      this.delegateEventToElementManager('scroll', window);
-      this.delegateEventToElementManager('copy', window);
-
-      this.setupHandler('keydown', this.handleKeyDown);
-      this.setupHandler('keyup', this.handleKeyUp);
+      this.setupHandler('keydown', this.onKeyDown);
+      this.setupHandler('keyup', this.onKeyUp);
 
       this.setupKey('b');
       this.setupKey('m');
@@ -326,11 +325,14 @@
       target.addEventListener(name, handler.bind(this));
     }
 
+    /*
     delegateEventToElementManager(name, target) {
-      this.setupHandler(name.toLowerCase(), function(evt) {
+      var evtName = name.slice(2).toLowerCase();
+      this.setupHandler(evtName, function(evt) {
         elementManager[name](evt);
       }, target);
     }
+    */
 
     setupKey(name, allowsCommand) {
       var code = KeyEventManager[name.toUpperCase()];
@@ -340,11 +342,11 @@
       }
     }
 
-    handleKeyDown(evt) {
+    onKeyDown(evt) {
       this.checkKeyEvent('KeyDown', evt);
     }
 
-    handleKeyUp(evt) {
+    onKeyUp(evt) {
       this.checkKeyEvent('KeyUp', evt);
     }
 
@@ -530,6 +532,7 @@
       function finished() {
         // TODO: change to transitionend?
         el.removeEventListener('webkitTransitionEnd', finished);
+        // TODO: not use self?
         fn.call(self);
       }
       el.addEventListener('webkitTransitionEnd', finished);
@@ -588,63 +591,51 @@
     constructor(el, tag, className) {
       super(el, tag, className);
       this.setupDragging();
+      this.suppressLinkClicks();
     }
 
-    // TODO: Object.create or extend?
-
-    //DraggableElement.prototype = Object.create(Element.prototype);
-    /*
-    DraggableElement.prototype.hide               = Element.prototype.hide;
-    DraggableElement.prototype.show               = Element.prototype.show;
-    DraggableElement.prototype.remove             = Element.prototype.remove;
-    DraggableElement.prototype.addClass           = Element.prototype.addClass;
-    DraggableElement.prototype.removeClass        = Element.prototype.removeClass;
-    DraggableElement.prototype.resetScroll        = Element.prototype.resetScroll;
-    DraggableElement.prototype.addEventListener   = Element.prototype.addEventListener;
-    DraggableElement.prototype.removeAllListeners = Element.prototype.removeAllListeners;
-    */
+    // --- Setup
 
     setupDragging() {
-      this.addEventListener('click', this.click.bind(this));
-      this.addEventListener('mousedown', this.mouseDown.bind(this));
+      this.addEventListener('mousedown', this.onMouseDown.bind(this));
 
-      // These two events are actually on the document,
-      // so being called in manually.
-      this.mouseUp   = this.mouseUp.bind(this);
-      this.mouseMove = this.mouseMove.bind(this);
+      // These two events are actually on the document, so bind manually.
+      this.onMouseMove = this.onMouseMove.bind(this);
+      this.onMouseUp   = this.onMouseUp.bind(this);
+      this.onScroll    = this.onScroll.bind(this);
+    }
+
+    suppressLinkClicks() {
+      if (this.el.href) {
+        this.addEventListener('click', function(evt) {
+          evt.preventDefault();
+        });
+      }
     }
 
     // --- Events
 
-    click(evt) {
-      if (evt.target.href) {
-        evt.preventDefault();
-        evt.stopPropagation();
-      }
-    }
-
-    mouseDown(evt) {
-      if (evt.button !== 0) return;
-      if (this.draggingStarted) {
-        // There are certain areas (over the dev tools) that do not
-        // trigger mouseup events so if the element is still in the
-        // middle of draggin when another mousedown is detected, then
-        // call mouseUp, and then call the whole thing off.
-        this.mouseUp(evt);
+    onMouseDown(evt) {
+      // Only allow left mouse button.
+      if (evt.button !== 0) {
         return;
       }
-      this.dragStartX = evt.clientX + window.scrollX;
-      this.dragStartY = evt.clientY + window.scrollY;
+      //this.dragOrigin = new Point(this.getEventX(evt), this.getEventY(evt));
+      this.dragOrigin = DragEvent.getEventCoords(evt);
+      // TODO: is this necessary now?
       elementManager.draggingElement = this;
       this.draggingStarted = false;
       this.resetTarget = null;
-      evt.preventDefault();
       evt.stopPropagation();
-      this.currentMouseX = evt.clientX;
-      this.currentMouseY = evt.clientY;
+      //this.currentMouseX = evt.clientX;
+      //this.currentMouseY = evt.clientY;
+      document.documentElement.addEventListener('mousemove', this.onMouseMove);
+      document.documentElement.addEventListener('mouseup', this.onMouseUp);
+      document.addEventListener('scroll', this.onScroll);
     }
 
-    mouseMove(evt) {
+    onMouseMove(evt) {
+      // TODO: better way to handle this?
       if (this.resetTarget) {
         // Setting the reset target flags this element for a
         // reset. In practice this means that a canceling key
@@ -655,46 +646,105 @@
         // so resetTarget so that it can be picked up and used later
         // if needed.
         evt.resetTarget = this.resetTarget;
-        this.mouseUp(evt);
-        this.mouseDown(evt);
+        this.onMouseUp(evt);
+        this.onMouseDown(evt);
       }
-      var x = evt.clientX + window.scrollX;
-      var y = evt.clientY + window.scrollY;
-      evt.dragOffset = new Point(x - this.dragStartX, y - this.dragStartY);
+
+      var dragEvent = new DragEvent(evt, this.dragOrigin);
+
+      //var x = this.getEventX(evt);
+      //var y = this.getEventY(evt);
+      //evt.dragOffset = new Point(x - this.dragOrigin.x, y - this.dragOrigin.y);
       if (!this.draggingStarted) {
-        this.fireEvent('dragStart', evt);
+        this.onDragStart(dragEvent);
+        //this.fireEvent('onDragStart', evt);
         this.draggingStarted = true;
       }
-      this.fireEvent('drag', evt);
+      this.onDragMove(dragEvent);
+      //this.fireEvent('onDragMove', evt);
       this.currentMouseX = evt.clientX;
       this.currentMouseY = evt.clientY;
     }
 
-    mouseUp(evt) {
+    onMouseUp(evt) {
       if (!this.draggingStarted) {
-        this.fireEvent('click', evt);
+        this.onClick(evt);
+        //this.fireEvent('onClick', evt);
       } else {
-        this.fireEvent('dragStop', evt);
+        this.onDragStop(evt);
+        //this.fireEvent('onDragStop', evt);
       }
       this.draggingStarted = false;
       elementManager.draggingElement = null;
+      document.documentElement.removeEventListener('mousemove', this.onMouseMove);
+      document.documentElement.removeEventListener('mouseup', this.onMouseUp);
+      document.removeEventListener('scroll', this.onScroll);
     }
 
-    scroll() {
-      var evt = new Event('mousemove');
-      evt.clientX = this.currentMouseX;
-      evt.clientY = this.currentMouseY;
-      this.mouseMove(evt);
+    onScroll() {
+      console.info('FORCING MOVE');
+      this.onMouseMove({
+        clientX: this.currentMouseX,
+        clientY: this.currentMouseY
+      });
     }
 
+    // --- Overrides
+
+    onDragStart() {
+    }
+
+    onDragMove()  {
+    }
+
+    onDragStop()  {
+    }
+
+    onClick() {
+    }
+
+    isConstrained(evt) {
+      return evt.shiftKey;
+    }
+
+    /*
     fireEvent(name, evt) {
       if (elementManager[name]) {
         elementManager[name](evt);
       }
     }
+    */
 
+    // TODO: can this be removed?
     dragReset(evt) {
       this.resetTarget = this.el;
+    }
+
+  }
+
+  /*-------------------------] DragEvent [--------------------------*/
+
+  class DragEvent {
+
+    static getEventX(evt) {
+      return evt.clientX + window.scrollX;
+    }
+
+    static getEventY(evt) {
+      return evt.clientY + window.scrollY;
+    }
+
+    static getEventCoords(evt) {
+      return new Point(DragEvent.getEventX(evt), DragEvent.getEventY(evt));
+    }
+
+    constructor(evt, origin) {
+      this.evt = evt;
+      this.origin = origin;
+      this.absX = DragEvent.getEventX(evt);
+      this.absY = DragEvent.getEventY(evt);
+      this.x = this.absX - origin.x;
+      this.y = this.absY - origin.y;
     }
 
   }
@@ -709,7 +759,7 @@
       this.target = target;
     }
 
-    dragStart(evt) {
+    onDragStart() {
       elementManager.setFocused(this.target);
     }
 
@@ -728,10 +778,6 @@
       }.bind(this));
     }
 
-    isConstrained(evt) {
-      return evt.shiftKey;
-    }
-
   }
 
   /*-------------------------] RotationHandle [--------------------------*/
@@ -746,13 +792,13 @@
       this.setHover('rotate');
     }
 
-    dragStart(evt) {
-      Handle.prototype.dragStart.apply(this, arguments);
+    onDragStart(evt) {
+      super.onDragStart(evt);
       this.startAngle = this.getAngleForMouseEvent(evt);
       elementManager.pushState();
     }
 
-    drag(evt) {
+    onDragMove(evt) {
       var r = this.getAngleForMouseEvent(evt) - this.startAngle;
       if (this.isConstrained(evt)) {
         r = round(r / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
@@ -800,20 +846,17 @@
 
     // --- Events
 
-    dragStart(evt) {
-      Handle.prototype.dragStart.apply(this, arguments);
+    onDragStart(evt) {
+      super.onDragStart();
       elementManager.pushState();
     }
 
-    drag(evt) {
-      elementManager.resize(evt.dragOffset, this.name, this.isConstrained(evt), true);
+    onDragMove(evt) {
+      var constrain = this.isConstrained(evt) && this.isCorner();
+      elementManager.resize(evt.dragOffset, this.name, constrain, true);
     }
 
     // --- State
-
-    isConstrained(evt) {
-      return Handle.prototype.isConstrained.call(this, evt) && this.isCorner();
-    }
 
     isCorner() {
       return !!this.xProp && !!this.yProp;
@@ -916,48 +959,29 @@
 
     // --- Constants
 
-    //PositionableElement.BACKGROUND_POSITION_MATCH = /([-\d]+)(px|%).+?([-\d]+)(px|%)/;
-
     static get PEEKING_DIMENSIONS() { return 500 };
-    static get DBLCLICK_TIMEOUT()   { return 500 };
+    static get DOUBLE_CLICK_TIMEOUT()   { return 500 };
 
     constructor(el) {
       super(el);
 
       this.states = [];
-      this.setupElement(el);
       this.setupEvents();
-      // TODO: rename?
-      this.setupAttributes();
-      this.setupParents();
+      this.getPositionedParents();
+      this.getInitialState();
       this.createHandles();
+      this.addClass('positioned-element');
     }
 
     // --- Setup
 
-    setupElement(el) {
-      //this.el = el;
-      this.addClass('positioned-element');
-      //this.setupDragging();
+    setupEvents() {
+      this.addEventListener('dblclick', this.onDoubleClick.bind(this));
+      this.addEventListener('mouseover', this.onMouseOver.bind(this));
+      this.addEventListener('contextmenu', this.onContextMenu.bind(this));
     }
 
-    destroy() {
-      this.unfocus();
-      this.removeClass('positioned-element');
-      this.removeAllListeners();
-      // TODO: why is one remove and the other destroy??
-      this.handles.rotate.remove();
-      this.handles.nw.destroy();
-      this.handles.ne.destroy();
-      this.handles.se.destroy();
-      this.handles.sw.destroy();
-      this.handles.n.destroy();
-      this.handles.e.destroy();
-      this.handles.s.destroy();
-      this.handles.w.destroy();
-    }
-
-    setupParents() {
+    getPositionedParents() {
       var el = this.el, style;
       this.positionedParents = [];
       while(el = el.offsetParent) {
@@ -968,141 +992,75 @@
       }
     }
 
-    ensurePositioned() {
-      var style = this.getComputedStyle();
-      if (style.position === 'static') {
+    getInitialState() {
+      var el = this.el, matcher = new CSSRuleMatcher(el);
+
+      // TODO: make sure this property is exported as well!
+      if (matcher.getProperty('position') === 'static') {
         this.el.style.position = 'absolute';
       }
-    }
-
-    setupEvents() {
-      this.addEventListener('dblclick', this.dblclick.bind(this));
-      this.addEventListener('mouseover', this.mouseover.bind(this));
-      this.addEventListener('contextmenu', this.contextmenu.bind(this));
-    }
-
-    setupAttributes() {
-      //var rules, style;
-      var el, matcher;
-
-      el = this.el;
-      matcher = new CSSRuleMatcher(el);
 
       this.box = new CSSBox(
-        matcher.getPosition('Left', el),
-        matcher.getPosition('Top', el),
+        matcher.getCSSValue('left', el),
+        matcher.getCSSValue('top', el),
         matcher.getCSSValue('width', el),
         matcher.getCSSValue('height', el)
       );
 
       this.zIndex = matcher.getZIndex();
       this.transform = matcher.getTransform(el);
-
       this.backgroundImage = matcher.getBackgroundImage(el);
-      //var image = matcher.getBackgroundImage();
-
-      //if (image.url) {
-        // TODO: move the recognizer into the background class!
-        //this.spriteRecognizer = new SpriteRecognizer(image.url);
-      //}
-
-      //this.backgroundPosition = matcher.getBackgroundPosition(el);
-
-      // Get background recognizer
-      //match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
-      ////this.spriteRecognizer = new SpriteRecognizer(match[1]);
-
-      /*
-        this.getInitialPosition(rules, style, 'Left'),
-        this.getInitialPosition(rules, style, 'Top'),
-        this.getCSSValue(rules, style, 'width', 'px'),
-        this.getCSSValue(rules, style, 'height', 'px'),
-        // not "length"?
-        this.getCSSValue(rules, style, 'zIndex'),
-        this.getTransform(rules, style)
-        */
-
-      // Ensure positioning first to make sure the rules are up to date.
-      // TODO: is this required? can't use one computed style for all here?
-      //this.ensurePositioned();
-
-      // TODO: remove reference to allow garbage collection
-      //style = this.getComputedStyle();
-      //rules = this.getCSSRules();
-
-      //this.getDimensions(rules, style);
-
-      //if (style.backgroundImage !== 'none') {
-        //this.getBackgroundAttributes(style);
-      //}
     }
-
-    getDimensions(rules, style) {
-      //this.position = new CSSPoint(left, top);
-      //this.zIndex = style.zIndex === 'auto' ? null : parseInt(style.zIndex);
-    }
-
-    /*
-    getNumericValue(val) {
-      val = parseFloat(val);
-      return isNaN(val) ? 0 : val;
-    }
-
-    getBackgroundPosition() {
-      var match, style = this.style;
-
-      // Get background recognizer
-      match = style.backgroundImage.match(PositionableElement.BACKGROUND_IMAGE_MATCH);
-      this.spriteRecognizer = new SpriteRecognizer(match[1]);
-
-      // Get background position
-      match = style.backgroundPosition.match(PositionableElement.BACKGROUND_POSITION_MATCH);
-      if (match) {
-        this.backgroundPosition = new Point(parseInt(match[1]), parseInt(match[3]));
-      } else {
-        this.backgroundPosition = new Point(0, 0);
-      }
-    }
-    */
 
     createHandles() {
-      this.handles = {};
-      this.createSizingHandles();
-      this.handles.rotate = new RotationHandle(this);
+      this.handles = {
+        n:         new SizingHandle(this, 'n',   null,   'top'),
+        ne:        new SizingHandle(this, 'ne', 'right', 'top'),
+        e:         new SizingHandle(this, 'e',  'right',  null),
+        se:        new SizingHandle(this, 'se', 'right', 'bottom'),
+        s:         new SizingHandle(this, 's',   null,   'bottom'),
+        sw:        new SizingHandle(this, 'sw', 'left',  'bottom'),
+        w:         new SizingHandle(this, 'w',  'left',   null),
+        nw:        new SizingHandle(this, 'nw', 'left',  'top'),
+        rotation:  new RotationHandle(this)
+      };
     }
-
-    createSizingHandles() {
-      this.handles.nw = new SizingHandle(this, 'nw', 'left',  'top');
-      this.handles.ne = new SizingHandle(this, 'ne', 'right', 'top');
-      this.handles.se = new SizingHandle(this, 'se', 'right', 'bottom');
-      this.handles.sw = new SizingHandle(this, 'sw', 'left',  'bottom');
-      this.handles.n  = new SizingHandle(this, 'n', null,  'top');
-      this.handles.e  = new SizingHandle(this, 'e', 'right', null);
-      this.handles.s  = new SizingHandle(this, 's', null,  'bottom');
-      this.handles.w  = new SizingHandle(this, 'w', 'left', null);
-    }
-
 
     // --- Events
 
-    mouseDown(evt) {
-      DraggableElement.prototype.mouseDown.call(this, evt);
+    onMouseDown(evt) {
+      elementManager.setFocused(this, evt.shiftKey);
+      super.onMouseDown(evt);
     }
 
-    mouseUp(evt) {
+    /*
+    onMouseUp(evt) {
       if (!this.draggingStarted && evt.shiftKey) {
         elementManager.addFocused(this);
       } else if (!this.draggingStarted) {
         elementManager.setFocused(this, true);
       }
-      DraggableElement.prototype.mouseUp.call(this, evt);
+      super.onMouseUp(evt);
     }
+    */
 
-    mouseover(evt) {
+    onMouseOver(evt) {
       statusBar.setState('position');
     }
 
-    dblclick(evt) {
+    onDragStart(dragEvent) {
+      elementManager.pushState();
+    }
+
+    onDragMove(dragEvent) {
+      if (dragEvent.evt.ctrlKey) {
+        elementManager.backgroundDrag(dragEvent);
+      } else {
+        elementManager.positionDrag(dragEvent);
+      }
+    }
+
+    onDoubleClick(evt) {
 
       if (!this.spriteRecognizer) {
         return;
@@ -1123,25 +1081,24 @@
       }
     }
 
-    contextmenu(evt) {
+    onContextMenu(evt) {
       if (evt.ctrlKey) {
-        this.handleCtrlDoubleClick(evt);
         evt.preventDefault();
+        this.handleCtrlDoubleClick(evt);
       }
     }
 
+    // TODO: what is this?
     handleCtrlDoubleClick(evt) {
-      if (this.dblClickTimer) {
-        this.dblclick(evt)
+      if (this.doubleClickTimer) {
+        this.onDoubleClick(evt)
       }
-      this.dblClickTimer = setTimeout(function() {
-        this.dblClickTimer = null;
-      }.bind(this), PositionableElement.DBLCLICK_TIMEOUT);
+      this.doubleClickTimer = setTimeout(function() {
+        this.doubleClickTimer = null;
+      }.bind(this), PositionableElement.DOUBLE_CLICK_TIMEOUT);
     }
 
-    isBackgroundDrag(evt) {
-      return evt.ctrlKey;
-    }
+    // --- Focusing
 
     focus() {
       this.addClass('positioned-element-focused');
@@ -1156,28 +1113,6 @@
         el.removeClass('positioned-parent-focused');
       });
     }
-
-
-
-    // --- Dragging
-
-    dragStart(evt) {
-      elementManager.setFocused(this);
-      elementManager.pushState();
-    }
-
-    drag(evt) {
-      if (this.isBackgroundDrag(evt)) {
-        elementManager.backgroundDrag(evt);
-      } else {
-        elementManager.positionDrag(evt);
-      }
-    }
-
-    isConstrained(evt) {
-      return evt.shiftKey;
-    }
-
 
     // --- Resizing
 
@@ -1282,7 +1217,7 @@
 
     // --- Position
 
-    backgroundDrag(evt) {
+    backgroundDrag(dragEvent) {
       var lastPosition, rotation, pos;
 
       lastPosition = this.getLastState().backgroundImage.getPosition();
@@ -1294,7 +1229,7 @@
       }
       */
 
-      pos = this.getDraggedPosition(evt, lastPosition);
+      pos = this.getDraggedPosition(dragEvent, lastPosition);
 
       /*
       if (rotation) {
@@ -1305,23 +1240,22 @@
       this.setBackgroundPosition(pos);
     }
 
-    positionDrag(evt) {
-      var pos = this.getDraggedPosition(evt, this.getLastState().box.getPosition());
+    positionDrag(dragEvent) {
+      var pos = this.getDraggedPosition(dragEvent, this.getLastState().box.getPosition());
       this.box.setPosition(pos);
       this.updatePosition();
       statusBar.update();
     }
 
     // TODO: rename?
-    getDraggedPosition(evt, lastPosition) {
-      var drag, pos, absX, absY;
+    getDraggedPosition(dragEvent, lastPosition) {
+      var pos, absX, absY;
 
-      drag = evt.dragOffset;
-      pos  = lastPosition.add(drag);
+      pos  = lastPosition.add(new Point(dragEvent.x, dragEvent.y));
 
-      if (this.isConstrained(evt)) {
-        absX = Math.abs(drag.x);
-        absY = Math.abs(drag.y);
+      if (this.isConstrained(dragEvent.evt)) {
+        absX = Math.abs(dragEvent.x);
+        absY = Math.abs(dragEvent.y);
         if (absX < absY) {
           pos.x = lastPosition.x;
         } else {
@@ -1685,6 +1619,7 @@
       }
     }
 
+    // TODO: fix
     getStyleLines(prop, val1, val2) {
       var isPx, lines = [], str = '';
       if (this.canIgnoreStyle(prop, val1, val2)) {
@@ -1793,6 +1728,24 @@
       return this.style.position !== 'static';
     }
 
+    // --- Teardown
+
+    destroy() {
+      this.unfocus();
+      this.removeClass('positioned-element');
+      this.removeAllListeners();
+      // TODO: why is one remove and the other destroy??
+      this.handles.rotation.remove();
+      this.handles.nw.destroy();
+      this.handles.ne.destroy();
+      this.handles.se.destroy();
+      this.handles.sw.destroy();
+      this.handles.n.destroy();
+      this.handles.e.destroy();
+      this.handles.s.destroy();
+      this.handles.w.destroy();
+    }
+
   }
 
   /*-------------------------] PositionableElementManager [--------------------------*/
@@ -1805,16 +1758,18 @@
 
       this.draggingElement = null;
 
-      this.delegateToDragging('mouseDown', dragSelection);
-      this.delegateToDragging('mouseMove', dragSelection);
-      this.delegateToDragging('mouseUp',   dragSelection);
+      this.delegateToDragging('onMouseDown', dragSelection);
+      this.delegateToDragging('onMouseMove', dragSelection);
+      this.delegateToDragging('onMouseUp',   dragSelection);
 
       // Scrolling
-      this.delegateToDragging('scroll');
+      this.delegateToDragging('onScroll');
 
-      this.delegateToDragging('drag');
-      this.delegateToDragging('dragStart');
-      this.delegateToDragging('dragStop');
+      // Dragging
+      this.delegateToDragging('onDragStart');
+      this.delegateToDragging('onDragMove');
+      this.delegateToDragging('onDragStop');
+
       this.delegateToDragging('dragReset');
 
       // Peeking
@@ -1930,6 +1885,7 @@
       }.bind(this);
     }
 
+    // TODO: no need alternate?
     delegateToDragging(name, alternate) {
       // TODO: can this be cleaner?
       this[name] = function() {
@@ -1943,6 +1899,21 @@
 
     // --- Actions
 
+    setFocused(element, add) {
+      if (!add) {
+        this.unfocusAll();
+      }
+      this.addFocused(element);
+    }
+
+    addFocused(element) {
+      if (!this.elementIsFocused(element)) {
+        element.focus();
+        this.focusedElements.push(element);
+      }
+    }
+
+    /*
     setFocused(element, force) {
       var elements;
       if (typeof element === 'function') {
@@ -1964,6 +1935,7 @@
       }
       statusBar.update();
     }
+    */
 
     unfocusAll() {
       this.focusedElements.forEach(function(el) {
@@ -2150,12 +2122,21 @@
 
   /*-------------------------] DragSelection [--------------------------*/
 
-  class DragSelection extends DraggableElement {
+  // TODO: mouse coords are not aligning with box perfectly (looks like scrollbar issues)
+  class DragSelection extends Element {
 
     constructor() {
-      super(document.body, 'div', 'drag-selection');
+      super(document.documentElement, 'div', 'drag-selection');
       this.buildSides();
-      this.box = new Rectangle();
+      this.setupDocument();
+    }
+
+    setupDocument() {
+      this.doc = new DraggableElement(document.documentElement);
+      this.doc.onDragStart = this.onDragStart.bind(this);
+      this.doc.onDragMove  = this.onDragMove.bind(this);
+      this.doc.onDragStop  = this.onDragStop.bind(this);
+      this.doc.onClick     = this.onClick.bind(this);
     }
 
     buildSides() {
@@ -2167,41 +2148,43 @@
 
     // --- Events
 
-    dragStart(evt) {
-      this.from = new Point(evt.clientX, evt.clientY);
-      this.to   = this.from;
+    onDragStart(dragEvent) {
+      this.from = new Point(dragEvent.origin.x, dragEvent.origin.y);
+      this.to   = new Point(dragEvent.absX, dragEvent.absY);
       this.addClass('drag-selection-active');
+      this.doc.addClass('drag-active');
       this.render();
     }
 
-    drag(evt) {
-      this.to = new Point(evt.clientX, evt.clientY);
+    onDragMove(dragEvent) {
+      this.to = new Point(dragEvent.absX, dragEvent.absY);
       this.render();
     }
 
-    mouseUp(evt) {
+    onDragStop() {
       this.removeClass('drag-selection-active');
-      this.getFocused();
-      DraggableElement.prototype.mouseUp.call(this, evt);
+      this.doc.removeClass('drag-active');
+      this.findFocused();
       this.min = this.max = null;
     }
 
-
-    mouseMove(evt) {
-      if (elementManager.draggingElement !== this) return;
-      DraggableElement.prototype.mouseMove.call(this, evt);
+    onClick() {
+      elementManager.unfocusAll();
+      statusBar.update();
     }
 
     // --- Actions
 
-    getFocused() {
-      elementManager.setFocused(function(el) {
-        return this.contains(el.getAbsoluteCenter());
-      }.bind(this));
+    findFocused() {
+      elementManager.elements.forEach(function(el) {
+        if (this.contains(el.getAbsoluteCenter())) {
+          elementManager.addFocused(el);
+        }
+      }, this);
+      statusBar.update();
     }
 
     // --- Calculation
-
 
     calculateBox() {
       this.min = new Point(Math.min(this.from.x, this.to.x) + window.scrollX, Math.min(this.from.y, this.to.y) + window.scrollY);
@@ -2212,7 +2195,10 @@
       if (!this.min || !this.max) {
         return false;
       }
-      return point.x >= this.min.x && point.x <= this.max.x && point.y >= this.min.y && point.y <= this.max.y;
+      return point.x >= this.min.x &&
+             point.x <= this.max.x &&
+             point.y >= this.min.y &&
+             point.y <= this.max.y;
     }
 
     // --- Rendering
@@ -2878,8 +2864,11 @@
     }
 
     setElementDetails(el) {
+
       this.detailsLeft.html(el.box.cssLeft);
       this.detailsTop.html(el.box.cssTop);
+      this.detailsWidth.html(el.box.cssWidth);
+      this.detailsHeight.html(el.box.cssHeight);
 
       if (el.zIndex.isNull()) {
         this.detailsZIndex.hide();
@@ -2889,9 +2878,6 @@
         this.detailsZIndex.show(false);
         this.detailsComma2.show(false);
       }
-
-      this.detailsWidth.html(el.box.cssWidth);
-      this.detailsHeight.html(el.box.cssHeight);
 
       //var rotation = el.getRoundedRotation();
       if (el.transform.getRotation()) {
@@ -2939,11 +2925,11 @@
 
     // --- Events
 
-    dragStart(evt) {
+    onDragStart(evt) {
       this.lastPosition = this.position;
     }
 
-    drag(evt) {
+    onDragMove(evt) {
       this.position = new Point(this.lastPosition.x + evt.dragOffset.x, this.lastPosition.y - evt.dragOffset.y);
       this.updatePosition();
     }
@@ -3779,10 +3765,6 @@
       return BackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
     }
 
-    getBackgroundPosition(el) {
-    }
-
-
     getProperty(prop) {
       var str;
 
@@ -4016,11 +3998,11 @@
       this.precision = precision || 0;
     }
 
-    static parse (str, prop, percentTarget) {
+    static parse(str, prop, percentTarget) {
 
       // TODO: test these on different properties!
       if (str === 'auto') {
-        return new CSSValue();
+        return new CSSPixelValue('auto');
       }
 
       var val   = parseFloat(str) || 0;
@@ -4063,18 +4045,29 @@
       return this.val == null;
     }
 
+    isAuto() {
+      return this.val === 'auto';
+    }
+
     clone() {
       return new CSSValue(this.val, this.unit, this.precision);
     }
 
     toString() {
+
+      if (this.isAuto()) {
+        return 'auto';
+      }
+
       if (this.isNull()) {
         return '';
       }
+
       // z-index values do not have a unit
       if (!this.unit) {
         return this.val;
       }
+
       return round(this.val, this.precision) + this.unit;
     }
   }
@@ -4088,7 +4081,7 @@
     }
 
     get px() {
-      return this.val;
+      return this.isAuto() ? 0 : this.val;
     }
 
     set px(val) {

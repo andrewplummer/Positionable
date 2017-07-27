@@ -785,6 +785,10 @@
   display: block;
 }
 
+.positionable-extension-drag-active {
+  user-select: none;
+}
+
 
 /*---------------------------] Loading Animation [-----------------------*/
 
