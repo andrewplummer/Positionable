@@ -1062,6 +1062,16 @@
     if (constrained) {
       handle.applyConstraint(dimensions, lastAspectRatio);
     }
+
+    if (settings.get(Settings.GRID)) {
+      var grid_x = settings.get(Settings.GRID_X);
+      var grid_y = settings.get(Settings.GRID_Y);
+      dimensions.left = Math.round(dimensions.left / grid_x) * grid_x;
+      dimensions.right = Math.round(dimensions.right / grid_x) * grid_x;
+      dimensions.top = Math.round(dimensions.top / grid_y) * grid_y;
+      dimensions.bottom = Math.round(dimensions.bottom / grid_y) * grid_y;
+    }
+
     this.dimensions = dimensions;
 
     if (this.dimensions.rotation) {
@@ -1121,6 +1131,13 @@
       } else {
         offset.y = point.y;
       }
+    }
+
+    if (settings.get(Settings.GRID)) {
+      var grid_x = settings.get(Settings.GRID_X);
+      var grid_y = settings.get(Settings.GRID_Y);
+      offset.x = Math.round(offset.x / grid_x) * grid_x;
+      offset.y = Math.round(offset.y / grid_y) * grid_y;
     }
     return offset;
   };
@@ -2392,6 +2409,10 @@
     this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
     this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
 
+    this.buildCheckboxField(area, Settings.GRID, 'Enable grid');
+    this.buildTextField(area, Settings.GRID_X, 'Horizontal grid size:', 'Number');
+    this.buildTextField(area, Settings.GRID_Y, 'Vertical grid size:', 'Number');
+
     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
     var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Clear All');
     var help  = new Element(header.el, 'span', 'settings-help-link').html('Help');
@@ -2728,6 +2749,9 @@
     this.defaults[Settings.SELECTOR] = Settings.SELECTOR_AUTO;
     this.defaults[Settings.OUTPUT_UNIQUE] = true;
     this.defaults[Settings.DOWNLOAD_FILENAME] = 'styles.css';
+    this.defaults[Settings.GRID]     = false;
+    this.defaults[Settings.GRID_X]   = 10;
+    this.defaults[Settings.GRID_Y]   = 10;
   };
 
   Settings.TABS              = 'tabs';
@@ -2752,6 +2776,10 @@
   Settings.TABS_TWO_SPACES  = 'two';
   Settings.TABS_FOUR_SPACES = 'four';
   Settings.TABS_TAB         = 'tab';
+
+  Settings.GRID = 'grid';
+  Settings.GRID_X = 'grid_x';
+  Settings.GRID_Y = 'grid_y';
 
   Settings.prototype.get = function(name) {
     return localStorage[name] || this.defaults[name] || '';
