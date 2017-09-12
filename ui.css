@@ -1,0 +1,627 @@
+
+/*---------------------------] Resets [-----------------------*/
+
+p {
+  margin: 0;
+}
+
+/*---------------------------] Animations [-----------------------*/
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes opacity-in-out {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/*---------------------------] Components [-----------------------*/
+
+.select-linked-area {
+  display: none;
+}
+
+.select-linked-area--active {
+  display: block;
+}
+
+/*---------------------------] Drag Selection [-----------------------*/
+
+.drag-selection {
+  position: fixed;
+  z-index: 9999996;
+  display: none;
+  opacity: .5;
+  background: rgba(0,0,0,.1);
+  pointer-events: none;
+}
+
+.drag-selection--active {
+  display: block;
+}
+
+.drag-selection-border {
+  position: absolute;
+  background: url('chrome-extension://__MSG_@@extension_id__/images/selection.gif');
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.drag-selection-top {
+  bottom: auto;
+  height: 1px;
+}
+
+.drag-selection-bottom {
+  top: auto;
+  height: 1px;
+}
+
+.drag-selection-left {
+  right: auto;
+  width: 1px;
+}
+
+.drag-selection-right {
+  left: auto;
+  width: 1px;
+}
+
+
+/*---------------------------] Control Panel [-----------------------*/
+
+.control-panel {
+  position: fixed;
+  z-index: 9999997;
+  bottom: 20px;
+  left: 20px;
+  overflow: hidden;
+  color: #333;
+  background-color: rgba(255,255,255,0.9);
+  box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.2), 0px 2px 5px 2px rgba(0,0,0,0.2);
+  border-radius: 10px;
+  font-weight: 400;
+  opacity: 0;
+  transition: height 300ms ease-in-out, width 300ms ease-in-out, opacity 300ms linear;
+  color: #222;
+  font-family: "Open Sans", sans-serif;
+}
+
+.control-panel--active {
+  opacity: 1;
+}
+
+.control-panel-settings-button {
+  position: absolute;
+  z-index: 3;
+  bottom: 5px;
+  left: 5px;
+  color: #000;
+  cursor: pointer;
+  opacity: 0.2;
+  width: 18px;
+  height: 18px;
+}
+
+.control-panel-settings-button:hover {
+  opacity: 0.5;
+}
+
+.control-panel-area {
+  position: absolute;
+  z-index: 1;
+  top: 25px;
+  right: 25px;
+  bottom: 30px;
+  left: 30px;
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+}
+
+.control-panel-area--active {
+  z-index: 2;
+  opacity: 1;
+}
+
+/*---------------------------] Element Area [-----------------------*/
+
+.control-panel--element-active {
+  width: 350px;
+  height: 90px;
+}
+
+/*---------------------------] Default Area [-----------------------*/
+
+.control-panel--default-active {
+  width: 180px;
+  height: 90px;
+}
+
+.default-area-icon {
+  height: 35px;
+  margin: -10px auto 5px auto;
+  display: block;
+}
+
+.default-area-text {
+  font-size: 14px;
+  text-align: center;
+}
+
+
+/*---------------------------] Getting Started Area [-----------------------*/
+
+.control-panel--getting-started-active {
+  width: 590px;
+  height: 370px;
+}
+
+.getting-started-block {
+  position: absolute;
+  width: 247px;
+  height: 115px;
+  padding: 20px 0;
+  text-align: center;
+  font-size: 14px;
+}
+
+.getting-started-block--mouse {
+  top: 0;
+  left: 0;
+}
+
+.getting-started-block--keyboard {
+  top: 0;
+  right: 0;
+}
+
+.getting-started-block--background {
+  bottom: 0;
+  left: 0;
+}
+
+.getting-started-block--output {
+  bottom: 0;
+  right: 0;
+}
+
+.getting-started-image {
+  height: 50px;
+  margin-bottom: 5px;
+}
+
+.getting-started-skip {
+  position: absolute;
+  bottom: -11px;
+  right: 2px;
+  font-size: 11px;
+  color: #999;
+  cursor: pointer;
+}
+
+/*---------------------------] Settings Area [-----------------------*/
+
+.control-panel--settings-active {
+  width: 620px;
+  height: 400px;
+}
+
+.settings-area-header {
+  display: inline-block;
+  font-size: 18px;
+  font-weight: 300;
+  margin: 0 0 1em 0;
+  color: rgba(0,0,0,0.7);
+}
+
+.settings-area-help-link {
+  font-size: 14px;
+  font-weight: 200;
+  color: rgba(20,130,240,0.8);
+  cursor: pointer;
+  border-left: 1px solid rgba(0,0,0,0.1);
+  padding: 2px 12px;
+  margin: 0 0 0 8px;
+}
+
+.settings-area-field {
+  border: none;
+  padding: 4px 0px;
+  white-space: nowrap;
+}
+
+.settings-area-label {
+  display: inline-block;
+  vertical-align: top;
+  text-align: right;
+  margin: 4px 4px 0 0;
+  width: 240px;
+  font-size: 12px;
+  font-weight: bold;
+  color: rgba(0,0,0,0.7);
+}
+
+.settings-area-control {
+  vertical-align: middle;
+  display: inline-block;
+}
+
+.settings-area-input {
+  font-size: 14px;
+}
+
+.settings-area-text-input {
+  padding: 1px 4px;
+}
+
+.settings-area-text-input::-webkit-input-placeholder {
+  color: rgba(0,0,0,0.5);
+}
+
+.settings-area-option {
+  font-size: 12px;
+}
+
+.output-selector-description {
+  margin-top: .5em;
+  font-size: 14px;
+}
+
+.output-selector-example {
+  margin-top: .5em;
+  font-family: Courier, monospace;
+  font-size: 14px;
+  color: rgba(0,0,0,0.6);
+}
+
+.settings-save {
+  position: absolute;
+  right: 0px;
+  bottom: 0px;
+  cursor: pointer;
+}
+
+.settings-reset {
+  position: absolute;
+  right: 50px;
+  bottom: 0px;
+  cursor: pointer;
+}
+
+/*---------------------------] Help Area [-----------------------*/
+
+.control-panel--help-active {
+  width: 650px;
+  height: 475px;
+}
+
+.help-area-block {
+  position: absolute;
+}
+
+.help-area-block--mouse {
+  top: 0;
+  left: 0;
+}
+
+.help-area-block--keyboard {
+  top: 0;
+  right: 0;
+}
+
+.help-area-block--commands {
+  bottom: 10px;
+  left: 0;
+}
+
+.help-area-item {
+  margin: 4px 0;
+}
+
+.help-area-item--lower {
+  margin: 5px 0 9px 0;
+}
+
+.help-area-header {
+  font-size: 16px;
+  margin: 0 0 .5em 0;
+  font-weight: 300;
+}
+
+.help-area-graphic {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 5px;
+  box-sizing: border-box;
+}
+
+.help-area-graphic--solid {
+  border: 1px solid rgba(0,0,0,0.5);
+}
+
+.help-area-graphic--dashed {
+  border: 1px dashed rgba(0,0,0,0.5);
+}
+
+.help-area-key-combo {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+.help-area-text {
+  max-width: 240px;
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.help-area-position-icon {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 23px;
+  height: 23px;
+}
+
+.help-area-resize-icon {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: rgba(0,0,0,.3);
+}
+
+.help-area-resize-icon--w,
+.help-area-resize-icon--nw,
+.help-area-resize-icon--sw {
+  left: 1px;
+}
+
+.help-area-resize-icon--n,
+.help-area-resize-icon--s {
+  width: 14px;
+  left: 8px;
+}
+
+.help-area-resize-icon--e,
+.help-area-resize-icon--ne,
+.help-area-resize-icon--se {
+  right: 1px;
+}
+
+.help-area-resize-icon--n,
+.help-area-resize-icon--nw,
+.help-area-resize-icon--ne {
+  top: 1px;
+}
+
+.help-area-resize-icon--w,
+.help-area-resize-icon--e {
+  height: 14px;
+  top: 8px;
+}
+
+.help-area-resize-icon--s,
+.help-area-resize-icon--sw,
+.help-area-resize-icon--se {
+  bottom: 1px;
+}
+
+.help-area-rotate-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  top: 30px;
+  left: 30px;
+  background-color: rgba(0,0,0,0.3);
+  border-radius: 30px;
+}
+
+.help-area-snap-background-icon {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 1px;
+  left: 2px;
+}
+
+.help-area-snap-pointer-icon {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  top: 15px;
+  left: 15px;
+}
+
+.help-area-drag-box--one {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.help-area-drag-box--two {
+  position: absolute;
+  bottom: 4px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.help-area-drag-pointer-icon {
+  position: absolute;
+  height: 12px;
+  bottom: -11px;
+  right: -9px;
+}
+
+
+.help-area-arrow-key-icon {
+  height: 10px;
+}
+
+
+/*---------------------------] Key Icon [-----------------------*/
+
+.horizontal-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;;
+  height: 1px;
+  background: linear-gradient(0deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
+}
+
+.vertical-line {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;;
+  width: 1px;
+  background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
+}
+
+.key-icon {
+  display: inline-block;
+  text-align: center;
+  border: 1px solid rgba(0,0,0,0.3);
+  border-radius: 4px;
+  box-shadow: inset 0px -1px 1px rgba(0,0,0,0.1), 0px 1px 1px rgba(0,0,0,0.1);
+  background-color: rgba(255,255,255,0.3);
+  width: 20px;
+  height: 20px;
+  line-height: 22px;
+  font-size: 14px;
+  color: rgba(0,0,0,0.8);
+  margin: 2px;
+}
+
+.key-icon--large {
+  width: 25px;
+  height: 25px;
+  line-height: 25px;
+}
+
+/*
+ * TODO: needed?
+.help-area-arrow-key-icon {
+  width: 17px;
+  height: 17px;
+  margin-top: 4px;
+}
+
+.help-area-letter-key-icon {
+  line-height: 29px;
+  text-indent: 6px;
+}
+
+.help-area-inline-key-icon {
+  width: 20px;
+  height: 20px;
+  line-height: 22px;
+  font-size: 14px;
+  margin: 0 3px 2px 0;
+  color: rgba(0,0,0,0.8);
+}
+*/
+
+
+
+
+/*---------------------------] Loading Animation [-----------------------*/
+
+.loading-animation {
+  position: fixed;
+  z-index: 9999999;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.loading-shade {
+  position: fixed;
+  z-index: 9999998;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 300ms linear;
+}
+
+.loading-animation--active .loading-shade {
+  opacity: 1;
+}
+
+.loading-graphic {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  height: 100px;
+  width: 100px;
+  margin: -50px 0 0 -50px;
+  background-color: rgba(0,0,0,0.8);
+  border-radius: 30px;
+  opacity: 0;
+  transform: scale(1.5);
+  transition: transform 300ms ease-in-out, opacity 300ms linear;
+}
+
+.loading-animation--active .loading-graphic {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.loading-spin {
+  width: 100%;
+  height: 100%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 15px;
+  background-color: rgba(255,255,255,0.2);
+  border-radius: 50px;
+  margin: -30px 0 0 -2px;
+  transform-origin: 2.5px 30px;
+}
+
+.loading-bar-1  { transform: rotateZ(0deg); }
+.loading-bar-2  { transform: rotateZ(30deg); }
+.loading-bar-3  { transform: rotateZ(60deg); }
+.loading-bar-4  { transform: rotateZ(90deg); }
+.loading-bar-5  { transform: rotateZ(120deg); }
+.loading-bar-6  { transform: rotateZ(150deg); }
+.loading-bar-7  { transform: rotateZ(180deg); }
+.loading-bar-8  { transform: rotateZ(210deg); }
+.loading-bar-9  { transform: rotateZ(240deg); }
+.loading-bar-10 { transform: rotateZ(270deg); }
+.loading-bar-11 { transform: rotateZ(300deg); }
+.loading-bar-12 { transform: rotateZ(330deg); }
+
+.loading-bar-12 { background-color: rgba(255,255,255,0.8); }
+.loading-bar-11 { background-color: rgba(255,255,255,0.7); }
+.loading-bar-10 { background-color: rgba(255,255,255,0.6); }
+.loading-bar-9  { background-color: rgba(255,255,255,0.5); }
+.loading-bar-8  { background-color: rgba(255,255,255,0.4); }
+.loading-bar-7  { background-color: rgba(255,255,255,0.3); }

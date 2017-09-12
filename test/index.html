@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Positionable Tests</title>
+    <link rel="stylesheet" href="suite/simple-test.css">
+    <link rel="stylesheet" href="styles/elements.css">
+  </head>
+  <body>
+
+    <div id="ui-fixtures" class="test-fixtures"></div>
+    <div id="element-fixtures" class="test-fixtures"></div>
+    <script src="suite/simple-test.js"></script>
+    <script src="../positionable.js"></script>
+    <script>
+    </script>
+    <!-- TODO: clean up helpers -->
+    <script src="helpers/events.js"></script>
+    <script src="helpers/scrolling.js"></script>
+    <script src="helpers/fixtures.js"></script>
+    <script src="helpers/ui.js"></script>
+    <script src="mocks/document-fragment.js"></script>
+    <script src="mocks/window.js"></script>
+    <script src="mocks/local-storage.js"></script>
+    <script src="tests/settings.js"></script>
+    <script src="tests/positionable-element-manager.js"></script>
+    <script src="tests/positionable-element.js"></script>
+    <script src="tests/control-panel.js"></script>
+    <script src="tests/position-handle.js"></script>
+    <script src="tests/rotation-handle.js"></script>
+    <script src="tests/resize-handle.js"></script>
+    <script src="tests/cursor-manager.js"></script>
+    <script src="tests/drag-target.js"></script>
+    <script src="tests/drag-selection.js"></script>
+    <script src="tests/draggable-element.js"></script>
+    <script src="tests/browser-event-target.js"></script>
+    <script src="tests/css-box.js"></script>
+    <script src="tests/css-positioning-property.js"></script>
+    <script>
+
+      ShadowDomInjector.setBasePath('../');
+      ShadowDomInjector.preload('element.html', 'element.css');
+
+      var injector = new ShadowDomInjector(document.getElementById('ui-fixtures'));
+      injector.setTemplate('ui.html');
+      injector.setStylesheet('ui.css');
+      injector.run(function(uiRoot) {
+        window.testRunner.run(uiRoot);
+      });
+
+    </script>
+  </body>
+</html>

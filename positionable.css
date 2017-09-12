@@ -1,4 +1,7 @@
 
+/* TODO: Remove -webkit?? */
+/* TODO: add !important to all inherited properties (font sizes, line height)? */
+
 @-webkit-keyframes spin {
   from { -webkit-transform: rotate(0deg); }
   to   { -webkit-transform: rotate(360deg); }
@@ -23,6 +26,20 @@
 
 .positionable-extension-positioned-parent-focused {
   z-index: 100000;
+}
+
+.positionable-extension-handles-hidden {
+  cursor: default;
+}
+
+.positionable-extension-handles-hidden .positionable-extension-handle {
+  pointer-events: none;
+}
+
+/*---------------------------] Atomic [-----------------------*/
+
+.positionable-extension-text-left {
+  text-align: left;
 }
 
 /*---------------------------] Handles [-----------------------*/
@@ -179,14 +196,10 @@
   border-radius: 18px;
 }
 
-.positionable-extension-resize-handles-hidden .positionable-extension-sizing-handle {
-  display: none;
-}
-
-/*---------------------------] Status Bar [-----------------------*/
+/*---------------------------] Control Panel [-----------------------*/
 
 
-.positionable-extension-status-bar {
+.positionable-extension-control-panel {
   position: fixed;
   z-index: 100001;
   bottom: 20px;
@@ -197,23 +210,22 @@
   box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.2), 0px 2px 5px 2px rgba(0,0,0,0.2);
   border-radius: 10px;
   font-weight: 400;
-  line-height: 1;
   opacity: 0;
   -webkit-transition: height 300ms ease-in-out, width 300ms ease-in-out, opacity 300ms linear;
   color: #222;
 }
 
-.positionable-extension-status-bar,
-.positionable-extension-status-bar h3,
-.positionable-extension-status-bar h4 {
+.positionable-extension-control-panel,
+.positionable-extension-control-panel h3,
+.positionable-extension-control-panel h4 {
   font-family: "Open Sans", sans-serif;
 }
 
-.positionable-extension-status-bar-active {
+.positionable-extension-control-panel--active {
   opacity: 1;
 }
 
-.positionable-extension-area {
+.positionable-extension-control-panel-area {
   position: absolute;
   z-index: 1;
   top: 20px;
@@ -225,289 +237,12 @@
   text-align: left;
 }
 
-.positionable-extension-active-area {
+.positionable-extension-control-panel-area--active {
   z-index: 2;
   opacity: 1;
 }
 
-/*---------------------------] Status Bar Start Area [-----------------------*/
-
-
-.positionable-extension-status-bar-start-active {
-  width: 560px;
-  height: 370px;
-}
-
-.positionable-extension-start-area {
-  width: 500px;
-  height: 285px;
-}
-
-.positionable-extension-start-help {
-  position: relative;
-  float: left;
-  width: 210px;
-  height: 120px;
-  padding: 15px 20px;
-  text-align: center;
-}
-
-.positionable-extension-start-icon {
-  height: 56px;
-  margin-bottom: 10px;
-}
-
-.positionable-extension-start-pointer-icon {
-  position: absolute;
-  top: 47px;
-  left: 46%;
-  -webkit-text-stroke-width: 1px;
-  -webkit-text-stroke-color: rgba(255,255,255,0.8);
-  text-shadow: 2px 2px 1px rgba(0,0,0,0.2);
-  height: 26px
-}
-
-.positionable-extension-start-help-text {
-  font-size: 12px;
-}
-
-.positionable-extension-start-help-text-left {
-  text-align: left;
-}
-
-
-.positionable-extension-start-horizontal-line {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  width: 100%;;
-  height: 1px;
-  background: -webkit-linear-gradient(left, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
-}
-
-.positionable-extension-start-vertical-line {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  height: 100%;;
-  width: 1px;
-  background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
-}
-
-.positionable-extension-start-hide-link {
-  position: absolute;
-  bottom: -40px;
-  right: 0;
-  font-size: 11px;
-  color: rgba(0,0,0,0.5);
-  cursor: pointer;
-}
-
-.positionable-extension-start-hide-link:hover {
-  color: rgba(20,130,240,0.8);
-}
-
-
-/*---------------------------] Status Bar Quick Start Area [-----------------------*/
-
-
-.positionable-extension-status-bar-quickstart-active {
-  width: 150px;
-  height: 80px;
-}
-
-.positionable-extension-quickstart-icon {
-  height: 35px;
-  margin: -10px auto 5px;
-  display: block;
-}
-
-.positionable-extension-quickstart-text {
-  font-size: 14px;
-  text-align: center;
-  margin: 0 -30px 0 -15px;
-}
-
-
-/*---------------------------] Status Bar Help Area [-----------------------*/
-
-
-.positionable-extension-status-bar-help-active {
-  width: 600px;
-  height: 460px;
-}
-
-.positionable-extension-help-block {
-  margin: 0 40px 20px 0;
-}
-
-.positionable-extension-keys-help-block {
-  float: right;
-  margin-right: 0px;
-}
-
-.positionable-extension-help-block-header {
-  font-size: 16px;
-  margin: 0 0 1em 0;
-  font-weight: 300;
-}
-
-.positionable-extension-help {
-  margin-bottom: 5px;
-}
-
-.positionable-extension-help-box {
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 10px;
-  position: relative;
-  width: 30px;
-  height: 30px;
-}
-
-.positionable-extension-key-plus {
-  margin: 0 5px;
-  color: rgba(0,0,0,0.4);
-}
-
-.positionable-extension-command-help-box {
-  width: 80px;
-}
-
-.positionable-extension-help-text {
-  width: 200px;
-  display: inline-block;
-  vertical-align: middle;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.positionable-extension-help-icon {
-  position: absolute;
-  height: 22px;
-  color: rgba(0,0,0,0.5);
-}
-
-.positionable-extension-help-element {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  width: 30px;
-  height: 30px;
-  border: 1px solid rgba(0,0,0,0.5);
-}
-
-.positionable-extension-position-help-icon {
-  display: block;
-  margin: 5px;
-  height: 20px;
-  width: 20px;
-}
-
-.positionable-extension-resize-help-icon {
-  position: absolute;
-  width: 6px;
-  height: 6px;
-  background-color: rgba(0,0,0,.3);
-}
-
-.positionable-extension-resize-w-help-icon,
-.positionable-extension-resize-nw-help-icon,
-.positionable-extension-resize-sw-help-icon {
-  left: 1px;
-}
-
-.positionable-extension-resize-n-help-icon,
-.positionable-extension-resize-s-help-icon {
-  width: 14px;
-  left: 8px;
-}
-
-.positionable-extension-resize-e-help-icon,
-.positionable-extension-resize-ne-help-icon,
-.positionable-extension-resize-se-help-icon {
-  right: 1px;
-}
-
-.positionable-extension-resize-n-help-icon,
-.positionable-extension-resize-nw-help-icon,
-.positionable-extension-resize-ne-help-icon {
-  top: 1px;
-}
-
-.positionable-extension-resize-w-help-icon,
-.positionable-extension-resize-e-help-icon {
-  height: 14px;
-  top: 8px;
-}
-
-.positionable-extension-resize-s-help-icon,
-.positionable-extension-resize-sw-help-icon,
-.positionable-extension-resize-se-help-icon {
-  bottom: 1px;
-}
-
-.positionable-extension-rotate-help {
-  margin-bottom: 13px;
-}
-
-.positionable-extension-rotate-handle {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  top: 30px;
-  left: 30px;
-  background-color: rgba(0,0,0,0.3);
-  border-radius: 30px;
-}
-
-.positionable-extension-snapping-help-icon {
-  width: 16px;
-  height: 16px;
-  top: 1px;
-  left: 2px;
-}
-
-.positionable-extension-snapping-help-pointer-icon {
-  width: 14px;
-  height: 14px;
-  top: 15px;
-  left: 15px;
-}
-
-.positionable-extension-multiple-select-help {
-  border-style: dashed;
-}
-
-.positionable-extension-aligning-box-one {
-  top: 4px;
-  left: 4px;
-  width: 6px;
-  height: 6px;
-  border: 1px solid rgba(0,0,0,0.3);
-}
-
-.positionable-extension-aligning-box-two {
-  bottom: 4px;
-  right: 14px;
-  width: 10px;
-  height: 10px;
-  border: 1px solid rgba(0,0,0,0.3);
-}
-
-.positionable-extension-aligning-pointer-icon {
-  height: 12px;
-  bottom: -11px;
-  right: -9px;
-}
-
-.positionable-extension-arrow-key-icon {
-  width: 17px;
-  height: 17px;
-  margin-top: 4px;
-}
-
-.positionable-extension-key-icon {
+.positionable-extension-control-panel-key-icon {
   display: inline-block;
   width: 25px;
   height: 25px;
@@ -518,14 +253,30 @@
   color: rgba(0,0,0,0.6);
   box-shadow: inset 0px -1px 1px rgba(0,0,0,0.1), 0px 1px 1px rgba(0,0,0,0.1);
   background-color: rgba(255,255,255,0.3);
+
+  /* TODO: these should cancel out above? */
+  width: 20px;
+  height: 20px;
+  line-height: 22px;
+  font-size: 14px;
+  margin: 0 2px 2px 0;
+  color: rgba(0,0,0,0.8);
 }
 
-.positionable-extension-letter-key-icon {
+/*
+ * TODO: needed?
+.positionable-extension-help-area-arrow-key-icon {
+  width: 17px;
+  height: 17px;
+  margin-top: 4px;
+}
+
+.positionable-extension-help-area-letter-key-icon {
   line-height: 29px;
   text-indent: 6px;
 }
 
-.positionable-extension-inline-key-icon {
+.positionable-extension-help-area-inline-key-icon {
   width: 20px;
   height: 20px;
   line-height: 22px;
@@ -533,18 +284,295 @@
   margin: 0 3px 2px 0;
   color: rgba(0,0,0,0.8);
 }
+*/
 
 
 
-/*---------------------------] Status Bar Element Area [-----------------------*/
+
+/*---------------------------] Getting Started Area [-----------------------*/
 
 
-.positionable-extension-status-bar-element-active {
+.positionable-extension-control-panel--getting-started-active {
+  width: 600px;
+  height: 370px;
+}
+
+/* TODO: needed??
+.positionable-extension-getting-started-area {
+  width: 500px;
+  height: 285px;
+}
+*/
+
+.positionable-extension-getting-started-area-help {
+  position: relative;
+  float: left;
+  width: 230px;
+  height: 120px;
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.positionable-extension-getting-started-area-icon {
+  display: inline-block;
+  height: 56px;
+  margin-bottom: 10px;
+}
+
+/* TODO: needed??
+.positionable-extension-getting-started-area-pointer-icon {
+  position: absolute;
+  top: 47px;
+  left: 46%;
+  -webkit-text-stroke-width: 1px;
+  -webkit-text-stroke-color: rgba(255,255,255,0.8);
+  text-shadow: 2px 2px 1px rgba(0,0,0,0.2);
+  height: 26px
+}
+*/
+
+.positionable-extension-getting-started-area-help-text-left {
+  text-align: left;
+}
+
+
+.positionable-extension-getting-started-area-horizontal-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;;
+  height: 1px;
+  background: -webkit-linear-gradient(left, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
+}
+
+.positionable-extension-getting-started-area-vertical-line {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;;
+  width: 1px;
+  background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,.05) 10%, rgba(0,0,0,.05) 90%, rgba(0,0,0,0) 100%);
+}
+
+.positionable-extension-getting-started-area-skip {
+  position: absolute;
+  bottom: -40px;
+  right: 0;
+  font-size: 11px;
+  color: rgba(0,0,0,0.5);
+  cursor: pointer;
+}
+
+.positionable-extension-getting-started-area-skip:hover {
+  color: rgba(20,130,240,0.8);
+}
+
+
+/*---------------------------] Default Area [-----------------------*/
+
+
+.positionable-extension-control-panel--default-active {
+  width: 150px;
+  height: 80px;
+}
+
+.positionable-extension-default-area-icon {
+  height: 35px;
+  margin: -10px auto 5px;
+  display: block;
+}
+
+.positionable-extension-default-area-text {
+  font-size: 14px;
+  text-align: center;
+  margin: 0 -30px 0 -15px;
+}
+
+
+/*---------------------------] Help Area [-----------------------*/
+
+
+.positionable-extension-control-panel--help-active {
+  width: 600px;
+  height: 460px;
+}
+
+/* TODO: why this??
+.positionable-extension-help-area {
+  margin-bottom: 5px;
+}
+*/
+
+.positionable-extension-help-area-block {
+  margin: 0 40px 20px 0;
+}
+
+.positionable-extension-help-area-keys-block {
+  float: right;
+  margin-right: 0px;
+}
+
+.positionable-extension-help-area-block-header {
+  font-size: 16px;
+  margin: 0 0 1em 0;
+  font-weight: 300;
+}
+
+.positionable-extension-help-area-box {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 10px;
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+
+.positionable-extension-help-area-key-plus {
+  margin: 0 5px;
+  color: rgba(0,0,0,0.4);
+}
+
+.positionable-extension-help-area-command-help-box {
+  width: 80px;
+}
+
+.positionable-extension-help-area-text {
+  width: 200px;
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.positionable-extension-help-area-icon {
+  position: absolute;
+  height: 22px;
+  color: rgba(0,0,0,0.5);
+}
+
+.positionable-extension-help-area-element {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(0,0,0,0.5);
+}
+
+.positionable-extension-help-area-position-help-icon {
+  display: block;
+  margin: 5px;
+  height: 20px;
+  width: 20px;
+}
+
+.positionable-extension-help-area-resize-help-icon {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: rgba(0,0,0,.3);
+}
+
+.positionable-extension-help-area-resize-w-help-icon,
+.positionable-extension-help-area-resize-nw-help-icon,
+.positionable-extension-help-area-resize-sw-help-icon {
+  left: 1px;
+}
+
+.positionable-extension-help-area-resize-n-help-icon,
+.positionable-extension-help-area-resize-s-help-icon {
+  width: 14px;
+  left: 8px;
+}
+
+.positionable-extension-help-area-resize-e-help-icon,
+.positionable-extension-help-area-resize-ne-help-icon,
+.positionable-extension-help-area-resize-se-help-icon {
+  right: 1px;
+}
+
+.positionable-extension-help-area-resize-n-help-icon,
+.positionable-extension-help-area-resize-nw-help-icon,
+.positionable-extension-help-area-resize-ne-help-icon {
+  top: 1px;
+}
+
+.positionable-extension-help-area-resize-w-help-icon,
+.positionable-extension-help-area-resize-e-help-icon {
+  height: 14px;
+  top: 8px;
+}
+
+.positionable-extension-help-area-resize-s-help-icon,
+.positionable-extension-help-area-resize-sw-help-icon,
+.positionable-extension-help-area-resize-se-help-icon {
+  bottom: 1px;
+}
+
+.positionable-extension-help-area-rotate-help {
+  margin-bottom: 13px;
+}
+
+.positionable-extension-help-area-rotate-handle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  top: 30px;
+  left: 30px;
+  background-color: rgba(0,0,0,0.3);
+  border-radius: 30px;
+}
+
+.positionable-extension-help-area-snapping-help-icon {
+  width: 16px;
+  height: 16px;
+  top: 1px;
+  left: 2px;
+}
+
+.positionable-extension-help-area-snapping-help-pointer-icon {
+  width: 14px;
+  height: 14px;
+  top: 15px;
+  left: 15px;
+}
+
+.positionable-extension-help-area-multiple-select-help {
+  border-style: dashed;
+}
+
+.positionable-extension-help-area-aligning-box-one {
+  top: 4px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.positionable-extension-help-area-aligning-box-two {
+  bottom: 4px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.positionable-extension-help-area-aligning-pointer-icon {
+  height: 12px;
+  bottom: -11px;
+  right: -9px;
+}
+
+/*---------------------------] Element Area [-----------------------*/
+
+
+.positionable-extension-control-panel--element-active {
   width: 420px;
   height: 100px;
 }
 
-.positionable-extension-single-header {
+.positionable-extension-element-area-single-header {
   margin: 0px;
   font-size: 28px;
   font-weight: 300;
@@ -557,16 +585,16 @@
   width: 320px;
 }
 
-.positionable-extension-inline-selector {
+.positionable-extension-element-area-inline-selector {
   color: #aaa;
   font-style: italic;
 }
 
-.positionable-extension-details {
+.positionable-extension-element-area-details {
   font-size: 13px;
 }
 
-.positionable-extension-multiple-header {
+.positionable-extension-element-area-multiple-header {
   margin: 0px;
   font-size: 16px;
   font-weight: 300;
@@ -574,11 +602,11 @@
   white-space: nowrap;
 }
 
-.positionable-extension-element-actions {
+.positionable-extension-element-area-element-actions {
   white-space: nowrap;
 }
 
-.positionable-extension-element-action {
+.positionable-extension-element-area-element-action {
   display: inline-block;
   width: 16px;
   height: 16px;
@@ -589,7 +617,7 @@
   cursor: pointer;
 }
 
-.positionable-extension-element-states {
+.positionable-extension-element-area-element-states {
   position: absolute;
   top: 0px;
   right: -15px;
@@ -597,7 +625,7 @@
   height: 60px;
 }
 
-.positionable-extension-element-state {
+.positionable-extension-element-area-element-state {
   position: absolute;
   top: 0px;
   left: 0px;
@@ -608,46 +636,43 @@
   opacity: 0;
 }
 
-.positionable-extension-element-active-state {
+.positionable-extension-element-area-element-active-state {
   opacity: 1;
 }
 
-.positionable-extension-element-state-icon {
+.positionable-extension-element-area-element-state-icon {
   width: 30px;
   height: 30px;
 }
 
-.positionable-extension-element-state-text {
+.positionable-extension-element-area-element-state-text {
   font-size: 14px;
   line-height: 24px;
   margin: 0;
 }
 
-.positionable-extension-background-position-state .positionable-extension-element-state-text {
+.positionable-extension-element-area-background-position-state .positionable-extension-element-area-element-state-text {
   font-size: 12px;
 }
 
 
 
-/*---------------------------] Status Bar Settings Area [-----------------------*/
+/*---------------------------] Settings Area [-----------------------*/
 
 
-.positionable-extension-status-bar-settings-active {
+.positionable-extension-control-panel--settings-active {
   width: 620px;
   height: 400px;
 }
 
-.positionable-extension-settings-area {
-}
-
-.positionable-extension-settings-header {
+.positionable-extension-settings-area-header {
   font-size: 18px;
   font-weight: 300;
   margin: .5em 0 1em 0;
   color: rgba(0,0,0,0.7);
 }
 
-.positionable-extension-settings-button {
+.positionable-extension-settings-area-button {
   position: absolute;
   z-index: 3;
   bottom: 5px;
@@ -659,18 +684,18 @@
   height: 18px;
 }
 
-.positionable-extension-settings-button:hover {
+.positionable-extension-settings-area-button:hover {
   opacity: 0.5;
 }
 
-.positionable-extension-setting-field {
+.positionable-extension-settings-area-field {
   border: none;
   padding: 4px 0px;
   margin: 0 0 .3em 0;
   white-space: nowrap;
 }
 
-.positionable-extension-setting-label {
+.positionable-extension-settings-area-label {
   display: inline-block;
   vertical-align: top;
   text-align: right;
@@ -681,42 +706,42 @@
   color: rgba(0,0,0,0.7);
 }
 
-.positionable-extension-setting-block {
+.positionable-extension-settings-area-block {
   vertical-align: middle;
   display: inline-block;
 }
 
-.positionable-extension-setting-input {
+.positionable-extension-settings-area-input {
   display: block;
   margin: 0;
   font-size: 14px;
 }
 
-.positionable-extension-setting-text-input {
+.positionable-extension-settings-area-text-input {
   padding: 1px 4px;
 }
 
-.positionable-extension-setting-text-input::-webkit-input-placeholder {
+.positionable-extension-settings-area-text-input::-webkit-input-placeholder {
   color: rgba(0,0,0,0.5);
 }
 
-.positionable-extension-setting-option {
+.positionable-extension-settings-area-option {
   font-size: 12px;
 }
 
-.positionable-extension-setting-description {
+.positionable-extension-settings-area-description {
   margin-top: .5em;
   font-size: 14px;
 }
 
-.positionable-extension-setting-example {
+.positionable-extension-settings-area-example {
   margin-top: .5em;
   font-family: Courier, monospace;
   font-size: 14px;
   color: rgba(0,0,0,0.6);
 }
 
-.positionable-extension-settings-help-link {
+.positionable-extension-settings-area-help-link {
   font-size: 14px;
   font-weight: 200;
   color: rgba(20,130,240,0.8);
@@ -726,14 +751,14 @@
   margin: 0 0 0 1em;
 }
 
-.positionable-extension-settings-save {
+.positionable-extension-settings-area-save {
   position: absolute;
   right: 0px;
   bottom: 0px;
   cursor: pointer;
 }
 
-.positionable-extension-settings-reset {
+.positionable-extension-settings-area-reset {
   position: absolute;
   right: 50px;
   bottom: 0px;
@@ -792,7 +817,7 @@
 
 /*---------------------------] Loading Animation [-----------------------*/
 
-.positionable-extension-loading {
+.positionable-extension-loading-animation {
   position: fixed;
   z-index: 100004;
   top: 50%;

@@ -1,0 +1,36 @@
+.box {
+  top: 100px;
+  left: 100px;
+  width: 100px;
+  height: 100px;
+  z-index: 2;
+}
+
+.box--override {
+  transform: rotate(30deg);
+  z-index: 10;
+}
+
+.fixed-box {
+  position: fixed;
+}
+
+.absolute-box {
+  position: absolute;
+}
+
+.relative-box {
+  position: relative;
+}
+
+.static-box {
+  position: static;
+}
+
+.inverted-box {
+  position: absolute;
+  top: auto;
+  left: auto;
+  bottom: 100px;
+  right: 100px;
+}

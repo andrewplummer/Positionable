@@ -1,0 +1,135 @@
+
+/*---------------------------] Base [-----------------------*/
+
+.ui {
+  opacity: .5;
+}
+
+.ui--focused {
+  opacity: 1;
+}
+
+/*---------------------------] Position Handle [-----------------------*/
+
+.position-handle {
+  position: absolute;
+  z-index: 2;
+  top: 22%;
+  left: 22%;
+  width: 56%;
+  height: 56%;
+}
+
+/*---------------------------] Rotation Handle [-----------------------*/
+
+.rotation-handle {
+  position: absolute;
+  z-index: 2;
+  height: 18px;
+  width: 18px;
+  bottom: -18px;
+  right: -18px;
+  background-color: rgba(0,0,0,0.1);
+  border-radius: 18px;
+}
+
+/*---------------------------] Resize Handles [-----------------------*/
+
+.resize-handle {
+  position: absolute;
+  z-index: 3;
+  height: 22%;
+  width: 22%;
+}
+
+.resize-handle-n,
+.resize-handle-nw,
+.resize-handle-ne {
+  top: 0;
+}
+
+.resize-handle-e,
+.resize-handle-ne,
+.resize-handle-se {
+  right: 0;
+}
+
+.resize-handle-s,
+.resize-handle-sw,
+.resize-handle-se {
+  bottom: 0;
+}
+
+.resize-handle-w,
+.resize-handle-nw,
+.resize-handle-sw {
+  left: 0;
+}
+
+.resize-handle-n,
+.resize-handle-s {
+  left: 22%;
+  width: 56%;
+}
+
+.resize-handle-w,
+.resize-handle-e {
+  top: 22%;
+  height: 56%;
+}
+
+.resize-handle-n:after,
+.resize-handle-e:after,
+.resize-handle-s:after,
+.resize-handle-w:after,
+.resize-handle-ne:after,
+.resize-handle-se:after,
+.resize-handle-sw:after,
+.resize-handle-nw:after {
+  content: '';
+  position: absolute;
+  border-color: rgba(0,0,0,0.7);
+  border-style: solid;
+  border-width: 0;
+  height: calc(100% - 2px);
+  width: calc(100% - 2px);
+}
+
+.resize-handle-n:after,
+.resize-handle-nw:after,
+.resize-handle-ne:after {
+  top: -2px;
+  border-top-width: 2px;
+}
+
+.resize-handle-s:after,
+.resize-handle-sw:after,
+.resize-handle-se:after {
+  bottom: -2px;
+  border-bottom-width: 2px;
+}
+
+.resize-handle-w:after,
+.resize-handle-sw:after,
+.resize-handle-nw:after {
+  left: -2px;
+  border-left-width: 2px;
+}
+
+.resize-handle-e:after,
+.resize-handle-se:after,
+.resize-handle-ne:after {
+  right: -2px;
+  border-right-width: 2px;
+}
+
+.resize-handle-e:after,
+.resize-handle-w:after {
+  top: 1px;
+}
+
+.resize-handle-n:after,
+.resize-handle-s:after {
+  left: 1px;
+}
+

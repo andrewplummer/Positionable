@@ -29,6 +29,8 @@
   },
 
   "web_accessible_resources": [
+    "*.html",
+    "*.css",
     "images/*"
   ]
 

@@ -1,0 +1,69 @@
+
+describe('CSSPositioningProperty', function(uiRoot) {
+
+  var el, matcher, hProp, vProp;
+
+  function setupNormal() {
+    el      = appendAbsoluteBox();
+    matcher = new CSSRuleMatcher(el);
+    hProp   = CSSPositioningProperty.horizontalFromMatcher(matcher);
+    vProp   = CSSPositioningProperty.verticalFromMatcher(matcher);
+  }
+
+  function setupInverted() {
+    el      = appendInvertedBox();
+    matcher = new CSSRuleMatcher(el);
+    hProp   = CSSPositioningProperty.horizontalFromMatcher(matcher);
+    vProp   = CSSPositioningProperty.verticalFromMatcher(matcher);
+  }
+
+  it('should work on normal properties', function() {
+    setupNormal();
+
+    assert.equal(hProp.prop, 'left');
+    assert.equal(vProp.prop, 'top');
+    assert.equal(hProp.px, 100);
+    assert.equal(vProp.px, 100);
+
+    hProp.px = 300;
+    vProp.px = 500;
+
+    hProp.render(el.style);
+    vProp.render(el.style);
+
+    assert.equal(el.style.left,   '300px');
+    assert.equal(el.style.top,    '500px');
+    assert.equal(el.style.right,  '');
+    assert.equal(el.style.bottom, '');
+
+  });
+
+  it('should work on inverted properties', function() {
+    setupInverted();
+
+    assert.equal(hProp.prop, 'right');
+    assert.equal(vProp.prop, 'bottom');
+    assert.equal(hProp.px, 100);
+    assert.equal(vProp.px, 100);
+
+    hProp.px = 20;
+    vProp.px = 30;
+
+    hProp.render(el.style);
+    vProp.render(el.style);
+
+    assert.equal(el.style.left,   '');
+    assert.equal(el.style.top,    '');
+    assert.equal(el.style.right,  '20px');
+    assert.equal(el.style.bottom, '30px');
+
+  });
+
+  it('should be able to clone itself', function() {
+    setupNormal();
+    var clone = hProp.clone();
+    assert.equal(clone.prop, 'left');
+    assert.equal(clone.px, 100);
+  });
+
+});
