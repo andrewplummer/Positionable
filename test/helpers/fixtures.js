@@ -1,5 +1,4 @@
 
-/*-------------------------] Positionable Elements [--------------------------*/
 
 function appendFixture(classNames) {
   var el = document.getElementById('element-fixtures');
@@ -50,3 +49,4 @@ function appendChild(el, tag) {
   el.appendChild(child);
   return child;
 }
+

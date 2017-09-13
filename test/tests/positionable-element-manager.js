@@ -43,9 +43,11 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   teardown(function() {
-    releaseAppendedFixtures();
-    el  = null;
-    els = null;
+    manager.destroyAll();
+    el       = null;
+    els      = null;
+    manager  = null;
+    listener = null;
   });
 
   function setupAbsolute() {

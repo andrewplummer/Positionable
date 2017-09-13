@@ -594,10 +594,6 @@ class Element {
     return this;
   }
 
-  remove(html) {
-    this.el.remove();
-  }
-
   setStyle(name, val) {
     this.el.style[name] = val;
   }
@@ -607,6 +603,11 @@ class Element {
     for (var i = 0, el; el = els[i]; i++) {
       this[camelize(el.id)] = new Element(el);
     }
+  }
+
+  getCenter() {
+    var rect = this.el.getBoundingClientRect();
+    return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   destroy() {
@@ -884,8 +885,8 @@ class BrowserEventTarget extends Element {
   }
 
   destroy() {
-    super.destroy();
     this.removeAllListeners();
+    super.destroy();
   }
 
 }
@@ -1038,12 +1039,13 @@ class DragTarget extends BrowserEventTarget {
       this.onDragStop(evt);
     }
     this.dragOrigin = null;
+    this.lastMouseEvent = null;
     document.documentElement.removeEventListener('mousemove', this.onMouseMove);
     document.documentElement.removeEventListener('mouseup', this.onMouseUp);
     document.removeEventListener('scroll', this.onScroll);
   }
 
-  onScroll(evt) {
+  onScroll() {
     // Elements that are relative to the page (not fixed) should also be dragged
     // while scrolling, as this will affect their positioning, so need to force
     // a mousemove event here. Note that there is no way to set pageX/Y on
@@ -1703,6 +1705,7 @@ class PositionableElement extends BrowserEventTarget {
   setupHandles(root) {
     /* TODO: do we need an object to hold handles? */
     // TODO: consolidate order of listener in arguments?
+    // TODO: rename sizingHandles??
     this.handles = {
       n:  new ResizeHandle(root, 'n',  this),
       e:  new ResizeHandle(root, 'e',  this),
@@ -1718,7 +1721,7 @@ class PositionableElement extends BrowserEventTarget {
     // TODO: different origins?
     this.rotationHandle = new RotationHandle(root, this,
                                                    this.getRotation(),
-                                                   this.getRotationOrigin(),
+                                                   this.getCenter(),
                                                    this.isFixed);
   }
 
@@ -1730,20 +1733,30 @@ class PositionableElement extends BrowserEventTarget {
     this.transform.setRotation(r);
   }
 
+  /*
   getRotationOrigin() {
     return this.cssBox.getCenter();
-    /*
     var p = this.box.getCenterPosition();
     if (this.isFixedPosition) {
       p.x -= window.scrollX;
       p.y -= window.scrollY;
     }
     return p;
-    */
   }
 
+  getPosition() {
+    // TODO: this won't work on inverted position!
+    return new Point(this.cssH.px, this.cssV.px);
+  }
+
+  getCenter() {
+    var rect = this.el.getBoundingClientRect();
+  }
+    */
+
+
   updateRotationOrigin() {
-    this.rotationHandle.origin = this.getRotationOrigin();
+    this.rotationHandle.origin = this.getCenter();
   }
 
   // --- Mouse Events
@@ -2028,9 +2041,9 @@ class PositionableElement extends BrowserEventTarget {
   move(x, y, constrain) {
     var p = this.getConstrainedMovePosition(x, y, constrain);
     this.cssBox = this.getLastState().cssBox.clone();
-    this.cssBox.addPosition(p.x, p.y);
-    this.updateRotationOrigin();
+    this.cssBox.move(p.x, p.y);
     this.renderBox();
+    this.updateRotationOrigin();
   }
 
   getConstrainedMovePosition(x, y, constrain) {
@@ -2258,6 +2271,7 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Calculations
 
+  /*
   getElementCoordsForPoint(point) {
     // Gets the coordinates relative to the element's
     // x/y internal coordinate system, which may be rotated.
@@ -2299,7 +2313,9 @@ class PositionableElement extends BrowserEventTarget {
     // TODO: could this be nicer?
     return [this.handles.nw, this.handles.ne, this.handles.se, this.handles.sw][(this.transform.getRotation() / 90 | 0) + offset];
   }
+  /*/
 
+  /*
   getCenter() {
     return this.box.getCenter();
   }
@@ -2307,7 +2323,9 @@ class PositionableElement extends BrowserEventTarget {
   getAbsoluteCenter() {
     return this.getAbsoluteDimensions().getCenter();
   }
+  */
 
+  /*
   getViewportCenter() {
     var rect = this.el.getBoundingClientRect();
     var x = (rect.left + rect.right) / 2;
@@ -2324,12 +2342,14 @@ class PositionableElement extends BrowserEventTarget {
       rect.left + this.el.offsetLeft
     );
   }
+  */
 
   getEdgeValue(side) {
     var handle = this.getHandleForSide(side);
     return handle.getPosition()[this.getAxisForSide(side)];
   }
 
+  /*
   getCenterAlignValue(type) {
     var center = this.getCenter();
     return type === 'vertical' ? center.x : center.y;
@@ -2360,6 +2380,7 @@ class PositionableElement extends BrowserEventTarget {
     return side === 'top' || side === 'bottom' ? 'y' : 'x';
   }
 
+  */
 
   // --- Output
 
@@ -2570,11 +2591,8 @@ class PositionableElement extends BrowserEventTarget {
   // --- Teardown
 
   destroy() {
-    this.unfocus();
-    this.removeClass('positioned-element');
-    this.removeAllListeners();
-    // TODO: why is one remove and the other destroy??
-    this.handles.rotation.remove();
+    this.positionHandle.destroy();
+    this.rotationHandle.destroy();
     this.handles.nw.destroy();
     this.handles.ne.destroy();
     this.handles.se.destroy();
@@ -2583,6 +2601,7 @@ class PositionableElement extends BrowserEventTarget {
     this.handles.e.destroy();
     this.handles.s.destroy();
     this.handles.w.destroy();
+    super.destroy();
   }
 
   // --- Private
@@ -2966,6 +2985,7 @@ class PositionableElementManager {
   */
 
   findElements(includeSelector, excludeSelector) {
+    var els;
 
     try {
       // The :not pseudo-selector cannot have multiple arguments,
@@ -2977,20 +2997,20 @@ class PositionableElementManager {
       excludeSelector = excludeSelectors.map(s => `:not(${s})`).join('')
 
       let query = `${includeSelector || '*'}${excludeSelector}`;
-      let els = document.body.querySelectorAll(query);
 
-      for(let i = 0, el; el = els[i]; i++) {
-        if (includeSelector || this.elementIsPositioned(el)) {
-          this.elements.push(new PositionableElement(el, this));
-        }
-      }
-
-      // TODO: is this needed now?
-      this.active = true;
-
+      els = document.body.querySelectorAll(query);
     } catch(e) {
       throwError(e.message, false);
     }
+
+    for(let i = 0, el; el = els[i]; i++) {
+      if (includeSelector || this.elementIsOutOfFlow(el)) {
+        this.elements.push(new PositionableElement(el, this));
+      }
+    }
+
+    // TODO: is this needed now?
+    this.active = true;
 
   }
 
@@ -3020,7 +3040,7 @@ class PositionableElementManager {
     }
   }
 
-  elementIsPositioned(el) {
+  elementIsOutOfFlow(el) {
     var position = window.getComputedStyle(el).position;
     return position === 'absolute' || position === 'fixed';
   }
@@ -3070,7 +3090,7 @@ class PositionableElementManager {
 
   focusContainedElements(selection) {
     var prev = this.getFocusedElements();
-    var next = this.elements.filter(e => selection.contains(e.el));
+    var next = this.elements.filter(el => selection.contains(el.getCenter()));
     prev.forEach(e => this.removeFocused(e));
     next.forEach(e => this.addFocused(e));
     if (this.focusedElementsChanged(prev, next)) {
@@ -3376,6 +3396,10 @@ class PositionableElementManager {
     return map;
   }
 
+  destroyAll() {
+    this.elements.forEach(el => el.destroy());
+  }
+
 }
 
 /*-------------------------] DragSelection [--------------------------*/
@@ -3399,7 +3423,7 @@ class DragSelection extends DragTarget {
 
   onDragStart(evt) {
     super.onDragStart(evt);
-    this.dragStartBox = CSSBox.createFromPixelDimensions(evt.clientX, evt.clientY, 0, 0);
+    this.dragStartBox = CSSBox.fromPixelValues(evt.clientX, evt.clientY, 0, 0);
     this.ui.addClass(DragSelection.ACTIVE_CLASS);
   }
 
@@ -3424,22 +3448,15 @@ class DragSelection extends DragTarget {
     this.listener.onDragSelectionClear();
   }
 
-  contains(el) {
+  contains(p) {
     var rect = this.ui.el.getBoundingClientRect();
-    var p = this.getElementCenter(el);
 
-    return rect.left   <= p.x  &&
+    return rect.left   <= p.x &&
            rect.right  >= p.x &&
            rect.top    <= p.y &&
            rect.bottom >= p.y;
 
   }
-
-  getElementCenter(el) {
-    var rect = el.getBoundingClientRect();
-    return new Point(rect.left + rect.width / 2, rect.top  + rect.height / 2);
-  }
-
 
   render() {
     this.cssBox.render(this.ui.el.style);
@@ -5087,6 +5104,7 @@ class Rectangle {
     }
   }
 
+  /*
   getCenter() {
     return new Point(this.left + (this.getWidth() / 2), this.top + (this.getHeight() / 2));
   }
@@ -5111,6 +5129,7 @@ class Rectangle {
     var center = this.getCenter();
     return position.subtract(center).rotate(-this.rotation).add(center);
   }
+  */
 
   clone() {
     return new Rectangle(this.top, this.right, this.bottom, this.left, this.rotation);
@@ -5311,10 +5330,10 @@ class CSSPosition {
 // TODO: can this supersede rectangle?
 class CSSBox {
 
-  static createFromPixelDimensions(left, top, width, height) {
+  static fromPixelValues(left, top, width, height) {
     return new CSSBox(
       new CSSPositioningProperty(new CSSPixelValue(left), 'left'),
-      new CSSPositioningProperty(new CSSPixelValue(top), 'top'),
+      new CSSPositioningProperty(new CSSPixelValue(top),  'top'),
       new CSSPixelValue(width),
       new CSSPixelValue(height)
     );
@@ -5377,19 +5396,7 @@ class CSSBox {
     cssDim.px = dpx;
   }
 
-  getPosition() {
-    // TODO: this won't work on inverted position!
-    return new Point(this.cssH.px, this.cssV.px);
-  }
-
-  getCenter() {
-    return new Point(
-      this.cssH.px + this.cssWidth.px  / 2,
-      this.cssV.px + this.cssHeight.px / 2
-    );
-  }
-
-  addPosition(x, y) {
+  move(x, y) {
     this.cssH.add(x);
     this.cssV.add(y);
   }
@@ -5444,6 +5451,14 @@ class CSSBox {
       }
       this.moveEdge(px, this.cssH, this.cssWidth, hEdge);
     }
+  }
+
+  getCenter() {
+    // Note that this only returns the center of the box itself
+    // and cannot be used in relation to coordinates relative
+    // to the viewport/page as the box may be reflected or have
+    // inverted properties.
+    return new Point(this.cssWidth.px / 2, this.cssHeight.px / 2);
   }
 
   getRatio() {

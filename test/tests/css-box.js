@@ -15,27 +15,33 @@ describe('CSSBox', function(uiRoot) {
 
   function setupPixel(left, top, width, height) {
     el = appendAbsoluteBox();
-    box = CSSBox.createFromPixelDimensions(left, top, width, height);
+    box = CSSBox.fromPixelValues(left, top, width, height);
   }
 
-  it('should get its position', function() {
+  it('should be able to get its center', function() {
     setupNormal();
-    assert.equal(box.getPosition().x, 100);
-    assert.equal(box.getPosition().y, 100);
+    assert.equal(box.getCenter().x, 50);
+    assert.equal(box.getCenter().y, 50);
   });
 
-  it('should add to its position', function() {
+  it('should be able to move', function() {
     setupNormal();
-    box.addPosition(50, 50);
-    assert.equal(box.getPosition().x, 150);
-    assert.equal(box.getPosition().y, 150);
+    box.move(50, 50);
+    box.render(el.style);
+    assert.equal(el.style.left,   '150px');
+    assert.equal(el.style.top,    '150px');
+    assert.equal(el.style.right,  '');
+    assert.equal(el.style.bottom, '');
   });
 
-  it('should add position to an inverted box', function() {
+  it('should be able to move an inverted box', function() {
     setupInverted();
-    box.addPosition(50, 50);
-    assert.equal(box.getPosition().x, 50);
-    assert.equal(box.getPosition().y, 50);
+    box.move(50, 50);
+    box.render(el.style);
+    assert.equal(el.style.left,   '');
+    assert.equal(el.style.top,    '');
+    assert.equal(el.style.bottom, '50px');
+    assert.equal(el.style.right,  '50px');
   });
 
   it('should move the opposite edges of a normal box', function() {
@@ -150,15 +156,6 @@ describe('CSSBox', function(uiRoot) {
     assert.equal(el.style.height, '50px');
     assert.equal(el.style.right,  '200px');
     assert.equal(el.style.bottom, '200px');
-  });
-
-  it('should get the center of a normal box', function() {
-    var el = appendAbsoluteBox();
-    el.style.left = '40px';
-    el.style.top  = '70px';
-    var box = CSSBox.fromElement(el);
-    assert.equal(box.getCenter().x, 90);
-    assert.equal(box.getCenter().y, 120);
   });
 
   it('should be able to clone itself', function() {

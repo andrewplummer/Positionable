@@ -207,4 +207,11 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(listener.lastEventResizeDrag.y, 100);
   });
 
+  it('should destroy the element', function() {
+    el = appendAbsoluteBox();
+    p = new PositionableElement(el, listener);
+    p.destroy();
+    assert.equal(el.parentNode, null);
+  });
+
 });
