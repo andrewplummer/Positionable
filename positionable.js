@@ -1108,7 +1108,7 @@ class DragTarget extends BrowserEventTarget {
 
   onDragStop(evt)  {
     this.clearUserSelect();
-    this.checkDragIntentStopped();
+    this.checkDragIntentStopped(evt);
   }
 
   onDragIntentStart(evt) {}
@@ -1516,14 +1516,9 @@ class ResizeHandle extends DragTarget {
 
 class RotationHandle extends DragTarget {
 
-  static get OFFSET() { return 45; };
-
-  constructor(root, listener, rotation, origin, originFixed) {
+  constructor(root, listener) {
     super(root.getElementById('rotation-handle'));
-    this.listener    = listener;
-    this.rotation    = rotation    || 0;
-    this.origin      = origin      || new Point(0, 0);
-    this.originFixed = originFixed || false;
+    this.listener = listener;
     this.setupDragIntents();
   }
 
@@ -1537,14 +1532,11 @@ class RotationHandle extends DragTarget {
 
   onDragStart(evt) {
     super.onDragStart(evt);
-    this.startRotation = this.rotation;
     this.listener.onRotationHandleDragStart(evt, this);
   }
 
   onDragMove(evt) {
     super.onDragMove(evt);
-    this.rotation = this.getRotationForEvent(evt);
-    this.setEventRotation(evt);
     this.listener.onRotationHandleDragMove(evt, this);
 
     /*
@@ -1570,7 +1562,6 @@ class RotationHandle extends DragTarget {
 
   onDragStop(evt) {
     super.onDragStop(evt);
-    this.startRotation = null;
     this.listener.onRotationHandleDragStop(evt, this);
     //this.listener.onRotationHandleDragMove(this.addRotationEventData(evt));
     //this.listener.onRotationHandleDragStart(this.addRotationEventData(evt));
@@ -1598,19 +1589,6 @@ class RotationHandle extends DragTarget {
   }
   */
   // --- Private
-
-  setEventRotation(evt) {
-    evt.rotation = {
-      abs: this.rotation,
-      offset: this.rotation - this.startRotation
-    };
-  }
-
-  getRotationForEvent(evt) {
-    var x = this.originFixed ? evt.clientX : evt.pageX;
-    var y = this.originFixed ? evt.clientY : evt.pageY;
-    return new Point(x, y).subtract(this.origin).getAngle() - RotationHandle.OFFSET;
-  }
 
 }
 
@@ -1719,10 +1697,7 @@ class PositionableElement extends BrowserEventTarget {
     this.positionHandle = new PositionHandle(root, this);
 
     // TODO: different origins?
-    this.rotationHandle = new RotationHandle(root, this,
-                                                   this.getRotation(),
-                                                   this.getCenter(),
-                                                   this.isFixed);
+    this.rotationHandle = new RotationHandle(root, this);
   }
 
   getRotation() {
@@ -1755,10 +1730,6 @@ class PositionableElement extends BrowserEventTarget {
     */
 
 
-  updateRotationOrigin() {
-    this.rotationHandle.origin = this.getCenter();
-  }
-
   // --- Mouse Events
 
   onMouseDown(evt) {
@@ -1769,67 +1740,77 @@ class PositionableElement extends BrowserEventTarget {
   // --- Position Handle Drag Events
 
   onPositionHandleDragIntentStart(evt, handle) {
-    this.listener.onPositionHandleDragIntentStart(evt, this);
+    this.listener.onPositionDragIntentStart(evt, handle, this);
   }
 
   onPositionHandleDragIntentStop(evt, handle) {
-    this.listener.onPositionHandleDragIntentStop(evt, this);
+    this.listener.onPositionDragIntentStop(evt, handle, this);
   }
 
-  onPositionHandleDragStart(evt) {
-    this.listener.onPositionHandleDragStart(evt, this);
+  onPositionHandleDragStart(evt, handle) {
+    this.listener.onPositionDragStart(evt, handle, this);
   }
 
-  onPositionHandleDragMove(evt) {
-    this.listener.onPositionHandleDragMove(evt, this);
+  onPositionHandleDragMove(evt, handle) {
+    this.listener.onPositionDragMove(evt, handle, this);
   }
 
-  onPositionHandleDragStop(evt) {
-    this.listener.onPositionHandleDragStop(evt, this);
+  onPositionHandleDragStop(evt, handle) {
+    this.listener.onPositionDragStop(evt, handle, this);
   }
 
   // --- Resize Handle Drag Events
 
   onResizeHandleDragIntentStart(evt, handle) {
-    this.listener.onResizeHandleDragIntentStart(evt, handle);
+    this.listener.onResizeDragIntentStart(evt, handle, this);
   }
 
   onResizeHandleDragIntentStop(evt, handle) {
-    this.listener.onResizeHandleDragIntentStop(evt, handle);
+    this.listener.onResizeDragIntentStop(evt, handle, this);
   }
 
   onResizeHandleDragStart(evt, handle) {
-    this.listener.onResizeHandleDragStart(evt, handle);
+    this.listener.onResizeDragStart(evt, handle, this);
   }
 
   onResizeHandleDragMove(evt, handle) {
-    this.listener.onResizeHandleDragMove(evt, handle);
+    this.listener.onResizeDragMove(evt, handle, this);
   }
 
   onResizeHandleDragStop(evt, handle) {
-    this.listener.onResizeHandleDragStop(evt, handle);
+    this.listener.onResizeDragStop(evt, handle, this);
   }
 
   // --- Rotation Handle Drag Events
 
   onRotationHandleDragIntentStart(evt, handle) {
-    this.listener.onRotationHandleDragIntentStart(evt, handle);
+    this.listener.onRotationDragIntentStart(evt, handle, this);
   }
 
   onRotationHandleDragIntentStop(evt, handle) {
-    this.listener.onRotationHandleDragIntentStop(evt, handle);
+    this.listener.onRotationDragIntentStop(evt, handle, this);
   }
 
   onRotationHandleDragStart(evt, handle) {
-    this.listener.onRotationHandleDragStart(evt, handle);
+    this.startRotation = this.getRotation();
+    this.rotationOrigin = this.getCenter();
+    this.listener.onRotationDragStart(evt, handle, this);
   }
 
   onRotationHandleDragMove(evt, handle) {
-    this.listener.onRotationHandleDragMove(evt, handle);
+    var x = this.isFixed ? evt.clientX : evt.pageX;
+    var y = this.isFixed ? evt.clientY : evt.pageY;
+    // TODO: where should the 45 live?
+    var rotation = new Point(x, y).subtract(this.rotationOrigin).getAngle() - 45;
+    evt.rotation = {
+      abs: rotation,
+      offset: rotation - this.startRotation
+    }
+    this.listener.onRotationDragMove(evt, handle, this);
   }
 
   onRotationHandleDragStop(evt, handle) {
-    this.listener.onRotationHandleDragStop(evt, handle);
+    this.listener.onRotationDragStop(evt, handle, this);
   }
 
   /*
@@ -2043,7 +2024,6 @@ class PositionableElement extends BrowserEventTarget {
     this.cssBox = this.getLastState().cssBox.clone();
     this.cssBox.move(p.x, p.y);
     this.renderBox();
-    this.updateRotationOrigin();
   }
 
   getConstrainedMovePosition(x, y, constrain) {
@@ -2681,74 +2661,82 @@ class AppController {
     }
   }
 
-  // --- Position Handle Drag Events
+  // --- Position Drag Events
 
-  onPositionHandleDragIntentStart(evt, element) {
-    console.info('POSITION HANDLE DRAG INTENT START');
+  onPositionDragIntentStart(evt, handle, element) {
+    console.info('POSITION DRAG INTENT START');
     this.cursorManager.setHoverCursor('move');
   }
 
-  onPositionHandleDragIntentStop(evt, element) {
-    console.info('POSITION HANDLE DRAG INTENT STOP');
+  onPositionDragIntentStop(evt, handle, element) {
+    console.info('POSITION DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
   }
 
-  onPositionHandleDragStart(evt, element) {
-    console.info('POSITION HANDLE DRAG START');
+  onPositionDragStart(evt, handle, element) {
+    console.info('POSITION DRAG START');
     this.cursorManager.setDragCursor('move');
   }
 
-  onPositionHandleDragStop(evt, element) {
-    console.info('POSITION HANDLE DRAG STOP');
+  onPositionDragMove(evt, handle, element) {
+    console.info('POSITION DRAG MOVE');
+  }
+
+  onPositionDragStop(evt, handle, element) {
+    console.info('POSITION DRAG STOP');
     this.cursorManager.clearDragCursor();
   }
 
-  // --- Resize Handle Drag Events
+  // --- Resize Drag Events
 
-  onResizeHandleDragIntentStart(evt, handle) {
-    console.info('RESIZE HANDLE DRAG INTENT START');
-    this.cursorManager.setResizeHoverCursor(handle.name, 0);
+  onResizeDragIntentStart(evt, handle, element) {
+    console.info('RESIZE DRAG INTENT START');
+    this.cursorManager.setResizeHoverCursor(handle.name, element.getRotation());
   }
 
-  onResizeHandleDragIntentStop(evt, handle) {
-    console.info('RESIZE HANDLE DRAG INTENT STOP');
+  onResizeDragIntentStop(evt, handle, element) {
+    console.info('RESIZE DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
   }
 
-  onResizeHandleDragStart(evt, handle) {
-    console.info('RESIZE HANDLE DRAG START');
-    this.cursorManager.setResizeDragCursor(handle.name, 0);
+  onResizeDragStart(evt, handle, element) {
+    console.info('RESIZE DRAG START');
+    this.cursorManager.setResizeDragCursor(handle.name, element.getRotation());
   }
 
-  onResizeHandleDragStop(evt, handle) {
-    console.info('RESIZE HANDLE DRAG STOP');
+  onResizeDragMove(evt, handle, element) {
+    console.info('RESIZE DRAG MOVE');
+  }
+
+  onResizeDragStop(evt, handle, element) {
+    console.info('RESIZE DRAG STOP');
     this.cursorManager.clearDragCursor();
   }
 
-  // --- Rotation Handle Drag Events
+  // --- Rotation Drag Events
 
-  onRotationHandleDragIntentStart(evt, handle) {
-    console.info('ROTATION HANDLE DRAG INTENT START');
-    this.cursorManager.setRotateHoverCursor(handle.rotation);
+  onRotationDragIntentStart(evt, handle, element) {
+    console.info('ROTATION DRAG INTENT START');
+    this.cursorManager.setRotateHoverCursor(element.getRotation());
   }
 
-  onRotationHandleDragIntentStop(evt, handle) {
-    console.info('ROTATION HANDLE DRAG INTENT STOP');
+  onRotationDragIntentStop(evt, handle, element) {
+    console.info('ROTATION DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
   }
 
-  onRotationHandleDragMove(evt, handle) {
-    console.info('ROTATION HANDLE DRAG MOVE');
-    this.cursorManager.setRotateDragCursor(handle.rotation);
+  onRotationDragStart(evt, handle, element) {
+    console.info('ROTATION DRAG START');
+    this.cursorManager.setRotateDragCursor(handle.name, element.getRotation());
   }
 
-  onRotationHandleDragStart(evt, handle) {
-    console.info('ROTATION HANDLE DRAG START');
-    this.cursorManager.setRotateDragCursor(handle.name, 0);
+  onRotationDragMove(evt, handle, element) {
+    console.info('ROTATION DRAG MOVE');
+    this.cursorManager.setRotateDragCursor(evt.rotation.abs);
   }
 
-  onRotationHandleDragStop(evt, handle) {
-    console.info('ROTATION HANDLE DRAG STOP');
+  onRotationDragStop(evt, handle, element) {
+    console.info('ROTATION DRAG STOP');
     this.cursorManager.clearDragCursor();
   }
 
@@ -2834,22 +2822,22 @@ class PositionableElementManager {
     this.swapFocused(evt, element);
   }
 
-  // --- Position Handle Drag Events
+  // --- Position Drag Events
 
-  onPositionHandleDragIntentStart(evt, element) {
-    this.listener.onPositionHandleDragIntentStart(evt, element);
+  onPositionDragIntentStart(evt, handle, element) {
+    this.listener.onPositionDragIntentStart(evt, handle, element);
   }
 
-  onPositionHandleDragIntentStop(evt, element) {
-    this.listener.onPositionHandleDragIntentStop(evt, element);
+  onPositionDragIntentStop(evt, handle, element) {
+    this.listener.onPositionDragIntentStop(evt, handle, element);
   }
 
-  onPositionHandleDragStart(evt, element) {
+  onPositionDragStart(evt, handle, element) {
     this.pushFocusedStates();
-    this.listener.onPositionHandleDragStart(evt, element);
+    this.listener.onPositionDragStart(evt, handle, element);
   }
 
-  onPositionHandleDragMove(evt, element) {
+  onPositionDragMove(evt, handle, element) {
     this.focusedElements.forEach(el => {
       var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
       var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
@@ -2860,10 +2848,11 @@ class PositionableElementManager {
         el.move(x, y, constrain)
       }
     });
+    this.listener.onPositionDragMove(evt, handle, element);
   }
 
-  onPositionHandleDragStop(evt, element) {
-    this.listener.onPositionHandleDragStop(evt, element);
+  onPositionDragStop(evt, handle, element) {
+    this.listener.onPositionDragStop(evt, handle, element);
   }
 
   // --- Handle Events
@@ -2892,51 +2881,54 @@ class PositionableElementManager {
   }
   */
 
-  // --- Resize Handle Drag Events
+  // --- Resize Drag Events
 
-  onResizeHandleDragIntentStart(evt, handle) {
-    this.listener.onResizeHandleDragIntentStart(evt, handle);
+  onResizeDragIntentStart(evt, handle, element) {
+    this.listener.onResizeDragIntentStart(evt, handle, element);
   }
 
-  onResizeHandleDragIntentStop(evt, handle) {
-    this.listener.onResizeHandleDragIntentStop(evt, handle);
+  onResizeDragIntentStop(evt, handle, element) {
+    this.listener.onResizeDragIntentStop(evt, handle, element);
   }
 
-  onResizeHandleDragStart(evt, handle) {
+  onResizeDragStart(evt, handle, element) {
     this.pushFocusedStates();
+    this.listener.onResizeDragStart(evt, handle, element);
   }
 
-  onResizeHandleDragMove(evt, handle) {
+  onResizeDragMove(evt, handle, element) {
     this.focusedElements.forEach(el => {
       el.resize(evt.drag.x, evt.drag.y, handle.name, evt.shiftKey);
     });
+    this.listener.onResizeDragMove(evt, handle, element);
   }
 
-  onResizeHandleDragStop(evt, handle) {
+  onResizeDragStop(evt, handle, element) {
+    this.listener.onResizeDragStop(evt, handle, element);
   }
 
-  // --- Rotation Handle Drag Events
+  // --- Rotation Drag Events
 
-  onRotationHandleDragIntentStart(evt, handle) {
-    this.listener.onRotationHandleDragIntentStart(evt, handle);
+  onRotationDragIntentStart(evt, handle, element) {
+    this.listener.onRotationDragIntentStart(evt, handle, element);
   }
 
-  onRotationHandleDragIntentStop(evt, handle) {
-    this.listener.onRotationHandleDragIntentStop(evt, handle);
+  onRotationDragIntentStop(evt, handle, element) {
+    this.listener.onRotationDragIntentStop(evt, handle, element);
   }
 
-  onRotationHandleDragStart(evt, handle) {
+  onRotationDragStart(evt, handle, element) {
     this.pushFocusedStates();
-    this.listener.onRotationHandleDragStart(evt, handle);
+    this.listener.onRotationDragStart(evt, handle, element);
   }
 
-  onRotationHandleDragMove(evt, handle) {
+  onRotationDragMove(evt, handle, element) {
     this.focusedElements.forEach(el => el.rotate(evt.rotation.offset, evt.shiftKey));
-    this.listener.onRotationHandleDragMove(evt, handle);
+    this.listener.onRotationDragMove(evt, handle, element);
   }
 
-  onRotationHandleDragStop(evt, handle) {
-    this.listener.onRotationHandleDragStop(evt, handle);
+  onRotationDragStop(evt, handle, element) {
+    this.listener.onRotationDragStop(evt, handle, element);
   }
 
   // TODO FIRST!

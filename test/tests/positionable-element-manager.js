@@ -5,34 +5,49 @@ describe('PositionableElementManager', function(uiRoot) {
 
   class Listener {
 
-    onPositionHandleDragIntentStart() {
+    // --- Position Events
+
+    onPositionDragIntentStart() {
     }
 
-    onPositionHandleDragIntentStop() {
+    onPositionDragIntentStop() {
     }
 
-    onPositionHandleDragStart() {
+    onPositionDragStart() {
     }
 
-    onPositionHandleDragMove() {
+    onPositionDragMove() {
     }
 
-    onPositionHandleDragStop() {
+    onPositionDragStop() {
     }
 
-    onRotationHandleDragIntentStop() {
+    // --- Resize Events
+
+    onResizeDragIntentStop() {
     }
 
-    onRotationHandleDragStart() {
+    onResizeDragStart() {
     }
 
-    onRotationHandleDragMove() {
+    onResizeDragMove() {
     }
 
-    onRotationHandleDragStop() {
+    onResizeDragStop() {
     }
 
-    onResizeHandleDragIntentStop() {
+    // --- Rotation Events
+
+    onRotationDragIntentStop() {
+    }
+
+    onRotationDragStart() {
+    }
+
+    onRotationDragMove() {
+    }
+
+    onRotationDragStop() {
     }
 
   }

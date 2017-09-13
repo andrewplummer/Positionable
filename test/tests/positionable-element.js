@@ -22,40 +22,40 @@ describe('PositionableElement', function(uiRoot) {
       this.lastDrag = evt.drag;
     }
 
-    // --- Resize Handle Events
+    // --- Resize Events
 
-    onResizeHandleDragIntentStart(evt) {
+    onResizeDragIntentStart(evt) {
     }
 
-    onResizeHandleDragIntentStop(evt) {
+    onResizeDragIntentStop(evt) {
     }
 
-    onResizeHandleDragStart(evt) {
+    onResizeDragStart(evt) {
     }
 
-    onResizeHandleDragMove(evt) {
+    onResizeDragMove(evt) {
       this.lastEventResizeDrag = evt.drag;
     }
 
-    onResizeHandleDragStop(evt) {
+    onResizeDragStop(evt) {
     }
 
-    // --- Rotation Handle Events
+    // --- Rotation Events
 
-    onRotationHandleDragIntentStart(evt) {
+    onRotationDragIntentStart(evt) {
     }
 
-    onRotationHandleDragIntentStop(evt) {
+    onRotationDragIntentStop(evt) {
     }
 
-    onRotationHandleDragStart(evt) {
+    onRotationDragStart(evt) {
     }
 
-    onRotationHandleDragMove(evt) {
+    onRotationDragMove(evt) {
       this.lastEventRotation = evt.rotation;
     }
 
-    onRotationHandleDragStop(evt) {
+    onRotationDragStop(evt) {
     }
 
   }

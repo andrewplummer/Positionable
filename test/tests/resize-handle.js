@@ -46,7 +46,7 @@ describe('ResizeHandle', function(uiRoot) {
     assert.equal(handle.vProp, vProp);
   }
 
-  it('should correctly throw resize events on listener', function() {
+  it('should fire resize handle events', function() {
     var handle = createHandle('se');
     dragElement(handle.el, 200, 200, 300, 250);
     assert.equal(listener.lastEventDrag.x, 100);
