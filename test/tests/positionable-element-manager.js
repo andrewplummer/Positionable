@@ -82,6 +82,11 @@ describe('PositionableElementManager', function(uiRoot) {
     els = [el1, el2];
   }
 
+  function setupNested() {
+    el = appendNestedBox();
+    manager.findElements();
+  }
+
   function setupBox(left, top, width, height) {
     el = appendAbsoluteBox();
     el.style.left   = left;
@@ -89,6 +94,10 @@ describe('PositionableElementManager', function(uiRoot) {
     el.style.width  = width;
     el.style.height = height;
     manager.findElements();
+  }
+
+  function getElementZIndex(el) {
+    return window.getComputedStyle(el).zIndex;
   }
 
   function setupPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
@@ -114,7 +123,8 @@ describe('PositionableElementManager', function(uiRoot) {
   function mockOffsetParentDimensions(el, offsetWidth, offsetHeight) {
     mockGetter(el, 'offsetParent',  {
       offsetWidth: offsetWidth,
-      offsetHeight: offsetHeight
+      offsetHeight: offsetHeight,
+      style: {}
     });
   }
 
@@ -243,6 +253,33 @@ describe('PositionableElementManager', function(uiRoot) {
     fireShiftMouseDown(els[1]);
     fireMouseUp(getUiElement(els[0], '.position-handle'));
     assert.equal(manager.focusedElements.length, 2);
+  });
+
+  it('should put focused element on top', function() {
+    setupMultiple();
+    focusElement(els[0]);
+    var z1 = getElementZIndex(els[0]);
+    var z2 = getElementZIndex(els[1]);
+    assert.isTrue(z1 > z2);
+  });
+
+  it('should put all focused element parents on top and then restore after unfocus', function() {
+    setupNested();
+
+    var zEl = getElementZIndex(el);
+    var zParent = getElementZIndex(el.parentNode);
+
+    // Need to mock the offsetParent property here because the
+    // fixtures are rendered in a hidden box where it will be null.
+    mockGetter(el, 'offsetParent',  el.parentNode);
+
+    focusElement(el);
+    assert.equal(getElementZIndex(el), String(PositionableElement.TOP_Z_INDEX));
+    assert.equal(getElementZIndex(el.parentNode), String(PositionableElement.TOP_Z_INDEX));
+
+    manager.unfocusAll();
+    assert.equal(getElementZIndex(el), zEl);
+    assert.equal(getElementZIndex(el.parentNode), zParent);
   });
 
   // --- Positioning

@@ -3,9 +3,6 @@
 function appendFixture(classNames, parent) {
   parent = parent || document.getElementById('element-fixtures');
   var el = document.createElement('div');
-  if (typeof classNames === 'string') {
-    classNames = [classNames];
-  }
   classNames.filter(n => n).forEach(n => el.classList.add(n));
   parent.appendChild(el);
   return el;
@@ -32,8 +29,8 @@ function appendInvertedBox(className, parent) {
 }
 
 function appendNestedBox() {
-  var container = appendFixture('nested-container');
-  return appendFixture('absolute-box', container);
+  var container = appendRelativeBox();
+  return appendFixture(['box', 'absolute-box'], container);
 }
 
 function releaseAppendedFixtures() {

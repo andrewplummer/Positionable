@@ -164,6 +164,11 @@
       this.results.push(new TestResult(arg1 === arg2, msg));
     }
 
+    assertTrue(arg1) {
+      var msg = `${arg1} should be true`;
+      this.results.push(new TestResult(!!arg1, msg));
+    }
+
     assertNull(arg) {
       this.results.push(new TestResult(arg == null, arg + ' should be null'));
     }
@@ -190,6 +195,7 @@
       return {
         equal: this.assertEqual.bind(this),
         match: this.assertMatch.bind(this),
+        isTrue: this.assertTrue.bind(this),
         isNull: this.assertNull.bind(this),
         exists: this.assertExists.bind(this),
         isUndefined: this.assertUndefined.bind(this),

@@ -1606,6 +1606,8 @@ class PositionableElement extends BrowserEventTarget {
 
   static get ROTATION_SNAPPING() { return 22.5 };
 
+  static get TOP_Z_INDEX() { return 9999999; }
+
   constructor(el, listener) {
     super(el);
     this.listener = listener;
@@ -1878,23 +1880,19 @@ class PositionableElement extends BrowserEventTarget {
 
   focus() {
     this.ui.addClass(PositionableElement.UI_FOCUSED_CLASS);
-    /*
-    this.addClass('positioned-element-focused');
-     TODO: test this!
-    this.positionedParents.forEach(function(el) {
-      el.addClass('positioned-parent-focused');
-    });
-    */
+    this.setElementZIndex(PositionableElement.TOP_Z_INDEX);
   }
 
   unfocus() {
     this.ui.removeClass(PositionableElement.UI_FOCUSED_CLASS);
-    /*
-    this.removeClass('positioned-element-focused');
-    this.positionedParents.forEach(function(el) {
-      el.removeClass('positioned-parent-focused');
-    });
-    */
+    this.setElementZIndex('');
+  }
+
+  setElementZIndex(zIndex) {
+    var el = this.el;
+    do {
+      el.style.zIndex = zIndex;
+    } while (el = el.offsetParent);
   }
 
   // --- Resizing
