@@ -77,7 +77,8 @@ describe('DragTarget', function(uiRoot) {
 
   it('should trigger click if no drag detected', function() {
     setupStatic();
-    dragElement(el, 50, 100, 50, 100);
+    fireMouseDown(el, 50, 100);
+    fireDocumentMouseUp(50, 100);
 
     assert.isUndefined(target.lastDragEvent);
     assert.equal(target.clicked, true);

@@ -1007,6 +1007,7 @@ class DragTarget extends BrowserEventTarget {
   }
 
   onMouseMove(evt) {
+
     // TODO: better way to handle this?
     if (this.resetTarget) {
       // Setting the reset target flags this element for a
@@ -1793,17 +1794,18 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   onRotationHandleDragStart(evt, handle) {
-    this.startRotation = this.getRotation();
     this.rotationOrigin = this.getViewportCenter();
+    this.startRotation  = this.getRotationForEvent(evt);
     this.listener.onRotationDragStart(evt, handle, this);
   }
 
-  onRotationHandleDragMove(evt, handle) {
-    // Our rotation origin uses 
-    var x = evt.clientX;
-    var y = evt.clientY;
+  getRotationForEvent(evt) {
     // TODO: where should the 45 live?
-    var rotation = new Point(x, y).subtract(this.rotationOrigin).getAngle() - 45;
+    return new Point(evt.clientX, evt.clientY).subtract(this.rotationOrigin).getAngle() - 45;
+  }
+
+  onRotationHandleDragMove(evt, handle) {
+    var rotation = this.getRotationForEvent(evt);
     evt.rotation = {
       abs: rotation,
       offset: rotation - this.startRotation
@@ -6185,7 +6187,7 @@ class CSSPixelValue extends CSSValue {
 class CSSDegreeValue extends CSSValue {
 
   constructor(val) {
-    super(val, 'deg');
+    super(val, 'deg', 2);
   }
 
   get deg() {

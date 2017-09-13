@@ -23,12 +23,6 @@
       rect.right  += next.left;
       rect.bottom += next.top;
     }
-    rect.x      -= window.scrollX;
-    rect.y      -= window.scrollY;
-    rect.left   -= window.scrollX;
-    rect.top    -= window.scrollY;
-    rect.right  -= window.scrollX;
-    rect.bottom -= window.scrollY;
     return rect;
   }
 

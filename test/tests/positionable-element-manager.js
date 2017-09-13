@@ -527,14 +527,18 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.transform, 'rotate(45deg)');
   });
 
+  it('should rotate based on the handle origin, not the original element rotation', function() {
+    setupAbsolute();
+    dragElement(getUiElement(el, '.rotation-handle'), 214, 194, 214, 195);
+    assert.equal(el.style.transform, 'rotate(0.6deg)');
+  });
+
   it('should constrain rotation', function() {
     setupAbsolute();
-    fireShiftMouseDown(getUiElement(el, '.rotation-handle'), 200, 200);
-    fireShiftDocumentMouseMove(142, 200);
+    shiftDragElement(getUiElement(el, '.rotation-handle'), 200, 200, 142, 200);
     assert.equal(el.style.transform, 'rotate(45deg)');
-    fireShiftDocumentMouseMove(140, 200);
-    assert.equal(el.style.transform, 'rotate(68deg)');
-    fireShiftDocumentMouseUp(140, 200);
+    shiftDragElement(getUiElement(el, '.rotation-handle'), 142, 200, 130, 200);
+    assert.equal(el.style.transform, 'rotate(67.5deg)');
   });
 
   it('should rotate properly while scrolled', function() {
