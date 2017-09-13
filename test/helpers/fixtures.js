@@ -1,31 +1,39 @@
 
 
-function appendFixture(classNames) {
-  var el = document.getElementById('element-fixtures');
-  var box = document.createElement('div');
-  classNames.filter(n => n).forEach(n => box.classList.add(n));
-  el.appendChild(box);
-  return box;
+function appendFixture(classNames, parent) {
+  parent = parent || document.getElementById('element-fixtures');
+  var el = document.createElement('div');
+  if (typeof classNames === 'string') {
+    classNames = [classNames];
+  }
+  classNames.filter(n => n).forEach(n => el.classList.add(n));
+  parent.appendChild(el);
+  return el;
 }
 
-function appendAbsoluteBox(className) {
-  return appendFixture(['box', 'absolute-box', className]);
+function appendAbsoluteBox(className, parent) {
+  return appendFixture(['box', 'absolute-box', className], parent);
 }
 
-function appendFixedBox(className) {
-  return appendFixture(['box', 'fixed-box', className]);
+function appendFixedBox(className, parent) {
+  return appendFixture(['box', 'fixed-box', className], parent);
 }
 
-function appendRelativeBox(className) {
-  return appendFixture(['box', 'relative-box', className]);
+function appendRelativeBox(className, parent) {
+  return appendFixture(['box', 'relative-box', className], parent);
 }
 
-function appendStaticBox(className) {
-  return appendFixture(['box', 'static-box', className]);
+function appendStaticBox(className, parent) {
+  return appendFixture(['box', 'static-box', className], parent);
 }
 
-function appendInvertedBox(className) {
-  return appendFixture(['box', 'inverted-box', className]);
+function appendInvertedBox(className, parent) {
+  return appendFixture(['box', 'inverted-box', className], parent);
+}
+
+function appendNestedBox() {
+  var container = appendFixture('nested-container');
+  return appendFixture('absolute-box', container);
 }
 
 function releaseAppendedFixtures() {

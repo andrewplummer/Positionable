@@ -605,7 +605,7 @@ class Element {
     }
   }
 
-  getCenter() {
+  getViewportCenter() {
     var rect = this.el.getBoundingClientRect();
     return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
@@ -1621,7 +1621,6 @@ class PositionableElement extends BrowserEventTarget {
   setup() {
     this.setupEvents();
     this.setupInitialState();
-    this.setupPositionedParents();
     this.injectInterface();
   }
 
@@ -1669,6 +1668,7 @@ class PositionableElement extends BrowserEventTarget {
     this.backgroundImage = matcher.getBackgroundImage(el);
   }
 
+  /*
   setupPositionedParents() {
     var el = this.el, style;
     this.positionedParents = [];
@@ -1679,6 +1679,7 @@ class PositionableElement extends BrowserEventTarget {
       }
     }
   }
+  */
 
   setupHandles(root) {
     /* TODO: do we need an object to hold handles? */
@@ -1793,13 +1794,14 @@ class PositionableElement extends BrowserEventTarget {
 
   onRotationHandleDragStart(evt, handle) {
     this.startRotation = this.getRotation();
-    this.rotationOrigin = this.getCenter();
+    this.rotationOrigin = this.getViewportCenter();
     this.listener.onRotationDragStart(evt, handle, this);
   }
 
   onRotationHandleDragMove(evt, handle) {
-    var x = this.isFixed ? evt.clientX : evt.pageX;
-    var y = this.isFixed ? evt.clientY : evt.pageY;
+    // Our rotation origin uses 
+    var x = evt.clientX;
+    var y = evt.clientY;
     // TODO: where should the 45 live?
     var rotation = new Point(x, y).subtract(this.rotationOrigin).getAngle() - 45;
     evt.rotation = {
@@ -2986,6 +2988,9 @@ class PositionableElementManager {
       let excludeSelectors = excludeSelector ? excludeSelector.split(',') : [];
 
       excludeSelectors.push(hostClassName);
+      excludeSelectors.push('script');
+      excludeSelectors.push('style');
+      excludeSelectors.push('link');
       excludeSelector = excludeSelectors.map(s => `:not(${s})`).join('')
 
       let query = `${includeSelector || '*'}${excludeSelector}`;
@@ -3082,7 +3087,7 @@ class PositionableElementManager {
 
   focusContainedElements(selection) {
     var prev = this.getFocusedElements();
-    var next = this.elements.filter(el => selection.contains(el.getCenter()));
+    var next = this.elements.filter(el => selection.contains(el.getViewportCenter()));
     prev.forEach(e => this.removeFocused(e));
     next.forEach(e => this.addFocused(e));
     if (this.focusedElementsChanged(prev, next)) {
@@ -5777,7 +5782,7 @@ class CSSRuleMatcher {
   }
 
   getCSSValue(prop) {
-    return CSSValue.parse(this.getProperty(prop), prop, this.el.parentNode);
+    return CSSValue.parse(this.getProperty(prop), prop, this.el.offsetParent);
 
     /* TODO: handle these
     if (str === 'auto' || str === '') {
@@ -5785,7 +5790,7 @@ class CSSRuleMatcher {
       return new CSSValue(null);
     } else if (str === 'center') {
       // TODO: other values??
-      return new CSSValue(50, '%', percentTarget, percentComponent);
+      return new CSSValue(50, '%', offsetParent, percentComponent);
     }
     */
 
@@ -5799,7 +5804,7 @@ class CSSRuleMatcher {
   }
 
   getMatchedCSSValue(prop) {
-    return CSSValue.parse(this.getMatchedProperty(prop), prop, this.el.parentNode);
+    return CSSValue.parse(this.getMatchedProperty(prop), prop, this.el.offsetParent);
   }
 
   getZIndex() {
@@ -5822,7 +5827,9 @@ class CSSRuleMatcher {
     // Must use computed styles here,
     // otherwise the url may not include the host.
     var backgroundImage = this.computedStyles['backgroundImage'];
-    var backgroundPosition = this.getProperty('backgroundPosition');
+    // It seems the initial value of backgroundPosition is 0% 0%,
+    // so prevent defaulting to percentage values by using only matcheds styles.
+    var backgroundPosition = this.getMatchedProperty('backgroundPosition') || 'initial';
     return BackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
   }
 
@@ -5984,7 +5991,7 @@ class CSSCompositeTransformFunction {
     }
 
     values = values.split(',').map(function(str) {
-      var val = CSSValue.parse(str, name, true);
+      var val = CSSValue.parse(str, name, null, true);
       if (val.unit === '%') {
         // Won't support percentages here as they would have to take scale
         // operations into account as well, which is too complex to handle.
@@ -6065,7 +6072,7 @@ class CSSValue {
     this.precision = precision || 0;
   }
 
-  static parse(str, prop, percentTarget, subpixel) {
+  static parse(str, prop, offsetParent, subpixel) {
 
     if (!str) {
       return null;
@@ -6084,7 +6091,7 @@ class CSSValue {
     switch (unit) {
 
       case '%':
-        return CSSPercentValue.fromProperty(prop, val, percentTarget);
+        return CSSPercentValue.fromProperty(prop, val, offsetParent);
 
       case 'vw':
       case 'vh':
@@ -6098,7 +6105,6 @@ class CSSValue {
       case 'px':   return new CSSPixelValue(val, subpixel);
 
       default:
-        console.info('gotch');
         throwError('UHOHOHOHHO', val, unit);
     }
   }
@@ -6244,11 +6250,11 @@ class CSSTurnValue extends CSSValue {
 
 class CSSPercentValue extends CSSValue {
 
-  static fromProperty(prop, val, percentTarget) {
+  static fromProperty(prop, val, offsetParent) {
     if (CSSPercentValue.isBackgroundProperty(prop)) {
-      return new CSSBackgroundPercentValue(val, prop, percentTarget);
+      return new CSSBackgroundPercentValue(val, prop, offsetParent);
     } else {
-      return new CSSPercentValue(val, prop, percentTarget);
+      return new CSSPercentValue(val, prop, offsetParent);
     }
   }
 
@@ -6256,36 +6262,53 @@ class CSSPercentValue extends CSSValue {
     return prop === 'backgroundLeft' || prop === 'backgroundTop';
   }
 
-  constructor(val, prop, target) {
+  constructor(val, prop, offsetParent) {
     super(val, '%', 2);
-    this.prop   = prop;
-    this.target = target;
+    this.prop         = prop;
+    this.offsetParent = offsetParent;
+    this.isFixed      = this.hasNoPositionedOffsetParent();
+  }
+
+  hasNoPositionedOffsetParent() {
+    return !this.offsetParent || this.hasStaticBodyOffset();
+  }
+
+  // It seems that CSS/CSSOM has a bug/quirk where absolute elements are relative
+  // to the viewport if the HTML and BODY are not positioned, however offsetParent
+  // is still reported as the BODY, so check for this case.
+  hasStaticBodyOffset() {
+    return this.offsetParent === document.body &&
+           this.isStatic(document.body) &&
+           this.isStatic(document.documentElement);
+  }
+
+  isStatic(el) {
+    return window.getComputedStyle(el).position === 'static';
   }
 
   get px() {
-    return this.val / 100 * this.getTargetValue();
+    return this.val / 100 * this.getOffset();
   }
 
   set px(px) {
-    this.val = px / this.getTargetValue() * 100;
+    this.val = px / this.getOffset() * 100;
   }
 
-  // TODO: rename?
-  getTargetValue() {
+  getOffset() {
     switch (this.prop) {
       case 'left':
       case 'right':
       case 'width':
-        return this.target.clientWidth;
+        return this.isFixed ? window.innerWidth : this.offsetParent.offsetWidth;
       case 'top':
       case 'bottom':
       case 'height':
-        return this.target.clientHeight;
+        return this.isFixed ? window.innerHeight : this.offsetParent.offsetHeight;
     }
   }
 
   clone() {
-    return new CSSPercentValue(this.val, this.prop, this.target);
+    return new CSSPercentValue(this.val, this.prop, this.offsetParent);
   }
 
 }

@@ -58,7 +58,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   teardown(function() {
-    manager.destroyAll();
+    releaseAppendedFixtures();
     el       = null;
     els      = null;
     manager  = null;
@@ -89,6 +89,33 @@ describe('PositionableElementManager', function(uiRoot) {
     el.style.width  = width;
     el.style.height = height;
     manager.findElements();
+  }
+
+  function setupPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
+    el = appendAbsoluteBox();
+    el.style.left   = left;
+    el.style.top    = top;
+    el.style.width  = width;
+    el.style.height = height;
+    mockOffsetParentDimensions(el, offsetWidth, offsetHeight);
+    manager.findElements();
+  }
+
+  function setupNestedPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
+    el = appendNestedBox();
+    el.style.left   = left;
+    el.style.top    = top;
+    el.style.width  = width;
+    el.style.height = height;
+    mockOffsetParentDimensions(el, offsetWidth, offsetHeight);
+    manager.findElements();
+  }
+
+  function mockOffsetParentDimensions(el, offsetWidth, offsetHeight) {
+    mockGetter(el, 'offsetParent',  {
+      offsetWidth: offsetWidth,
+      offsetHeight: offsetHeight
+    });
   }
 
   function setupRotatedBox(left, top, width, height, rotation) {
@@ -266,6 +293,20 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.left, '150px');
     assert.equal(el.style.top,  '150px');
 
+  });
+
+  it('should move boxes positioned by percent', function() {
+    setupPercentBox('10%', '10%', '100px', '100px', 1000, 1000);
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 300, 300);
+    assert.equal(el.style.left, '25%');
+    assert.equal(el.style.top,  '25%');
+  });
+
+  it('should move boxes nested inside non-positioned elements', function() {
+    setupNestedPercentBox('10%', '10%', '100px', '100px', 1000, 1000);
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 300, 300);
+    assert.equal(el.style.left, '25%');
+    assert.equal(el.style.top,  '25%');
   });
 
   // --- Resize
@@ -494,6 +535,16 @@ describe('PositionableElementManager', function(uiRoot) {
     fireShiftDocumentMouseMove(140, 200);
     assert.equal(el.style.transform, 'rotate(68deg)');
     fireShiftDocumentMouseUp(140, 200);
+  });
+
+  it('should rotate properly while scrolled', function() {
+
+    whileFakeScrolled(500, () => {
+      setupAbsolute();
+      dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 200);
+      assert.equal(el.style.transform, 'rotate(45deg)');
+    });
+
   });
 
   it('should update all element rotation handles', function() {
