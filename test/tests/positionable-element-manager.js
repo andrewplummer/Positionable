@@ -277,6 +277,16 @@ describe('PositionableElementManager', function(uiRoot) {
 
   });
 
+  it('should toggle focus on shift click', function() {
+    setupAbsolute();
+
+    clickElement(el);
+    assertElementFocused(el, true);
+
+    shiftClickElement(el);
+    assertElementFocused(el, false);
+  });
+
   it('should toggle focus on shift click when multiple are focused', function() {
     setupMultiple();
 
