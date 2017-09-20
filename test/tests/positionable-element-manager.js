@@ -352,6 +352,13 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(listener.focusedElementsChangedEvents, 2);
   });
 
+  it('should allow selective focus by function', function() {
+    setupMultiple();
+    manager.setFocused(element => element.el === els[1]);
+    assertElementFocused(els[0], false);
+    assertElementFocused(els[1], true);
+  });
+
   // --- Positioning
 
   it('should move', function() {

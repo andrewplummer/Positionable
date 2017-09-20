@@ -1606,7 +1606,7 @@ class PositionableElement extends BrowserEventTarget {
 
   static get ROTATION_SNAPPING() { return 22.5 };
 
-  static get TOP_Z_INDEX() { return 9999999; }
+  static get TOP_Z_INDEX() { return 9999995; }
 
   constructor(el, listener) {
     super(el);
@@ -2802,11 +2802,16 @@ class AppController {
 
   // --- Drag Selection Events
 
+  onDragSelectionStart() {
+    this.cursorManager.setDragCursor('crosshair');
+  }
+
   onDragSelectionMove(selection) {
-    this.elementManager.focusContainedElements(selection);
+    this.elementManager.setFocused(element => selection.contains(element.el));
   }
 
   onDragSelectionStop() {
+    this.cursorManager.clearDragCursor();
   }
 
   onDragSelectionClear() {
@@ -2908,7 +2913,14 @@ class PositionableElementManager {
     var prev, next, incoming, outgoing;
 
     prev = this.getFocusedElements();
-    next = Array.isArray(arg) ? arg : [arg];
+
+    if (typeof arg === 'function') {
+      next = this.elements.filter(arg);
+    } else if (Array.isArray(arg)) {
+      next = arg;
+    } else {
+      next = [arg];
+    }
 
     incoming = next.filter(el => !prev.includes(el));
     outgoing = prev.filter(el => !next.includes(el));
@@ -3504,6 +3516,7 @@ class DragSelection extends DragTarget {
     super.onDragStart(evt);
     this.dragStartBox = CSSBox.fromPixelValues(evt.clientX, evt.clientY, 0, 0);
     this.ui.addClass(DragSelection.ACTIVE_CLASS);
+    this.listener.onDragSelectionStart(this);
   }
 
   onDragMove(evt) {
@@ -3527,14 +3540,21 @@ class DragSelection extends DragTarget {
     this.listener.onDragSelectionClear();
   }
 
-  contains(p) {
+  contains(el) {
+
+    var center = this.getCenterForElement(el);
     var rect = this.ui.el.getBoundingClientRect();
 
-    return rect.left   <= p.x &&
-           rect.right  >= p.x &&
-           rect.top    <= p.y &&
-           rect.bottom >= p.y;
+    return rect.left   <= center.x &&
+           rect.right  >= center.x &&
+           rect.top    <= center.y &&
+           rect.bottom >= center.y;
 
+  }
+
+  getCenterForElement(el) {
+    var rect = el.getBoundingClientRect();
+    return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   render() {

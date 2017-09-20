@@ -27,6 +27,15 @@ describe('DragSelection', function(uiRoot) {
     drag = new DragSelection(uiRoot, listener);
   });
 
+  function setupPositionedElement(top, left, width, height) {
+    var el = appendAbsoluteBox();
+    el.style.left   = left;
+    el.style.top    = top;
+    el.style.width  = width;
+    el.style.height = height;
+    return el;
+  }
+
   function dragSelection(startX, startY, endX, endY) {
     fireMouseDown(document.documentElement, startX, startY);
     fireDocumentMouseMove(startX, startY);
@@ -43,14 +52,12 @@ describe('DragSelection', function(uiRoot) {
     assert.equal(ui.style.height, '900px');
   });
 
-  it('should report points it contains', function() {
+  it('should report elements it contains', function() {
     dragSelection(100, 100, 1000, 1000);
-    assert.equal(drag.contains(new Point(0,    0)), false);
-    assert.equal(drag.contains(new Point(100,  100)), true);
-    assert.equal(drag.contains(new Point(100,  1000)), true);
-    assert.equal(drag.contains(new Point(1000, 100)), true);
-    assert.equal(drag.contains(new Point(1000, 1000)), true);
-    assert.equal(drag.contains(new Point(1001, 1001)), false);
+    var el1 = setupPositionedElement('100px', '100px', '100px', '100px');
+    var el2 = setupPositionedElement('1000px', '1000px', '100px', '100px');
+    assert.equal(drag.contains(el1), true);
+    assert.equal(drag.contains(el2), false);
   });
 
   it('should fire drag selection clear events', function() {
