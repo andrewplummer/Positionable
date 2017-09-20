@@ -64,6 +64,10 @@ function fireShiftMouseDownUp(el, x, y) {
   fireMouseUp(el, x, y, { shiftKey: true });
 }
 
+function fireShiftClick(el, x, y, opt) {
+  fireMouseEvent('click', el, x, y, { shiftKey: true });
+}
+
 /*-------------------------] Drag Events [--------------------------*/
 
 function fireDragElement(el, coords, opt) {

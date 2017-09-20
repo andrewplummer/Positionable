@@ -1642,6 +1642,7 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   setupEvents() {
+    this.bindEvent('click', this.onClick);
     this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('mousedown', this.onMouseDown);
     this.bindEvent('contextmenu', this.onContextMenu);
@@ -1739,6 +1740,11 @@ class PositionableElement extends BrowserEventTarget {
   onMouseDown(evt) {
     evt.stopPropagation();
     this.listener.onElementMouseDown(evt, this);
+  }
+
+  onClick(evt) {
+    evt.stopPropagation();
+    this.listener.onElementClick(evt, this);
   }
 
   // --- Position Handle Drag Events
@@ -1937,13 +1943,12 @@ class PositionableElement extends BrowserEventTarget {
     }
 
     if (rotation) {
-      var a1 = this.getAnchorPosition(dir, lastBox, rotation);
-      var a2 = this.getAnchorPosition(dir, nextBox, rotation);
-      // TODO: move into function?
-      //var a1 = anchor.getPosition(lastBox, rotation);
-      //var a2 = anchor.getPosition(nextBox, rotation);
-      var pos = lastState.cssTransform.getTranslation().add(a1.subtract(a2))
-      this.cssTransform.setTranslation(pos);
+      // If a box is rotated, then the anchor positions will shift
+      // as the box is resized, so update the translation here based
+      // on this shift to keep the anchors aligned.
+      var anchorOffset = this.getAnchorOffset(dir, lastBox, nextBox, rotation);
+      var lastTranslation = lastState.cssTransform.getTranslation();
+      this.cssTransform.setTranslation(lastTranslation.add(anchorOffset));
       this.renderTransform();
     }
 
@@ -1951,23 +1956,59 @@ class PositionableElement extends BrowserEventTarget {
     this.cssBox.render(this.el.style);
   }
 
-  getAnchorPosition(dir, cssBox, rotation) {
-    var offset = this.getAnchorCenterOffset(dir, cssBox);
-    return cssBox.getCenter().add(offset.rotate(rotation));
+  getAnchorOffset(dir, lastBox, nextBox, rotation) {
+    var lastAnchorPos = this.getAnchorPosition(dir, lastBox, rotation);
+    var nextAnchorPos = this.getAnchorPosition(dir, nextBox, rotation);
+    return lastAnchorPos.subtract(nextAnchorPos);
   }
 
-  getAnchorCenterOffset(dir, cssBox) {
-    var w = cssBox.cssWidth.px  / 2;
-    var h = cssBox.cssHeight.px / 2;
+  getAnchorPosition(dir, cssBox, rotation) {
+    var boxNormal = this.getBoxNormal(cssBox);
+    var anchorNormal = this.getAnchorNormal(dir);
+
+    // The distance to the center of the box. This will be the
+    // same regardless of the box being inverted or not.
+    var boxCenterOffset = cssBox.getDimensions().multiply(.5);
+
+    // The position of the rotated anchor point from the center of
+    // the box. Rotation needs to be applied around the center, which
+    // is why the vectors need to be broken down and then multiplied
+    // by the box normal to ensure that inverted axes remain correct
+    // relative to the box.
+    var anchorOffsetFromCenter = boxCenterOffset.multiply(anchorNormal).rotate(rotation).multiply(boxNormal);
+
+    // The final return value will be the result of adding all the
+    // positions together. Note that the final value will not be an
+    // absolute point relative to the viewport or page, as it is only
+    // needed to calculate offsets from other anchor positions. However,
+    // it does need to be in an X/Y coordinate system as the result will
+    // be used for setting translation, so the final result needs to be
+    // multiplied by the box normal to flip any inverted axes of the box.
+    return cssBox.getPosition().add(boxCenterOffset).add(anchorOffsetFromCenter).multiply(boxNormal);
+  }
+
+  getBoxNormal(cssBox) {
+    // The box normal represents the direction of the internal
+    // coordinates of a box relative to its position, which may
+    // have inverted axes.
+    var x = cssBox.hasInvertedAxis('h') ? -1 : 1;
+    var y = cssBox.hasInvertedAxis('v') ? -1 : 1;
+    return new Point(x, y);
+  }
+
+  getAnchorNormal(dir) {
+    // The anchor normal represents the normalized offset of an
+    // anchor point opposite the given handle direction from the
+    // center. These are given in a normal X/Y coordinate system.
     switch (dir) {
-      case 's':  return new Point(0, -h);
-      case 'n':  return new Point(0,  h);
-      case 'w':  return new Point(w,  0);
-      case 'e':  return new Point(-w, 0);
-      case 'sw': return new Point(w,  -h);
-      case 'nw': return new Point(w,   h);
-      case 'ne': return new Point(-w,  h);
-      case 'se': return new Point(-w, -h);
+      case 'n':  return new Point( 0, 1);
+      case 's':  return new Point( 0,-1);
+      case 'w':  return new Point( 1, 0);
+      case 'e':  return new Point(-1, 0);
+      case 'sw': return new Point( 1,-1);
+      case 'nw': return new Point( 1, 1);
+      case 'ne': return new Point(-1, 1);
+      case 'se': return new Point(-1,-1);
     }
   }
 
@@ -2805,10 +2846,6 @@ class PositionableElementManager {
 
   }
 
-  getFocusedElements() {
-    return this.focusedElements;
-  }
-
   // --- Setup
 
   // TODO: wtf is this??
@@ -2818,10 +2855,157 @@ class PositionableElementManager {
   }
   */
 
+  // --- Focusing
+
+  getFocusedElements() {
+    return this.focusedElements;
+  }
+
+  focus(element) {
+    if (!this.elementIsFocused(element)) {
+      element.focus();
+      this.focusedElements.push(element);
+    }
+  }
+
+  unfocus(element) {
+    if (this.elementIsFocused(element)) {
+      element.unfocus();
+      this.focusedElements = this.focusedElements.filter(function(el) {
+        return el !== element;
+      });
+    }
+  }
+
+  /*
+  toggleFocused(element) {
+    if (this.focusedElements.includes(element)) {
+      this.setFocused(this.focusedElements.filter(el => el !== element));
+    } else {
+      this.setFocused(this.focusedElements.concat(element));
+    }
+  }
+  */
+
+  pushFocusedStates() {
+    // TODO: change to focused!
+    this.elements.forEach(el => el.pushState());
+  }
+
+  isFocused(element) {
+    return this.focusedElements.some(el => el === element);
+  }
+
+  addFocused(element) {
+    this.setFocused(this.focusedElements.concat(element));
+  }
+
+  removeFocused(element) {
+    this.setFocused(this.focusedElements.filter(el => el !== element));
+  }
+
+  setFocused(arg) {
+    var prev, next, incoming, outgoing;
+
+    prev = this.getFocusedElements();
+    next = Array.isArray(arg) ? arg : [arg];
+
+    incoming = next.filter(el => !prev.includes(el));
+    outgoing = prev.filter(el => !next.includes(el));
+
+    if (incoming.length || outgoing.length) {
+      outgoing.forEach(e => this.unfocus(e));
+      incoming.forEach(e => this.focus(e));
+      this.listener.onFocusedElementsChanged();
+      this.focusedElements = next;
+    }
+
+  }
+
+  unfocusAll() {
+    this.setFocused([]);
+  }
+
+  /*
+
+  addAllFocused() {
+    this.elements.forEach(function(el) {
+      this.focus(el);
+    }, this);
+  }
+
+  focusAll(toggle) {
+    if (toggle && this.focusedElements.length === this.elements.length) {
+      this.unfocusAll();
+    } else {
+      this.addAllFocused();
+    }
+    this.statusBar.update();
+  }
+
+  // TODO: move to focused?
+  focus(element, toggle) {
+    if (toggle) {
+      this.toggleFocused(element);
+    } else {
+      this.focus(element);
+    }
+    this.statusBar.update();
+  }
+  */
+
+  /*
+  unfocusAll() {
+    this.removeAllFocused();
+    this.statusBar.update();
+  }
+
+  // TODO: not toggling!
+  toggleFocused(element) {
+    if (this.elementIsFocused(element)) {
+      this.unfocus(element);
+    } else {
+      this.focus(element);
+    }
+  }
+
+  setFocused(element, add) {
+    if (!add) {
+      this.focusedElements.filter(el => el !== element).forEach(el => el.unfocus());
+      this.focusedElements = [];
+    }
+    this.focus(element);
+  }
+
+
+  callOnEveryFocused(name, args) {
+    var el, i, len;
+    for(i = 0, len = this.focusedElements.length; i < len; i++) {
+      el = this.focusedElements[i];
+      el[name].apply(el, args);
+    }
+  }
+  */
+
   // --- Element Drag Events
 
   onElementMouseDown(evt, element) {
-    this.swapFocused(evt, element);
+    if (evt.shiftKey) {
+      this.removeOnClick = this.isFocused(element);
+      this.addFocused(element);
+    } else if (!this.isFocused(element)) {
+      this.setFocused(element);
+    }
+  }
+
+  onElementDragMove() {
+    this.removeOnClick = false;
+  }
+
+  onElementClick(evt, element) {
+    if (this.removeOnClick) {
+      this.removeFocused(element);
+    }
   }
 
   // --- Position Drag Events
@@ -2840,6 +3024,7 @@ class PositionableElementManager {
   }
 
   onPositionDragMove(evt, handle, element) {
+    this.onElementDragMove();
     this.focusedElements.forEach(el => {
       var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
       var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
@@ -2899,6 +3084,7 @@ class PositionableElementManager {
   }
 
   onResizeDragMove(evt, handle, element) {
+    this.onElementDragMove();
     this.focusedElements.forEach(el => {
       el.resize(evt.drag.x, evt.drag.y, handle.name, evt.shiftKey);
     });
@@ -2925,6 +3111,7 @@ class PositionableElementManager {
   }
 
   onRotationDragMove(evt, handle, element) {
+    this.onElementDragMove();
     this.focusedElements.forEach(el => el.rotate(evt.rotation.offset, evt.shiftKey));
     this.listener.onRotationDragMove(evt, handle, element);
   }
@@ -2933,6 +3120,7 @@ class PositionableElementManager {
     this.listener.onRotationDragStop(evt, handle, element);
   }
 
+  /*
   // TODO FIRST!
   // TODO: no need alternate?
   delegateToDragging(name, alternate) {
@@ -2946,6 +3134,7 @@ class PositionableElementManager {
       }
     }.bind(this);
   }
+  */
 
   /*
 
@@ -3011,11 +3200,6 @@ class PositionableElementManager {
 
   }
 
-  pushFocusedStates() {
-    // TODO: change to focused!
-    this.elements.forEach(el => el.pushState());
-  }
-
   refresh() {
     this.destroyElements();
     this.startBuild();
@@ -3062,7 +3246,6 @@ class PositionableElementManager {
     var style = window.getComputedStyle(el);
     return style.position === 'absolute' || style.position === 'fixed';
   }
-    */
 
   delegateToFocused(name, disallowWhenDragging) {
     // TODO: can this be cleaner?
@@ -3072,108 +3255,7 @@ class PositionableElementManager {
       this.callOnEveryFocused(name, arguments);
     }.bind(this);
   }
-
-  // --- Actions
-
-  // TODO: move to focused?
-  focus(element, toggle) {
-    if (toggle) {
-      this.toggleFocused(element);
-    } else {
-      this.addFocused(element);
-    }
-    this.statusBar.update();
-  }
-
-  focusContainedElements(selection) {
-    var prev = this.getFocusedElements();
-    var next = this.elements.filter(el => selection.contains(el.getViewportCenter()));
-    prev.forEach(e => this.removeFocused(e));
-    next.forEach(e => this.addFocused(e));
-    if (this.focusedElementsChanged(prev, next)) {
-      this.listener.onFocusedElementsChanged();
-    }
-    this.focusedElements = next;
-  }
-
-  focusedElementsChanged(arr1, arr2) {
-    return arr1.length !== arr2.length || arr1.some((el, i) => arr1[el] !== arr2[el]);
-  }
-
-  focusAll(toggle) {
-    if (toggle && this.focusedElements.length === this.elements.length) {
-      this.unfocusAll();
-    } else {
-      this.addAllFocused();
-    }
-    this.statusBar.update();
-  }
-
-  /*
-  unfocusAll() {
-    this.removeAllFocused();
-    this.statusBar.update();
-  }
-  */
-
-  // TODO: not toggling!
-  toggleFocused(element) {
-    if (this.elementIsFocused(element)) {
-      this.removeFocused(element);
-    } else {
-      this.addFocused(element);
-    }
-  }
-
-  addFocused(element) {
-    if (!this.elementIsFocused(element)) {
-      element.focus();
-      this.focusedElements.push(element);
-    }
-  }
-
-  setFocused(element, add) {
-    if (!add) {
-      this.focusedElements.filter(el => el !== element).forEach(el => el.unfocus());
-      this.focusedElements = [];
-    }
-    this.addFocused(element);
-  }
-
-  swapFocused(evt, element) {
-    if (!evt.shiftKey && this.focusedElements.length === 1) {
-      this.unfocusAll();
-    }
-    this.addFocused(element);
-  }
-
-  removeFocused(element) {
-    if (this.elementIsFocused(element)) {
-      element.unfocus();
-      this.focusedElements = this.focusedElements.filter(function(el) {
-        return el !== element;
-      });
-    }
-  }
-
-  addAllFocused() {
-    this.elements.forEach(function(el) {
-      this.addFocused(el);
-    }, this);
-  }
-
-  unfocusAll() {
-    this.focusedElements.forEach(el => el.unfocus());
-    this.focusedElements = [];
-  }
-
-  callOnEveryFocused(name, args) {
-    var el, i, len;
-    for(i = 0, len = this.focusedElements.length; i < len; i++) {
-      el = this.focusedElements[i];
-      el[name].apply(el, args);
-    }
-  }
+    */
 
   // --- Alignment
 
@@ -4986,10 +5068,12 @@ class Point {
     return new Point(this.x - p.x, this.y - p.y);
   }
 
-  multiply(n) {
-    // TODO: does this work and do we even need it??
-    return new Point(this.x * n, this.y * n);
-    //return Point.vector(this.getAngle(), this.getLength() * n);
+  multiply(arg) {
+    if (typeof arg === 'number') {
+      return new Point(this.x * arg, this.y * arg);
+    } else {
+      return new Point(this.x * arg.x, this.y * arg.y);
+    }
   }
 
   getAngle() {
@@ -5450,13 +5534,44 @@ class CSSBox {
     }
   }
 
+  /*
   getCenter() {
-    // Note that this only returns the center of the box itself
-    // and cannot be used in relation to coordinates relative
-    // to the viewport/page as the box may be reflected or have
-    // inverted properties.
-    return new Point(this.cssWidth.px / 2, this.cssHeight.px / 2);
+    // Note that the center position may have inverted properties,
+    // and cannot be used in calculations relative to the viewport/page.
+    return new Point(this.cssH.px + this.cssWidth.px / 2, this.cssV.px + this.cssHeight.px / 2);
   }
+  */
+
+  hasInvertedAxis(axis) {
+    var cssPos = axis === 'h' ? this.cssH : this.cssV;
+    return cssPos.isInverted();
+  }
+
+  getPosition() {
+    return new Point(this.cssH.px, this.cssV.px);
+  }
+
+  getDimensions() {
+    return new Point(this.cssWidth.px, this.cssHeight.px);
+  }
+
+  /*
+  getCenterOffsetForDir(dir) {
+    var w = cssBox.cssWidth.px  / 2;
+    var h = cssBox.cssHeight.px / 2;
+    switch (dir) {
+      case 's':  return new Point(0, -h);
+      case 'n':  return new Point(0,  h);
+      case 'w':  return new Point(w,  0);
+      case 'e':  return new Point(-w, 0);
+      case 'sw': return new Point(w,  -h);
+      case 'nw': return new Point(w,   h);
+      case 'ne': return new Point(-w,  h);
+      case 'se': return new Point(-w, -h);
+    }
+  }
+  */
+
 
   getRatio() {
     return new Point(this.cssWidth.px, this.cssHeight.px).getRatio();

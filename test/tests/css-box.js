@@ -18,10 +18,16 @@ describe('CSSBox', function(uiRoot) {
     box = CSSBox.fromPixelValues(left, top, width, height);
   }
 
-  it('should be able to get its center', function() {
+  it('should be able to get its position', function() {
     setupNormal();
-    assert.equal(box.getCenter().x, 50);
-    assert.equal(box.getCenter().y, 50);
+    assert.equal(box.getPosition().x, 100);
+    assert.equal(box.getPosition().y, 100);
+  });
+
+  it('should be able to get its dimensions', function() {
+    setupNormal();
+    assert.equal(box.getDimensions().x, 100);
+    assert.equal(box.getDimensions().y, 100);
   });
 
   it('should be able to move', function() {

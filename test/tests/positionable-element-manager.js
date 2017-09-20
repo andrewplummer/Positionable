@@ -5,6 +5,16 @@ describe('PositionableElementManager', function(uiRoot) {
 
   class Listener {
 
+    constructor() {
+      this.focusedElementsChangedEvents = 0;
+    }
+
+    // --- Focus Events
+
+    onFocusedElementsChanged() {
+      this.focusedElementsChangedEvents += 1;
+    }
+
     // --- Position Events
 
     onPositionDragIntentStart() {
@@ -147,12 +157,33 @@ describe('PositionableElementManager', function(uiRoot) {
     manager.findElements();
   }
 
-  function focusElement(el) {
-    fireShiftMouseDownUp(getUiElement(el, '.position-handle'))
+  function setupInvertedRotatedBox(right, bottom, width, height, rotation) {
+    el = appendInvertedBox();
+    el.style.right  = right;
+    el.style.bottom = bottom;
+    el.style.width  = width;
+    el.style.height = height;
+    el.style.transform = 'rotate(' + rotation + ')';
+    manager.findElements();
   }
 
-  function focusElements(els) {
-    els.forEach(el => focusElement(el));
+  function clickElement(el) {
+    fireMouseDownUp(el);
+    fireClick(el)
+  }
+
+  function shiftClickElement(el) {
+    fireShiftMouseDownUp(el);
+    fireShiftClick(el)
+  }
+
+  function shiftClickElements(els) {
+    els.forEach(el => shiftClickElement(el));
+  }
+
+  function assertElementFocused(el, flag) {
+    var ui = getUiElement(el, '.ui');
+    assert.equal(ui.classList.contains('ui--focused'), flag);
   }
 
   function assertBoxDimensions(left, top, width, height) {
@@ -218,46 +249,54 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should focus element on position handle mousedown', function() {
     setupAbsolute();
     fireMouseDownUp(getUiElement(el, '.position-handle'));
-    assert.equal(manager.focusedElements.length, 1);
+    assertElementFocused(el, true);
   });
 
   it('should focus element on resize handle mousedown', function() {
     setupAbsolute();
     fireMouseDownUp(getUiElement(el, '.resize-handle'));
-    assert.equal(manager.focusedElements.length, 1);
+    assertElementFocused(el, true);
   });
 
   it('should focus elements on rotation handle mousedown', function() {
     setupAbsolute();
     fireMouseDownUp(getUiElement(el, '.rotation-handle'));
-    assert.equal(manager.focusedElements.length, 1);
+    assertElementFocused(el, true);
   });
 
   it('should swap focus by default', function() {
     setupMultiple();
 
-    fireMouseDownUp(getUiElement(els[0], '.position-handle'));
-    assert.equal(manager.focusedElements.length, 1);
-    assert.equal(manager.focusedElements[0], manager.elements[0]);
+    clickElement(els[0]);
+    assertElementFocused(els[0], true);
+    assertElementFocused(els[1], false);
 
-    fireMouseDownUp(getUiElement(els[1], '.position-handle'));
-    assert.equal(manager.focusedElements.length, 1);
-    assert.equal(manager.focusedElements[0], manager.elements[1]);
+    clickElement(els[1]);
+    assertElementFocused(els[0], false);
+    assertElementFocused(els[1], true);
 
   });
 
-  it('should not swap focus when shift key is pressed', function() {
+  it('should toggle focus on shift click when multiple are focused', function() {
     setupMultiple();
-    fireMouseDownUp(getUiElement(els[0], '.position-handle'));
-    fireShiftMouseDownUp(getUiElement(els[0], '.position-handle'));
-    fireShiftMouseDown(els[1]);
-    fireMouseUp(getUiElement(els[0], '.position-handle'));
-    assert.equal(manager.focusedElements.length, 2);
+
+    clickElement(els[0]);
+    assertElementFocused(els[0], true);
+    assertElementFocused(els[1], false);
+
+    shiftClickElement(els[1]);
+    assertElementFocused(els[0], true);
+    assertElementFocused(els[1], true);
+
+    shiftClickElement(els[1]);
+    assertElementFocused(els[0], true);
+    assertElementFocused(els[1], false);
+
   });
 
   it('should put focused element on top', function() {
     setupMultiple();
-    focusElement(els[0]);
+    clickElement(els[0]);
     var z1 = getElementZIndex(els[0]);
     var z2 = getElementZIndex(els[1]);
     assert.isTrue(z1 > z2);
@@ -273,13 +312,34 @@ describe('PositionableElementManager', function(uiRoot) {
     // fixtures are rendered in a hidden box where it will be null.
     mockGetter(el, 'offsetParent',  el.parentNode);
 
-    focusElement(el);
+    clickElement(el);
     assert.equal(getElementZIndex(el), String(PositionableElement.TOP_Z_INDEX));
     assert.equal(getElementZIndex(el.parentNode), String(PositionableElement.TOP_Z_INDEX));
 
     manager.unfocusAll();
     assert.equal(getElementZIndex(el), zEl);
     assert.equal(getElementZIndex(el.parentNode), zParent);
+  });
+
+  it('should fire one focus changed event when focused added', function() {
+    setupAbsolute();
+    clickElement(el);
+    assert.equal(listener.focusedElementsChangedEvents, 1);
+  });
+
+  it('should fire one focus changed event when focused removed', function() {
+    setupAbsolute();
+    clickElement(el);
+    manager.unfocusAll();
+    assert.equal(listener.focusedElementsChangedEvents, 2);
+  });
+
+  it('should fire one focus changed event when focused swapped', function() {
+    setupMultiple();
+    clickElement(els[0]);
+    assert.equal(listener.focusedElementsChangedEvents, 1);
+    clickElement(els[1]);
+    assert.equal(listener.focusedElementsChangedEvents, 2);
   });
 
   // --- Positioning
@@ -549,11 +609,32 @@ describe('PositionableElementManager', function(uiRoot) {
 
   // --- Resize on a rotated element
 
-  it('should keep anchors when resizing a rotated element', function() {
+  it('should stay anchored when resizing a rotated element from se', function() {
     setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 280);
     assertBoxDimensions('100px', '100px', '142px', '142px');
     assertBoxTranslation(-20.86, 8.64);
+  });
+
+  it('should stay anchored when resizing a rotated element from nw', function() {
+    setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
+    dragElement(getUiElement(el, '.resize-handle-nw'), 150, 79, 150, 8);
+    assertBoxDimensions('50px', '50px', '150px', '150px');
+    assertBoxTranslation(25.1, -10.4);
+  });
+
+  it('should stay anchored when resizing an inverted rotated element from se', function() {
+    setupInvertedRotatedBox('100px', '100px', '100px', '100px', '45deg');
+    dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 280);
+    assertInvertedBoxDimensions('58px', '58px', '142px', '142px');
+    assertBoxTranslation(-20.86, 8.64);
+  });
+
+  it('should stay anchored when resizing an inverted rotated element from nw', function() {
+    setupInvertedRotatedBox('100px', '100px', '100px', '100px', '45deg');
+    dragElement(getUiElement(el, '.resize-handle-nw'), 150, 79, 150, 8);
+    assertInvertedBoxDimensions('100px', '100px', '150px', '150px');
+    assertBoxTranslation(25.1, -10.4);
   });
 
   // --- Rotation
@@ -588,12 +669,21 @@ describe('PositionableElementManager', function(uiRoot) {
 
   });
 
+  it('should swap focus when rotation handle dragged', function() {
+    setupMultiple();
+
+    clickElement(els[0]);
+    dragElement(getUiElement(els[1], '.rotation-handle'), 200, 200, 150, 200);
+    assert.equal(els[0].style.transform, '');
+    assert.equal(els[1].style.transform, 'rotate(45deg)');
+  });
+
   it('should update all element rotation handles', function() {
     setupMultiple();
 
     // Focus both and drag element 1 to 45 degrees.
     // Both elements should be at 45 degrees.
-    focusElements(els);
+    shiftClickElements(els);
     dragElement(getUiElement(els[1], '.rotation-handle'), 200, 200, 150, 200);
     assert.equal(els[0].style.transform, 'rotate(45deg)');
     assert.equal(els[1].style.transform, 'rotate(45deg)');
@@ -601,14 +691,15 @@ describe('PositionableElementManager', function(uiRoot) {
     // Now focus element 1 and drag it to 90 degrees.
     // Element 1 should be at 90 degrees, and element 2 should be at 45 degrees.
     manager.unfocusAll();
-    focusElement(els[0]);
+    clickElement(els[0]);
     dragElement(getUiElement(els[0], '.rotation-handle'), 150, 200, 100, 200);
     assert.equal(els[0].style.transform, 'rotate(90deg)');
     assert.equal(els[1].style.transform, 'rotate(45deg)');
 
     // Now focus both again and drag element 2 to 180 degrees.
     // Element 1 should be at 225 degrees, and element 2 should be at 180 degrees.
-    focusElements(els);
+    manager.unfocusAll();
+    shiftClickElements(els);
     dragElement(getUiElement(els[1], '.rotation-handle'), 150, 200, 100, 100);
     assert.equal(els[0].style.transform, 'rotate(225deg)');
     assert.equal(els[1].style.transform, 'rotate(180deg)');
