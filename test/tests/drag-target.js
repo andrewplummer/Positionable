@@ -169,7 +169,7 @@ describe('DragTarget', function(uiRoot) {
   });
 
   it('should not follow links on click', function() {
-    setupLink('#');
+    setupLink('#foo');
     fireClick(el);
     assert.equal(window.location.hash, '');
   });

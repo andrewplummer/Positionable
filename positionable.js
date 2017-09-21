@@ -949,11 +949,13 @@ class DragTarget extends BrowserEventTarget {
 
   setupDragEvents() {
     this.bindEvent('mousedown', this.onMouseDown);
+    this.bindEvent('click',     this.onNativeClick);
     this.bindEvent('dragstart', this.onNativeDragStart);
 
     // These two events are actually on the document, so bind manually.
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseUp   = this.onMouseUp.bind(this);
+
     this.onScroll    = this.onScroll.bind(this);
   }
 
@@ -963,10 +965,10 @@ class DragTarget extends BrowserEventTarget {
     evt.preventDefault();
   }
 
-  suppressLinkClicks() {
-    if (this.el.href) {
-      this.preventDefault('click');
-    }
+  onNativeClick(evt) {
+    // Draggable links should not be followed
+    // when clicked.
+    evt.preventDefault();
   }
 
   // --- Events
@@ -1094,10 +1096,12 @@ class DragTarget extends BrowserEventTarget {
     }
   }
 
-  getScrollOffset() {
-  }
-
   // --- Overrides
+
+  onClick(evt) {}
+
+  onDragIntentStart(evt) {}
+  onDragIntentStop(evt)  {}
 
   onDragStart(evt) {
     this.disableUserSelect();
@@ -1111,10 +1115,6 @@ class DragTarget extends BrowserEventTarget {
     this.clearUserSelect();
     this.checkDragIntentStopped(evt);
   }
-
-  onDragIntentStart(evt) {}
-  onDragIntentStop(evt)  {}
-  onClick(evt) {}
 
   // --- Private
 

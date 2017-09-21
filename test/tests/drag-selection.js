@@ -9,6 +9,9 @@ describe('DragSelection', function(uiRoot) {
       this.dragSelectionClearFired = false;
     }
 
+    onDragSelectionStart() {
+    }
+
     onDragSelectionMove(dragSelection) {
     }
 
