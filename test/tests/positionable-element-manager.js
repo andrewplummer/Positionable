@@ -186,7 +186,7 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(ui.classList.contains('ui--focused'), flag);
   }
 
-  function assertBoxDimensions(left, top, width, height) {
+  function assertBoxDimensions(el, left, top, width, height) {
     assert.equal(el.style.left,   left);
     assert.equal(el.style.top,    top);
     assert.equal(el.style.width,  width);
@@ -435,7 +435,7 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should resize inverted box dimensions', function() {
     setupAbsolute();
     dragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 50, 50);
-    assertBoxDimensions('50px', '50px', '50px', '50px');
+    assertBoxDimensions(el, '50px', '50px', '50px', '50px');
   });
 
   // --- Resize Reflecting
@@ -443,13 +443,13 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should allow a box to be reflected from its opposite edges', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     dragElement(getUiElement(el, '.resize-handle-se'), 2420, 1580, 0, 0);
-    assertBoxDimensions('0px', '0px', '500px', '500px');
+    assertBoxDimensions(el, '0px', '0px', '500px', '500px');
   });
 
   it('should allow a box to be reflected from its positioned edges', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     dragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 2920, 2080);
-    assertBoxDimensions('2420px', '1580px', '500px', '500px');
+    assertBoxDimensions(el, '2420px', '1580px', '500px', '500px');
   });
 
   it('should allow an inverted box to be reflected from its opposite edges', function() {
@@ -469,25 +469,25 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should constrain resize', function() {
     setupAbsolute();
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 500, 300);
-    assertBoxDimensions('100px', '100px', '200px', '200px');
+    assertBoxDimensions(el, '100px', '100px', '200px', '200px');
   });
 
   it('should not fail to constrain se resize on 0', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 0, 0);
-    assertBoxDimensions('0px', '0px', '0px', '0px');
+    assertBoxDimensions(el, '0px', '0px', '0px', '0px');
   });
 
   it('should not fail to constrain nw resize on 0', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 0, 0, 1920, 1080);
-    assertBoxDimensions('1920px', '1080px', '0px', '0px');
+    assertBoxDimensions(el, '1920px', '1080px', '0px', '0px');
   });
 
   it('should not interfere with non-constrainable handles', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-n'), 0, 0, 0, -1000);
-    assertBoxDimensions('0px', '-1000px', '1920px', '2080px');
+    assertBoxDimensions(el, '0px', '-1000px', '1920px', '2080px');
   });
 
   // --- Resize constraining - special
@@ -495,7 +495,7 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should allow a zero size element when constraining', function() {
     setupBox('100px', '100px', '100px', '100px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 276, 100);
-    assertBoxDimensions('100px', '100px', '0px', '0px');
+    assertBoxDimensions(el, '100px', '100px', '0px', '0px');
   });
 
   // --- Resize Constraining - Normal Box
@@ -503,49 +503,49 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should constrain ratio when dragging se corner right and down', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 2800, 1100);
-    assertBoxDimensions('0px', '0px', '1956px', '1100px');
+    assertBoxDimensions(el, '0px', '0px', '1956px', '1100px');
   });
 
   it('should constrain ratio when dragging se corner right and up', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 2800, 900);
-    assertBoxDimensions('0px', '0px', '1600px', '900px');
+    assertBoxDimensions(el, '0px', '0px', '1600px', '900px');
   });
 
   it('should constrain ratio when dragging se corner left and down', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 1080, 1920);
-    assertBoxDimensions('0px', '0px', '1080px', '608px');
+    assertBoxDimensions(el, '0px', '0px', '1080px', '608px');
   });
 
   it('should constrain ratio when dragging se corner left and up', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 1420, 580);
-    assertBoxDimensions('0px', '0px', '1031px', '580px');
+    assertBoxDimensions(el, '0px', '0px', '1031px', '580px');
   });
 
   it('should constrain ratio when dragging nw corner right and down', function() {
     setupBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 0, 0, 500, 500);
-    assertBoxDimensions('889px', '500px', '1031px', '580px');
+    assertBoxDimensions(el, '889px', '500px', '1031px', '580px');
   });
 
   it('should constrain ratio when dragging nw corner right and up', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 1000, 0);
-    assertBoxDimensions('1000px', '781px', '1420px', '799px');
+    assertBoxDimensions(el, '1000px', '781px', '1420px', '799px');
   });
 
   it('should constrain ratio when dragging nw corner left and down', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 0, 1000);
-    assertBoxDimensions('1389px', '1000px', '1031px', '580px');
+    assertBoxDimensions(el, '1389px', '1000px', '1031px', '580px');
   });
 
   it('should constrain ratio when dragging nw corner left and up', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 0, 0);
-    assertBoxDimensions('0px', '219px', '2420px', '1361px');
+    assertBoxDimensions(el, '0px', '219px', '2420px', '1361px');
   });
 
   // --- Resize Constraining - Inverted Box
@@ -603,13 +603,13 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should allow a constrained resize to reflect from its opposite edge', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 2420, 1580, 0, 0);
-    assertBoxDimensions('0px', '219px', '500px', '281px');
+    assertBoxDimensions(el, '0px', '219px', '500px', '281px');
   });
 
   it('should allow a constrained resize to reflect from its positioned edge', function() {
     setupBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 2920, 2080);
-    assertBoxDimensions('2420px', '1580px', '500px', '281px');
+    assertBoxDimensions(el, '2420px', '1580px', '500px', '281px');
   });
 
   it('should allow a constrained resize on an inverted box to reflect from its opposite edge', function() {
@@ -629,14 +629,14 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should stay anchored when resizing a rotated element from se', function() {
     setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 280);
-    assertBoxDimensions('100px', '100px', '142px', '142px');
+    assertBoxDimensions(el, '100px', '100px', '142px', '142px');
     assertBoxTranslation(-20.86, 8.64);
   });
 
   it('should stay anchored when resizing a rotated element from nw', function() {
     setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-nw'), 150, 79, 150, 8);
-    assertBoxDimensions('50px', '50px', '150px', '150px');
+    assertBoxDimensions(el, '50px', '50px', '150px', '150px');
     assertBoxTranslation(25.1, -10.4);
   });
 
@@ -652,6 +652,36 @@ describe('PositionableElementManager', function(uiRoot) {
     dragElement(getUiElement(el, '.resize-handle-nw'), 150, 79, 150, 8);
     assertInvertedBoxDimensions('100px', '100px', '150px', '150px');
     assertBoxTranslation(25.1, -10.4);
+  });
+
+  // --- Resizing multiple elements
+
+  it('should resize multiple elements from se handle', function() {
+    setupMultiple();
+    shiftClickElements(els);
+    dragElement(getUiElement(els[1], '.resize-handle-se'), 200, 200, 250, 300);
+    assertBoxDimensions(els[0], '100px', '100px', '150px', '200px');
+    assertBoxDimensions(els[1], '100px', '100px', '150px', '200px');
+  });
+
+  it('should resize multiple elements from nw handle', function() {
+    setupMultiple();
+    shiftClickElements(els);
+    dragElement(getUiElement(els[1], '.resize-handle-nw'), 100, 100, 50, 150);
+    assertBoxDimensions(els[0], '50px', '150px', '150px', '50px');
+    assertBoxDimensions(els[1], '50px', '150px', '150px', '50px');
+  });
+
+  it('should resize multiple elements with rotation', function() {
+    var el1 = appendAbsoluteBox();
+    var el2 = appendAbsoluteBox();
+    el2.style.transform = 'rotate(45deg)';
+    manager.findElements();
+
+    shiftClickElements([el1, el2]);
+    dragElement(getUiElement(el1, '.resize-handle-se'), 200, 200, 300, 300);
+    assertBoxDimensions(el1, '100px', '100px', '200px', '200px');
+    assertBoxDimensions(el2, '100px', '100px', '200px', '200px');
   });
 
   // --- Rotation

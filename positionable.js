@@ -1920,8 +1920,8 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  resize(x, y, dir, constrain, isAbsolute) {
-    var lastState, lastBox, nextBox, ratio, rotation, vector;
+  resize(vector, dir, constrain, isAbsolute) {
+    var lastState, lastBox, nextBox, ratio, rotation;
 
     lastState = this.getLastState();
     lastBox   = lastState.cssBox;
@@ -1929,12 +1929,7 @@ class PositionableElement extends BrowserEventTarget {
     ratio     = lastBox.getRatio();
     //var lastRatio = lastBox.getRatio();
     rotation = this.cssTransform.getRotation();
-    vector = new Point(x, y);
     //var handle = this.getHandle(handleName);
-
-    if (rotation) {
-      vector = vector.rotate(-rotation);
-    }
 
     nextBox.moveEdges(vector.x, vector.y, dir);
 
@@ -3096,9 +3091,23 @@ class PositionableElementManager {
   }
 
   onResizeDragMove(evt, handle, element) {
+    var vector, rotation;
+
+    // When resizing, any rotation is relative to the current
+    // dragging element, not each individual element, so if
+    // you are dragging a rotated se handle away from its anchor,
+    // all other boxes will resize in a uniform fashion. This
+    // is why rotation needs to be compensated for here, not in
+    // each element's resize method.
+    vector   = new Point(evt.drag.x, evt.drag.y);
+    rotation = element.getRotation();
+    if (rotation) {
+      vector = vector.rotate(-rotation);
+    }
+
     this.onElementDragMove();
     this.focusedElements.forEach(el => {
-      el.resize(evt.drag.x, evt.drag.y, handle.name, evt.shiftKey);
+      el.resize(vector, handle.name, evt.shiftKey);
     });
     this.listener.onResizeDragMove(evt, handle, element);
   }

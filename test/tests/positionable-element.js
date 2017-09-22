@@ -161,7 +161,7 @@ describe('PositionableElement', function(uiRoot) {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.pushState();
-    p.resize(30, 80, 'se');
+    p.resize(new Point(30, 80), 'se');
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '130px');
@@ -172,7 +172,7 @@ describe('PositionableElement', function(uiRoot) {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.pushState();
-    p.resize(30, 80, 'nw');
+    p.resize(new Point(30, 80), 'nw');
     assert.equal(el.style.left,   '130px');
     assert.equal(el.style.top,    '180px');
     assert.equal(el.style.width,  '70px');
@@ -183,7 +183,7 @@ describe('PositionableElement', function(uiRoot) {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.pushState();
-    p.resize(200, 100, 'se', true);
+    p.resize(new Point(200, 100), 'se', true);
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '200px');
