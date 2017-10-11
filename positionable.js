@@ -2684,11 +2684,14 @@ class PositionableElementOutputManager {
 
 }
 
-/*-------------------------] AppController [--------------------------*/
+/*-------------------------] PositionableElementAlignmentManager [--------------------------*/
 
 class PositionableElementAlignmentManager {
 
   align(elements, edge) {
+    if (elements.length < 2) {
+      return;
+    }
     switch (edge) {
       case 'top':     this.alignEdge(elements, edge, false); break;
       case 'left':    this.alignEdge(elements, edge, false); break;
@@ -2699,56 +2702,103 @@ class PositionableElementAlignmentManager {
     }
   }
 
-  distribute(elements) {
+  distribute(elements, edge) {
+    this.distributeElements(elements, edge);
   }
 
   // --- Private
 
-  alignCenter(elements, edge) {
-    var centers, min, max, average;
-
-    centers = elements.map(element => {
-      var rect = element.el.getBoundingClientRect();
-      if (edge === 'hcenter') {
-        return rect.left + rect.width / 2;
-      } else {
-        return rect.top + rect.height / 2;
-      }
-    });
-
-    min = centers.reduce((min, c) => Math.min(c, min), Infinity);
-    max = centers.reduce((max, c) => Math.max(c, max), -Infinity);
-    average = Math.round((max - min) / 2 + min);
-
-    this.moveElements(elements, centers, edge, average);
-  }
-
   alignEdge(elements, edge, max) {
-    var values, edgeVal;
+    var elementMoves, edgeVal;
 
-    values = elements.map(element => element.el.getBoundingClientRect()[edge]);
+    elementMoves = this.getElementMoves(elements, edge);
 
     if (max) {
-      edgeVal = values.reduce((max, v) => Math.max(v, max), -Infinity);
+      edgeVal = elementMoves.reduce((max, em) => Math.max(em.current, max), -Infinity);
     } else {
-      edgeVal = values.reduce((min, v) => Math.min(v, min), Infinity);
+      edgeVal = elementMoves.reduce((min, em) => Math.min(em.current, min), Infinity);
     }
 
-    this.moveElements(elements, values, edge, edgeVal);
+    elementMoves.forEach(em => em.target = edgeVal);
+
+    this.executeElementMoves(elementMoves, edge);
   }
 
-  moveElements(elements, values, edge, targetValue) {
-    values.forEach((v, i) => {
-      if (v !== targetValue) {
-        var element = elements[i];
-        element.pushState();
+  alignCenter(elements, edge) {
+    var elementMoves, min, max, average;
+
+    elementMoves = this.getElementMoves(elements, edge);
+
+    min = elementMoves.reduce((min, em) => Math.min(em.current, min), Infinity);
+    max = elementMoves.reduce((max, em) => Math.max(em.current, max), -Infinity);
+    average = Math.round((max - min) / 2 + min);
+
+    elementMoves.forEach(em => em.target = average);
+
+    this.executeElementMoves(elementMoves, edge);
+  }
+
+  distributeElements(elements, edge) {
+    var elementMoves, min, max, distributeAmount;
+
+    if (elements.length < 3) {
+      return;
+    }
+
+    elementMoves = this.getElementMoves(elements, edge);
+
+    elementMoves.sort((a, b) => {
+      return a.current - b.current;
+    });
+
+    min = elementMoves[0].current;
+    max = elementMoves[elementMoves.length - 1].current;
+
+    distributeAmount = Math.round((max - min) / (elementMoves.length - 1));
+
+    // Moves can only be executed on elements between the edge values.
+    elementMoves = elementMoves.slice(1, -1);
+
+    elementMoves.forEach((em, i) => {
+      em.target = min + distributeAmount * (i + 1);
+    });
+
+    this.executeElementMoves(elementMoves, edge);
+
+  }
+
+  executeElementMoves(elementMoves, edge) {
+    elementMoves.forEach(em => {
+      if (em.target !== em.current) {
+        em.element.pushState();
         if (this.isHorizontalEdge(edge)) {
-          element.move(targetValue - v, 0)
+          em.element.move(em.target - em.current, 0);
         } else {
-          element.move(0, targetValue - v)
+          em.element.move(0, em.target - em.current);
         }
       }
     });
+  }
+
+  getElementMoves(elements, edge) {
+    return elements.map(element => {
+      return {
+        element: element,
+        current: this.getElementEdgeValue(element, edge)
+      };
+    });
+  }
+
+  getElementEdgeValue(element, edge) {
+    var rect = element.el.getBoundingClientRect(), val;
+    if (edge === 'hcenter') {
+      val = rect.left + rect.width / 2;
+    } else if (edge === 'vcenter') {
+      val = rect.top + rect.height / 2;
+    } else {
+      val = rect[edge];
+    }
+    return Math.round(val);
   }
 
   isHorizontalEdge(edge) {
@@ -3824,7 +3874,8 @@ class ControlPanel extends DraggableElement {
       'position':   new Element(root.getElementById('element-area-position')),
       'dimensions': new Element(root.getElementById('element-area-dimensions')),
       'zIndex':     new Element(root.getElementById('element-area-zindex')),
-      'transform':  new Element(root.getElementById('element-area-transform'))
+      'transform':  new Element(root.getElementById('element-area-transform')),
+      'distributeButtons': new Element(root.getElementById('distribute-buttons'))
     };
   }
 
@@ -3922,6 +3973,11 @@ class ControlPanel extends DraggableElement {
 
   renderMultipleSelected(count) {
     this.renderedElements.multiple.text(count + ' elements selected');
+    if (count > 2) {
+      this.renderedElements.distributeButtons.unhide();
+    } else {
+      this.renderedElements.distributeButtons.hide();
+    }
   }
 
   renderElementSelector(selector) {

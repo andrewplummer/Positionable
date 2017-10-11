@@ -95,6 +95,12 @@ describe('ControlPanel', function(uiRoot) {
   it('should render multiple selected', function() {
     panel.renderMultipleSelected(5);
     assert.equal(getUiElement(document.documentElement, '#align-area-header').textContent, '5 elements selected');
+    assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, '');
+  });
+
+  it('should not render distribute buttons with only 2 elements selected', function() {
+    panel.renderMultipleSelected(2);
+    assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, 'none');
   });
 
 });

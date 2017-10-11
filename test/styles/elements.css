@@ -56,9 +56,6 @@
   left: 80px;
   width: 700px;
   height: 120px;
-  // right: 780
-  // bottom: 170
-  // hcenter: 430
 }
 
 .align-box-2 {
@@ -66,9 +63,6 @@
   left: 420px;
   width: 30px;
   height: 9px;
-  // right: 450
-  // bottom: 559;
-  // hcenter: 435
 }
 
 .align-box-3 {
@@ -76,8 +70,12 @@
   left: 670px;
   width: 90px;
   height: 80px;
-  // right: 760
-  // bottom: 139
-  // hcenter: 715
+}
+
+.align-box-4 {
+  top: 120px;
+  left: 100px;
+  width: 200px;
+  height: 140px;
 }
 
