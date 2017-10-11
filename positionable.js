@@ -23,6 +23,7 @@
 // - different background positions... top right, percentages
 // - bug: go to zindex nudging and unfocus window, then focus back, move is rendered
 // - test "auto" values? what should happen here?
+// - add "8 spaces" to tab style list
 // - test background-image: none
 // - resize while flipping between sizing modes (jumps?)
 // - position drag then hit ctrl to background drag (jumps?)
@@ -576,17 +577,20 @@ class Element {
     this.el.scrollLeft = 0;
   }
 
-  show(on) {
-    this.el.style.display = on === false ? '' : 'block';
-  }
-
   hide() {
     this.el.style.display = 'none';
   }
 
-  html(html) {
-    this.el.innerHTML = html;
-    return this;
+  show() {
+    this.el.style.display = 'block';
+  }
+
+  unhide(on) {
+    this.el.style.display = '';
+  }
+
+  text(str) {
+    this.el.textContent = str;
   }
 
   title(title) {
@@ -855,6 +859,7 @@ class BrowserEventTarget extends Element {
     });
   }
 
+  /*
   // TODO: I think it's clearer prefer just calling this in the method directly..
   bindEventWithPrevent(eventName, fn) {
     this.bindEvent(eventName, evt => {
@@ -866,6 +871,7 @@ class BrowserEventTarget extends Element {
   preventDefault(eventName) {
     this.bindEventWithPrevent(eventName, () => {});
   }
+  */
 
   addEventListener(eventName, handler) {
     this.listeners[eventName] = handler;
@@ -926,7 +932,7 @@ class MouseEventTarget extends BrowserEventTarget {
 
 class DragTarget extends BrowserEventTarget {
 
-  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,label,select,code,pre,span'; }
+  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,form,label,select,code,pre,span'; }
 
   constructor(el, allowInteraction) {
     super(el, allowInteraction);
@@ -935,7 +941,7 @@ class DragTarget extends BrowserEventTarget {
     this.hovering = false;
 
     if (allowInteraction) {
-      this.disableDraggingOnInteractiveElements();
+      this.disableEventsForInteractiveElements();
     }
   }
 
@@ -968,6 +974,7 @@ class DragTarget extends BrowserEventTarget {
   onNativeClick(evt) {
     // Draggable links should not be followed
     // when clicked.
+    evt.stopPropagation();
     evt.preventDefault();
   }
 
@@ -1138,13 +1145,16 @@ class DragTarget extends BrowserEventTarget {
     }
   }
 
-  disableDraggingOnInteractiveElements() {
+  disableEventsForInteractiveElements() {
     var els = this.el.querySelectorAll(DragTarget.INTERACTIVE_ELEMENTS_SELECTOR);
     els.forEach(el => {
-      el.addEventListener('mousedown', function(evt) {
-        evt.stopPropagation();
-      });
+      el.addEventListener('mousedown', this.stopEventPropagation);
+      el.addEventListener('click', this.stopEventPropagation);
     });
+  }
+
+  stopEventPropagation(evt) {
+    evt.stopPropagation();
   }
 
   // TODO: can this be removed?
@@ -2400,31 +2410,89 @@ class PositionableElement extends BrowserEventTarget {
 
   */
 
-  // --- Output
+  isPositioned() {
+    return this.style.position !== 'static';
+  }
 
-  getSelector() {
-    var type = settings.get(Settings.OUTPUT_SELECTOR);
+  // --- Teardown
+
+  destroy() {
+    this.positionHandle.destroy();
+    this.rotationHandle.destroy();
+    this.handles.nw.destroy();
+    this.handles.ne.destroy();
+    this.handles.se.destroy();
+    this.handles.sw.destroy();
+    this.handles.n.destroy();
+    this.handles.e.destroy();
+    this.handles.s.destroy();
+    this.handles.w.destroy();
+    super.destroy();
+  }
+
+  // --- Private
+
+  isFixedPosition() {
+    return window.getComputedStyle(this.el).position === 'fixed';
+  }
+
+}
+
+/*-------------------------] PositionableElementOutputManager [--------------------------*/
+
+class PositionableElementOutputManager {
+
+  static get NULL_SELECTOR() { return '[element]'; };
+
+  constructor(settings) {
+    this.settings = settings;
+  }
+
+  // --- Selectors
+
+  getSelector(element) {
+    var type = this.settings.get(Settings.OUTPUT_SELECTOR), el = element.el;
     if (type === Settings.OUTPUT_SELECTOR_AUTO) {
-      type = this.el.id ? Settings.OUTPUT_SELECTOR_ID : Settings.OUTPUT_SELECTOR_FIRST;
+      type = el.id ? Settings.OUTPUT_SELECTOR_ID : Settings.OUTPUT_SELECTOR_FIRST;
     }
     switch(type) {
       case Settings.OUTPUT_SELECTOR_NONE:    return '';
-      case Settings.OUTPUT_SELECTOR_ID:      return '#' + this.el.id;
-      case Settings.OUTPUT_SELECTOR_ALL:     return this.getAllClasses(this.el.classList);
-      case Settings.OUTPUT_SELECTOR_TAG:     return this.getTagName(this.el);
-      case Settings.OUTPUT_SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(this.el);
-      case Settings.OUTPUT_SELECTOR_FIRST:   return this.getFirstClass(this.el.classList);
-      case Settings.OUTPUT_SELECTOR_LONGEST: return this.getLongestClass(this.el.classList);
+      case Settings.OUTPUT_SELECTOR_ID:      return '#' + el.id;
+      case Settings.OUTPUT_SELECTOR_ALL:     return this.getAllClasses(el.classList);
+      case Settings.OUTPUT_SELECTOR_TAG:     return this.getTagName(el);
+      case Settings.OUTPUT_SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(el);
+      case Settings.OUTPUT_SELECTOR_FIRST:   return this.getFirstClass(el.classList);
+      case Settings.OUTPUT_SELECTOR_LONGEST: return this.getLongestClass(el.classList);
     }
   }
 
-  getAllClasses(list) {
-    return '.' + this.getFilteredClasses(list).join('.');
+  getSelectorWithDefault(element) {
+    return this.getSelector(element) || PositionableElementOutputManager.NULL_SELECTOR;
   }
 
+  // --- Property Headers
+
+  getPositionHeader(element) {
+    return element.cssBox.getPositionHeader();
+  }
+
+  getDimensionsHeader(element) {
+    return element.cssBox.getDimensionsHeader();
+  }
+
+  getZIndexHeader(element) {
+    return element.cssZIndex.toString();
+  }
+
+  getTransformHeader(element) {
+    return element.cssTransform.getHeader();
+  }
+
+  // --- Private
+
   getFirstClass(list) {
-    var first = this.getFilteredClasses(list)[0];
-    return first ? '.' + first : '[undefined element]';
+    var first = list[0];
+    return first ? '.' + first : PositionableElementOutputManager.NULL_SELECTOR;
   }
 
   getTagName(el) {
@@ -2443,21 +2511,32 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   getLongestClass(list) {
-    return '.' + this.getFilteredClasses(list).reduce(function(a, b) {
+    var classNames = Array.from(list);
+    return '.' + classNames.reduce(function(a, b) {
       return a.length > b.length ? a : b;
     });
   }
 
-  getFilteredClasses(list) {
-    var filtered = [], i = 0;
-    while(name = list[i++]) {
-      if (!name.match(EXTENSION_CLASS_PREFIX)) {
-        filtered.push(name);
-      }
-    }
-    return filtered;
+  getAllClasses(list) {
+    return '.' + Array.from(list).join('.');
   }
 
+  getAllProperties(element) {
+    var cssValues = [element.cssBox, element.cssZIndex, element.cssTransform];
+    return cssValues.filter(cssValue => {
+      return !cssValue.isNull();
+    }).map(cssValue => {
+      return cssValue.getHeader();
+    });
+    /*
+    this.cssBox = CSSBox.fromMatcher(matcher);
+    this.cssZIndex = matcher.getZIndex();
+    this.cssTransform = matcher.getTransform(el);
+    this.backgroundImage = matcher.getBackgroundImage(el);
+    */
+  }
+
+  /*
   getStyles(exclude) {
     var lines = [];
 
@@ -2547,6 +2626,7 @@ class PositionableElement extends BrowserEventTarget {
     }
     return false;
   }
+  */
 
   propertyIsUnchanged(prop, val1, val2) {
     var state = this.states[0];
@@ -2602,32 +2682,6 @@ class PositionableElement extends BrowserEventTarget {
     return r;
   }
 
-  isPositioned() {
-    return this.style.position !== 'static';
-  }
-
-  // --- Teardown
-
-  destroy() {
-    this.positionHandle.destroy();
-    this.rotationHandle.destroy();
-    this.handles.nw.destroy();
-    this.handles.ne.destroy();
-    this.handles.se.destroy();
-    this.handles.sw.destroy();
-    this.handles.n.destroy();
-    this.handles.e.destroy();
-    this.handles.s.destroy();
-    this.handles.w.destroy();
-    super.destroy();
-  }
-
-  // --- Private
-
-  isFixedPosition() {
-    return window.getComputedStyle(this.el).position === 'fixed';
-  }
-
 }
 
 /*-------------------------] AppController [--------------------------*/
@@ -2639,6 +2693,7 @@ class AppController {
   constructor(uiRoot) {
 
     this.settings = new Settings(this, localStorage, uiRoot);
+    this.elementOutputManager = new PositionableElementOutputManager(this.settings);
 
     this.body = new Element(document.body);
 
@@ -2652,36 +2707,51 @@ class AppController {
     this.elementManager = new PositionableElementManager(this);
     this.controlPanel   = new ControlPanel(uiRoot, this);
 
-    this.bindEvents(uiRoot);
-
     new DragSelection(uiRoot, this);
     new LoadingAnimation(uiRoot, this).show();
   }
 
   onFocusedElementsChanged() {
-    this.controlPanel.updateElements(this.elementManager.getFocusedElements());
+    var elements = this.elementManager.getFocusedElements(), element;
+    if (elements.length > 1) {
+      this.renderAlignArea(elements);
+      this.controlPanel.showAlignArea();
+    } else if (elements.length === 1) {
+      this.renderElementArea(elements[0]);
+      this.controlPanel.showElementArea();
+    } else {
+      this.controlPanel.showDefaultArea();
+    }
   }
 
-  /*
-  onLoadingAnimationComplete() {
+  // TODO: me!
+  renderAlignArea(elements) {
+    this.controlPanel.renderAlignArea(elements.length);
   }
-  */
 
-  skipGettingStarted() {
+  onSaveStyles() {
+    var styles = this.getStylesForFocusedElements();
+    // output save styles dialogue
+  }
+
+  onCopyStyles() {
+    var styles = this.getStylesForFocusedElements();
+    // output copy styles dialogue
+  }
+
+  getStylesForFocusedElements() {
+    return this.elementManager.getFocusedElements().map(element => {
+      return this.settings.getStylesForElement(element);
+    }).join(' ');
+  }
+
+  onGettingStartedSkip() {
     this.settings.setBoolean(Settings.SKIP_GETTING_STARTED, true);
     this.controlPanel.showDefaultArea();
   }
 
-  onSettingsSaved() {
+  onSettingsUpdated() {
     this.controlPanel.showDefaultArea();
-  }
-
-  showSettings() {
-    this.controlPanel.showSettingsArea();
-  }
-
-  showHelp() {
-    this.controlPanel.showHelpArea();
   }
 
   // --- Loading Animation Events
@@ -2718,6 +2788,7 @@ class AppController {
 
   onPositionDragMove(evt, handle, element) {
     console.info('POSITION DRAG MOVE');
+    this.renderElementPosition(element);
   }
 
   onPositionDragStop(evt, handle, element) {
@@ -2744,6 +2815,8 @@ class AppController {
 
   onResizeDragMove(evt, handle, element) {
     console.info('RESIZE DRAG MOVE');
+    this.renderElementDimensions(element);
+    this.renderElementTransform(element);
   }
 
   onResizeDragStop(evt, handle, element) {
@@ -2771,6 +2844,7 @@ class AppController {
   onRotationDragMove(evt, handle, element) {
     console.info('ROTATION DRAG MOVE');
     this.cursorManager.setRotateDragCursor(evt.rotation.abs);
+    this.renderElementTransform(element);
   }
 
   onRotationDragStop(evt, handle, element) {
@@ -2813,6 +2887,37 @@ class AppController {
     this.elementManager.unfocusAll();
   }
 
+  // --- Control Panel Element Rendering
+
+  renderElementArea(element) {
+    this.renderElementSelector(element);
+    this.renderElementPosition(element);
+    this.renderElementDimensions(element);
+    this.renderElementZIndex(element);
+    this.renderElementTransform(element);
+  }
+
+  renderElementSelector(element) {
+    this.controlPanel.renderElementSelector(this.elementOutputManager.getSelectorWithDefault(element));
+  }
+
+  renderElementPosition(element) {
+    this.controlPanel.renderElementPosition(this.elementOutputManager.getPositionHeader(element));
+  }
+
+  renderElementDimensions(element) {
+    this.controlPanel.renderElementDimensions(this.elementOutputManager.getDimensionsHeader(element));
+  }
+
+  renderElementZIndex(element) {
+    this.controlPanel.renderElementZIndex(this.elementOutputManager.getZIndexHeader(element));
+  }
+
+  renderElementTransform(element) {
+    this.controlPanel.renderElementTransform(this.elementOutputManager.getTransformHeader(element));
+  }
+
+  /*
   // TODO: can this just use listeners?
   bindEvents(uiRoot) {
     var els = uiRoot.querySelectorAll('[click]');
@@ -2825,6 +2930,7 @@ class AppController {
       });
     }
   }
+  */
 
 }
 
@@ -3594,16 +3700,42 @@ class ControlPanel extends DraggableElement {
     super(root.getElementById('control-panel'), true);
     this.listener = listener;
 
-    this.setup(root);
+    this.setupAreas(root);
+    this.setupUiEvents(root);
+    this.setupRenderedElements(root);
     this.setupDoubleClick();
   }
 
-  setup(root) {
+  setupAreas(root) {
     this.helpArea           = new ControlPanelArea(root, 'help');
+    this.alignArea          = new ControlPanelArea(root, 'align');
     this.defaultArea        = new ControlPanelArea(root, 'default');
     this.elementArea        = new ControlPanelArea(root, 'element');
     this.settingsArea       = new ControlPanelArea(root, 'settings');
     this.gettingStartedArea = new ControlPanelArea(root, 'getting-started');
+  }
+
+  setupUiEvents(root) {
+    this.setupClickEvent(root, 'control-panel-settings-button', this.onControlPanelSettingsClick);
+    this.setupClickEvent(root, 'settings-area-help-link', this.onSettingsAreaHelpLinkClick);
+    this.setupClickEvent(root, 'getting-started-skip-link', this.onGettingStartedSkipLinkClick);
+  }
+
+  setupRenderedElements(root) {
+    this.renderedElements = {
+      'selector':   new Element(root.getElementById('element-area-selector')),
+      'position':   new Element(root.getElementById('element-area-position')),
+      'dimensions': new Element(root.getElementById('element-area-dimensions')),
+      'zIndex':     new Element(root.getElementById('element-area-zindex')),
+      'transform':  new Element(root.getElementById('element-area-transform'))
+    };
+  }
+
+  setupClickEvent(root, id, handler) {
+    root.getElementById(id).addEventListener('click', evt => {
+      evt.stopPropagation();
+      handler.call(this, evt);
+    });
   }
 
   setupDoubleClick() {
@@ -3616,10 +3748,6 @@ class ControlPanel extends DraggableElement {
     this.cssH = this.defaultH;
     this.cssV = this.defaultV;
     this.render();
-  }
-
-  updateElements(elements) {
-    console.info('would update control panel here');
   }
 
   activate() {
@@ -3647,6 +3775,10 @@ class ControlPanel extends DraggableElement {
 
   showSettingsArea() {
     this.showArea(this.settingsArea);
+  }
+
+  showAlignArea() {
+    this.showArea(this.alignArea);
   }
 
   getAreaActiveClassName(area) {
@@ -3687,6 +3819,51 @@ class ControlPanel extends DraggableElement {
        document.activeElement.blur();
      }
      */
+  }
+
+  // --- Rendering
+
+  renderElementSelector(selector) {
+    this.renderOrHide(this.renderedElements.selector, selector);
+  }
+
+  renderElementPosition(position) {
+    this.renderOrHide(this.renderedElements.position, position);
+  }
+
+  renderElementDimensions(dimensions) {
+    this.renderOrHide(this.renderedElements.dimensions, dimensions);
+  }
+
+  renderElementZIndex(zIndex) {
+    this.renderOrHide(this.renderedElements.zIndex, zIndex, 'z');
+  }
+
+  renderElementTransform(transform) {
+    this.renderOrHide(this.renderedElements.transform, transform);
+  }
+
+  renderOrHide(el, text, append) {
+    if (text) {
+      el.text(text + (append || ''));
+      el.unhide();
+    } else {
+      el.hide();
+    }
+  }
+
+  // --- Element Click Events
+
+  onControlPanelSettingsClick(evt) {
+    this.showSettingsArea();
+  }
+
+  onSettingsAreaHelpLinkClick(evt) {
+    this.showHelpArea();
+  }
+
+  onGettingStartedSkipLinkClick(evt) {
+    this.listener.onGettingStartedSkip();
   }
 
   // --- Drag Events
@@ -4614,22 +4791,38 @@ class ControlPanelBlock extends ControlPanelComponent {
 
 /*-------------------------] Settings [--------------------------*/
 
-class Form extends Element {
+class Form extends BrowserEventTarget {
 
-  constructor(el) {
+  constructor(el, listener) {
     super(el);
-    this.data = {};
-    this.addEventListener('submit', this.onFormSubmit);
+    this.listener = listener;
+    this.bindEvent('submit', this.onFormSubmit);
+    this.bindEvent('reset', this.onFormReset);
   }
 
-  onFormSubmit() {
-    console.info('whoa', this);
+  onFormSubmit(evt) {
+    evt.preventDefault();
+    this.listener.onFormSubmit();
   }
 
+  onFormReset(evt) {
+    evt.preventDefault();
+    this.listener.onFormReset();
+  }
+
+
+  forEachControl(fn) {
+    var els = this.el.elements;
+    for (var i = 0, control; control = els[i]; i++) {
+      if (control.id) {
+        fn(control);
+      }
+    }
+  }
 
 }
 
-class Settings extends BrowserEventTarget {
+class Settings {
 
   static get TAB_STYLE()           { return 'tab-style';         }
   static get SAVE_FILENAME()       { return 'save-filename';     }
@@ -4663,7 +4856,7 @@ class Settings extends BrowserEventTarget {
   }
 
   constructor(listener, storage, root) {
-    super(root.getElementById('settings-form'));
+    this.form = new Form(root.getElementById('settings-form'), this);
     this.listener = listener;
     this.storage = storage;
 
@@ -4682,79 +4875,22 @@ class Settings extends BrowserEventTarget {
   }
 
   setup(root) {
-    this.bindEvent('submit', this.onFormSubmit);
-    this.bindEvent('reset', this.onFormReset);
     this.setFormControlsFromStorage();
     new LinkedSelect(root.getElementById('output-selector'));
   }
 
-  setFormControlsFromStorage() {
-    this.forEachFormControl((control) => {
-      this.setFormControlFromStorage(control);
-    });
-  }
-
-  setFormControlFromStorage(control) {
-    switch (control.type) {
-      case 'select-one':
-        for (var i = 0, option; option = control.options[i]; i++) {
-          if (option.value === this.get(control.id)) {
-            option.selected = true;
-          }
-        }
-        break;
-      case 'text':
-        control.value = this.get(control.id) || '';
-        break;
-      case 'checkbox':
-        control.checked = this.getBoolean(control.id);
-        break;
-    }
-  }
-
-  setStorageFromFormControls() {
-    this.forEachFormControl((control) => {
-      this.setStorageFromFormControl(control);
-    });
-  }
-
-  setStorageFromFormControl(control) {
-    switch (control.type) {
-      case 'select-one':
-        this.set(control.id, control.selectedOptions[0].value);
-        break;
-      case 'text':
-        this.set(control.id, control.value);
-        break;
-      case 'checkbox':
-        this.setBoolean(control.id, control.checked);
-        break;
-    }
-  }
-
-  forEachFormControl(fn) {
-    for (var i = 0, control; control = this.el.elements[i]; i++) {
-      if (control.id) {
-        fn.call(this, control);
-      }
-    }
-  }
-
   onFormSubmit(evt) {
-    evt.preventDefault();
     this.setStorageFromFormControls();
-    this.listener.onSettingsSaved();
+    this.listener.onSettingsUpdated();
   }
 
   onFormReset(evt) {
-    evt.preventDefault();
     if (confirm('Really clear all settings?')) {
       this.storage.clear();
       this.setFormControlsFromStorage();
       // Set timeout to prevent jank after confirm here
-      setTimeout(() => this.listener.onSettingsSaved(), 0);
+      setTimeout(() => this.listener.onSettingsUpdated(), 0);
     }
-    this.listener.onSettingsReset();
   }
 
   get(name) {
@@ -4769,12 +4905,46 @@ class Settings extends BrowserEventTarget {
     }
   }
 
-  getBoolean(name) {
-    return !!this.get(name);
-  }
-
   setBoolean(name, val) {
     this.set(name, val ? '1' : null);
+  }
+
+  // --- Private
+
+  setFormControlsFromStorage() {
+    this.form.forEachControl((control) => {
+      switch (control.type) {
+        case 'select-one':
+          for (var i = 0, option; option = control.options[i]; i++) {
+            if (option.value === this.get(control.id)) {
+              option.selected = true;
+            }
+          }
+          break;
+        case 'text':
+          control.value = this.get(control.id) || '';
+          break;
+        case 'checkbox':
+          control.checked = !!this.get(control.id);
+          break;
+      }
+    });
+  }
+
+  setStorageFromFormControls() {
+    this.form.forEachControl((control) => {
+      switch (control.type) {
+        case 'select-one':
+          this.set(control.id, control.selectedOptions[0].value);
+          break;
+        case 'text':
+          this.set(control.id, control.value);
+          break;
+        case 'checkbox':
+          this.setBoolean(control.id, control.checked);
+          break;
+      }
+    });
   }
 
 }
@@ -4940,6 +5110,7 @@ class CopyAnimation extends Animation {
       // TODO: cleaner??
       this.finished = function() {
         this.box.el.removeEventListener('webkitAnimationEnd', this.finished);
+        this.box.hide();
         this.reset();
       }.bind(this);
       this.box.addEventListener('webkitAnimationEnd', this.finished);
@@ -4947,7 +5118,6 @@ class CopyAnimation extends Animation {
   }
 
   reset() {
-    this.box.show(false);
     this.box.removeClass(CopyAnimation.IN_CLASS);
     this.text.removeClass(CopyAnimation.TEXT_IN_CLASS);
   }
@@ -5330,6 +5500,10 @@ class CSSPositioningProperty {
     this.px += this.isInverted() ? -px : px;
   }
 
+  toString() {
+    return this.cssValue.toString();
+  }
+
   // --- Accessors
 
   get px() {
@@ -5601,7 +5775,6 @@ class CSSBox {
   }
   */
 
-
   getRatio() {
     return new Point(this.cssWidth.px, this.cssHeight.px).getRatio();
   }
@@ -5629,6 +5802,16 @@ class CSSBox {
 
   isInvertedEdge(prop) {
     return prop === 'right' || prop === 'bottom';
+  }
+
+  // --- Headers
+
+  getPositionHeader() {
+    return [this.cssH, this.cssV].join(', ');
+  }
+
+  getDimensionsHeader() {
+    return [this.cssWidth, this.cssHeight].join(', ');
   }
 
   /*
@@ -6074,6 +6257,12 @@ class CSSCompositeTransform {
     return func;
   }
 
+  getRotationFunction() {
+    return this.functions.find(function(f) {
+      return f.name === CSSCompositeTransformFunction.ROTATE;
+    });
+  }
+
   getTranslationFunction() {
     return this.functions.find(function(f) {
       return f.name === CSSCompositeTransformFunction.TRANSLATE;
@@ -6084,14 +6273,26 @@ class CSSCompositeTransform {
     return this.functions.length === 0;
   }
 
+  getHeader() {
+    var rFunc = this.getRotationFunction();
+    var tFunc = this.getTranslationFunction();
+    return [rFunc, tFunc].filter(func => {
+      return func;
+    }).map(func => {
+      return func.values.join(', ');
+    }).join(', ');
+  }
+
   toString() {
     return this.functions.join(' ');
   }
 
+  /*
   getRotationString() {
     var func = this.getRotationFunction();
     return func ? func.values[0].toString() : '';
   }
+  */
 
   clone() {
     var functions = this.functions.map(function(f) {
@@ -6284,6 +6485,7 @@ class CSSValue {
   }
 
   toString() {
+    var str;
 
     if (this.isAuto()) {
       return 'auto';
@@ -6295,10 +6497,12 @@ class CSSValue {
 
     // z-index values do not have a unit
     if (!this.unit) {
-      return this.val;
+      return this.val.toString();
     }
 
-    return this.val.toFixed(this.precision) + this.unit;
+    // Converting once to a fixed string, then parsing back to a float
+    // to prevent unnecessary trailing zeroes, such as 45.00.
+    return parseFloat(this.val.toFixed(this.precision)).toString() + this.unit;
   }
 }
 

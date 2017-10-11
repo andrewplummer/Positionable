@@ -65,6 +65,10 @@ describe('DragTarget', function(uiRoot) {
     target = new Target(el);
   }
 
+  teardown(function() {
+    releaseAppendedFixtures();
+  });
+
   it('should have drag data set', function() {
     setupStatic();
     dragElement(el, 50, 100, 250, 350);

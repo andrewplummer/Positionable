@@ -65,7 +65,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   teardown(function() {
-    el.remove();
+    releaseAppendedFixtures();
   });
 
   function createRotationMoveEvent(abs, offset) {

@@ -6,16 +6,11 @@ describe('Settings', function(uiRoot) {
   class Listener {
 
     constructor () {
-      this.saveEvents  = 0;
-      this.resetEvents = 0;
+      this.updateEvents = 0;
     }
 
-    onSettingsSaved() {
-      this.saveEvents += 1;
-    }
-
-    onSettingsReset() {
-      this.resetEvents += 1;
+    onSettingsUpdated() {
+      this.updateEvents += 1;
     }
 
   }
@@ -27,7 +22,7 @@ describe('Settings', function(uiRoot) {
   });
 
   teardown(function() {
-    settings.removeAllListeners();
+    settings.form.removeAllListeners();
   });
 
   it('should have default settings', function() {
@@ -46,14 +41,16 @@ describe('Settings', function(uiRoot) {
     assert.isUndefined(storage.getItem('output-unique-only'));
   });
 
-  it('should receive events', function() {
+  it('should receive submit event', function() {
 
     withMockedWindowEvents((mock) => {
       fireSubmitEvent(uiRoot.getElementById('settings-form'));
       fireResetEvent(uiRoot.getElementById('settings-form'));
 
-      assert.equal(listener.saveEvents, 1);
-      assert.equal(listener.resetEvents, 1);
+      assert.equal(listener.updateEvents, 1);
+
+      // The update event is deferred to prevent UI jank, so just
+      // check that the window confirm method has been called here.
       assert.equal(mock.getCalls('confirm'), 1);
     });
 

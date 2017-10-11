@@ -1,6 +1,10 @@
 
 describe('DraggableElement', function(uiRoot) {
 
+  teardown(function() {
+    releaseAppendedFixtures();
+  });
+
   it('should update position when dragged', function() {
     var el = appendAbsoluteBox();
     var draggableElement = new DraggableElement(el);

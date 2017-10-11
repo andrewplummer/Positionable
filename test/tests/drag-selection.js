@@ -30,6 +30,10 @@ describe('DragSelection', function(uiRoot) {
     drag = new DragSelection(uiRoot, listener);
   });
 
+  teardown(function() {
+    releaseAppendedFixtures();
+  });
+
   function setupPositionedElement(top, left, width, height) {
     var el = appendAbsoluteBox();
     el.style.left   = left;

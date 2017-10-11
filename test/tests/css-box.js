@@ -18,6 +18,10 @@ describe('CSSBox', function(uiRoot) {
     box = CSSBox.fromPixelValues(left, top, width, height);
   }
 
+  teardown(function() {
+    releaseAppendedFixtures();
+  });
+
   it('should be able to get its position', function() {
     setupNormal();
     assert.equal(box.getPosition().x, 100);
@@ -209,10 +213,10 @@ describe('CSSBox', function(uiRoot) {
 
   });
 
-  /*
-  it('should get the center of an inverted box', function() {
-    // TODO: should it???
+  it('should get its position header', function() {
+    var box = CSSBox.fromPixelValues(100, 100, 150, 150)
+    assert.equal(box.getPositionHeader(), '100px, 100px');
+    assert.equal(box.getDimensionsHeader(), '150px, 150px');
   });
-  */
 
 });

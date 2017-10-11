@@ -5,6 +5,12 @@ p {
   margin: 0;
 }
 
+h1,h2,h3 {
+  margin: 0;
+  font-weight: 300;
+  font-family: inherit;
+}
+
 /*---------------------------] Animations [-----------------------*/
 
 @keyframes spin {
@@ -107,10 +113,17 @@ p {
   opacity: 0.2;
   width: 18px;
   height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
 }
 
 .control-panel-settings-button:hover {
   opacity: 0.5;
+}
+
+.control-panel-settings-button:focus {
+  outline: none;
 }
 
 .control-panel-area {
@@ -132,8 +145,22 @@ p {
 /*---------------------------] Element Area [-----------------------*/
 
 .control-panel--element-active {
-  width: 350px;
-  height: 90px;
+  width: 480px;
+  height: 110px;
+}
+
+.element-area-selector {
+  font-size: 28px;
+}
+
+.element-area-properties {
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.element-area-property:not(:first-child):before {
+  content: '|';
+  margin-right: .2em;
 }
 
 /*---------------------------] Default Area [-----------------------*/
@@ -196,7 +223,7 @@ p {
   margin-bottom: 5px;
 }
 
-.getting-started-skip {
+.getting-started-skip-link {
   position: absolute;
   bottom: -11px;
   right: 2px;

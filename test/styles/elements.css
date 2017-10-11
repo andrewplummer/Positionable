@@ -34,3 +34,19 @@
   bottom: 100px;
   right: 100px;
 }
+
+.rotated-box {
+  transform: rotate(45deg);
+}
+
+.translated-box {
+  transform: translate(20px, 30px);
+}
+
+.transformed-box {
+  transform: rotate(45deg) translate(20px, 30px);
+}
+
+.subpixel-transformed-box {
+  transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
+}

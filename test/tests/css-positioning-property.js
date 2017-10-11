@@ -17,6 +17,10 @@ describe('CSSPositioningProperty', function(uiRoot) {
     vProp   = CSSPositioningProperty.verticalFromMatcher(matcher);
   }
 
+  teardown(function() {
+    releaseAppendedFixtures();
+  });
+
   it('should work on normal properties', function() {
     setupNormal();
 
@@ -66,4 +70,9 @@ describe('CSSPositioningProperty', function(uiRoot) {
     assert.equal(clone.px, 100);
   });
 
+  it('should export its underlying css value when calling toString', function() {
+    setupNormal();
+    assert.equal(hProp.toString(), '100px');
+    assert.equal(vProp.toString(), '100px');
+  });
 });

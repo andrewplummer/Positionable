@@ -68,19 +68,4 @@ describe('BrowserEventTarget', function(uiRoot) {
     assert.equal(target.mousedown, false);
   });
 
-  it('should allow preventing events', function() {
-    setupDivTarget();
-    target.bindEventWithPrevent('click', target.onClick);
-    fireClick(el);
-    assert.equal(target.lastEvent.defaultPrevented, true);
-  });
-
-  it('should allow preventing events without handler', function() {
-    setupLinkTarget();
-    target.preventDefault('click');
-    window.location.hash = '';
-    fireClick(el);
-    assert.equal(window.location.hash, '');
-  });
-
 });

@@ -27,6 +27,7 @@ class WindowFunctionMock {
       this.natives[prop] = window[prop];
       window[prop] = () => {
         this.calls[prop] += 1;
+        return true;
       };
     });
   }

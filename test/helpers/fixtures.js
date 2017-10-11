@@ -28,6 +28,22 @@ function appendInvertedBox(className, parent) {
   return appendFixture(['box', 'inverted-box', className], parent);
 }
 
+function appendRotatedBox(className, parent) {
+  return appendFixture(['box', 'rotated-box', className], parent);
+}
+
+function appendTranslatedBox(className, parent) {
+  return appendFixture(['box', 'translated-box', className], parent);
+}
+
+function appendTransformedBox(className, parent) {
+  return appendFixture(['box', 'transformed-box', className], parent);
+}
+
+function appendSubpixelTransformedBox(className, parent) {
+  return appendFixture(['box', 'subpixel-transformed-box', className], parent);
+}
+
 function appendNestedBox() {
   var container = appendRelativeBox();
   return appendFixture(['box', 'absolute-box'], container);
