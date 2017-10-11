@@ -50,3 +50,34 @@
 .subpixel-transformed-box {
   transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
 }
+
+.align-box-1 {
+  top: 50px;
+  left: 80px;
+  width: 700px;
+  height: 120px;
+  // right: 780
+  // bottom: 170
+  // hcenter: 430
+}
+
+.align-box-2 {
+  top: 550px;
+  left: 420px;
+  width: 30px;
+  height: 9px;
+  // right: 450
+  // bottom: 559;
+  // hcenter: 435
+}
+
+.align-box-3 {
+  top: 50px;
+  left: 670px;
+  width: 90px;
+  height: 80px;
+  // right: 760
+  // bottom: 139
+  // hcenter: 715
+}
+

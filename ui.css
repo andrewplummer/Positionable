@@ -35,6 +35,21 @@ h1,h2,h3 {
   display: block;
 }
 
+.image-button {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.image-button:focus {
+  outline: none;
+}
+
+.image-button img {
+  display: block;
+}
+
 /*---------------------------] Drag Selection [-----------------------*/
 
 .drag-selection {
@@ -109,21 +124,13 @@ h1,h2,h3 {
   bottom: 5px;
   left: 5px;
   color: #000;
-  cursor: pointer;
   opacity: 0.2;
   width: 18px;
   height: 18px;
-  padding: 0;
-  border: none;
-  background: none;
 }
 
 .control-panel-settings-button:hover {
   opacity: 0.5;
-}
-
-.control-panel-settings-button:focus {
-  outline: none;
 }
 
 .control-panel-area {
@@ -161,6 +168,26 @@ h1,h2,h3 {
 .element-area-property:not(:first-child):before {
   content: '|';
   margin-right: .2em;
+}
+
+/*---------------------------] Alignment Area [-----------------------*/
+
+.control-panel--align-active {
+  width: 480px;
+  height: 110px;
+}
+
+.align-area-header {
+  font-size: 16px;
+  margin-bottom: .3em;
+}
+
+.align-area-button {
+  display: inline-block;
+  border: 1px solid #ccc;
+  margin: -1px;
+  padding: 3px;
+  border-radius: 2px;
 }
 
 /*---------------------------] Default Area [-----------------------*/

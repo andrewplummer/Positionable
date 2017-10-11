@@ -60,7 +60,7 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(panel.el.style.bottom, '20px');
   });
 
-  // --- Rendering Element Areas
+  // --- Rendering Element Area
 
   it('should render element area with single element', function() {
     panel.renderElementSelector('.foo');
@@ -88,6 +88,13 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(getUiElement(document.documentElement, '#element-area-transform').style.display, '');
     assert.equal(getUiElement(document.documentElement, '#element-area-zindex').textContent, '10z');
     assert.equal(getUiElement(document.documentElement, '#element-area-transform').textContent, '50deg');
+  });
+
+  // --- Rendering Align Area
+
+  it('should render multiple selected', function() {
+    panel.renderMultipleSelected(5);
+    assert.equal(getUiElement(document.documentElement, '#align-area-header').textContent, '5 elements selected');
   });
 
 });

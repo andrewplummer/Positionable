@@ -2686,6 +2686,79 @@ class PositionableElementOutputManager {
 
 /*-------------------------] AppController [--------------------------*/
 
+class PositionableElementAlignmentManager {
+
+  align(elements, edge) {
+    switch (edge) {
+      case 'top':     this.alignEdge(elements, edge, false); break;
+      case 'left':    this.alignEdge(elements, edge, false); break;
+      case 'bottom':  this.alignEdge(elements, edge, true);  break;
+      case 'right':   this.alignEdge(elements, edge, true);  break;
+      case 'hcenter': this.alignCenter(elements, edge);      break;
+      case 'vcenter': this.alignCenter(elements, edge);      break;
+    }
+  }
+
+  distribute(elements) {
+  }
+
+  // --- Private
+
+  alignCenter(elements, edge) {
+    var centers, min, max, average;
+
+    centers = elements.map(element => {
+      var rect = element.el.getBoundingClientRect();
+      if (edge === 'hcenter') {
+        return rect.left + rect.width / 2;
+      } else {
+        return rect.top + rect.height / 2;
+      }
+    });
+
+    min = centers.reduce((min, c) => Math.min(c, min), Infinity);
+    max = centers.reduce((max, c) => Math.max(c, max), -Infinity);
+    average = Math.round((max - min) / 2 + min);
+
+    this.moveElements(elements, centers, edge, average);
+  }
+
+  alignEdge(elements, edge, max) {
+    var values, edgeVal;
+
+    values = elements.map(element => element.el.getBoundingClientRect()[edge]);
+
+    if (max) {
+      edgeVal = values.reduce((max, v) => Math.max(v, max), -Infinity);
+    } else {
+      edgeVal = values.reduce((min, v) => Math.min(v, min), Infinity);
+    }
+
+    this.moveElements(elements, values, edge, edgeVal);
+  }
+
+  moveElements(elements, values, edge, targetValue) {
+    values.forEach((v, i) => {
+      if (v !== targetValue) {
+        var element = elements[i];
+        element.pushState();
+        if (this.isHorizontalEdge(edge)) {
+          element.move(targetValue - v, 0)
+        } else {
+          element.move(0, targetValue - v)
+        }
+      }
+    });
+  }
+
+  isHorizontalEdge(edge) {
+    return edge === 'left' || edge === 'right' || edge === 'hcenter';
+  }
+
+}
+
+/*-------------------------] AppController [--------------------------*/
+
 class AppController {
 
   static get HOST_CLASS_NAME() { return 'positionble-extension-ui'; }
@@ -2694,6 +2767,7 @@ class AppController {
 
     this.settings = new Settings(this, localStorage, uiRoot);
     this.elementOutputManager = new PositionableElementOutputManager(this.settings);
+    this.elementAlignmentManager = new PositionableElementAlignmentManager();
 
     this.body = new Element(document.body);
 
@@ -2724,11 +2798,6 @@ class AppController {
     }
   }
 
-  // TODO: me!
-  renderAlignArea(elements) {
-    this.controlPanel.renderAlignArea(elements.length);
-  }
-
   onSaveStyles() {
     var styles = this.getStylesForFocusedElements();
     // output save styles dialogue
@@ -2752,6 +2821,14 @@ class AppController {
 
   onSettingsUpdated() {
     this.controlPanel.showDefaultArea();
+  }
+
+  onAlignButtonClicked(edge) {
+    this.elementAlignmentManager.align(this.elementManager.getFocusedElements(), edge);
+  }
+
+  onDistributeButtonClicked(edge) {
+    this.elementAlignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
   }
 
   // --- Loading Animation Events
@@ -2915,6 +2992,13 @@ class AppController {
 
   renderElementTransform(element) {
     this.controlPanel.renderElementTransform(this.elementOutputManager.getTransformHeader(element));
+  }
+
+  // --- Control Panel Align Rendering
+
+  // TODO: me!
+  renderAlignArea(elements) {
+    this.controlPanel.renderMultipleSelected(elements.length);
   }
 
   /*
@@ -3719,10 +3803,23 @@ class ControlPanel extends DraggableElement {
     this.setupClickEvent(root, 'control-panel-settings-button', this.onControlPanelSettingsClick);
     this.setupClickEvent(root, 'settings-area-help-link', this.onSettingsAreaHelpLinkClick);
     this.setupClickEvent(root, 'getting-started-skip-link', this.onGettingStartedSkipLinkClick);
+    this.setupClickEvent(root, 'align-top-button',          this.onAlignTopButtonClicked);
+    this.setupClickEvent(root, 'align-hcenter-button',      this.onAlignHCenterButtonClicked);
+    this.setupClickEvent(root, 'align-bottom-button',       this.onAlignBottomButtonClicked);
+    this.setupClickEvent(root, 'align-left-button',         this.onAlignLeftButtonClicked);
+    this.setupClickEvent(root, 'align-vcenter-button',      this.onAlignVCenterButtonClicked);
+    this.setupClickEvent(root, 'align-right-button',        this.onAlignRightButtonClicked);
+    this.setupClickEvent(root, 'distribute-top-button',     this.onDistributeTopButtonClicked);
+    this.setupClickEvent(root, 'distribute-hcenter-button', this.onDistributeHCenterButtonClicked);
+    this.setupClickEvent(root, 'distribute-bottom-button',  this.onDistributeBottomButtonClicked);
+    this.setupClickEvent(root, 'distribute-left-button',    this.onDistributeLeftButtonClicked);
+    this.setupClickEvent(root, 'distribute-vcenter-button', this.onDistributeVCenterButtonClicked);
+    this.setupClickEvent(root, 'distribute-right-button',   this.onDistributeRightButtonClicked);
   }
 
   setupRenderedElements(root) {
     this.renderedElements = {
+      'multiple':   new Element(root.getElementById('align-area-header')),
       'selector':   new Element(root.getElementById('element-area-selector')),
       'position':   new Element(root.getElementById('element-area-position')),
       'dimensions': new Element(root.getElementById('element-area-dimensions')),
@@ -3823,6 +3920,10 @@ class ControlPanel extends DraggableElement {
 
   // --- Rendering
 
+  renderMultipleSelected(count) {
+    this.renderedElements.multiple.text(count + ' elements selected');
+  }
+
   renderElementSelector(selector) {
     this.renderOrHide(this.renderedElements.selector, selector);
   }
@@ -3852,7 +3953,7 @@ class ControlPanel extends DraggableElement {
     }
   }
 
-  // --- Element Click Events
+  // --- Button Events
 
   onControlPanelSettingsClick(evt) {
     this.showSettingsArea();
@@ -3864,6 +3965,56 @@ class ControlPanel extends DraggableElement {
 
   onGettingStartedSkipLinkClick(evt) {
     this.listener.onGettingStartedSkip();
+  }
+
+  // --- Align Button Events
+
+  onAlignTopButtonClicked() {
+    this.listener.onAlignButtonClicked('top');
+  }
+
+  onAlignHCenterButtonClicked() {
+    this.listener.onAlignButtonClicked('hcenter');
+  }
+
+  onAlignBottomButtonClicked() {
+    this.listener.onAlignButtonClicked('bottom');
+  }
+
+  onAlignLeftButtonClicked() {
+    this.listener.onAlignButtonClicked('left');
+  }
+
+  onAlignVCenterButtonClicked() {
+    this.listener.onAlignButtonClicked('vcenter');
+  }
+
+  onAlignRightButtonClicked() {
+    this.listener.onAlignButtonClicked('right');
+  }
+
+  onDistributeTopButtonClicked() {
+    this.listener.onDistributeButtonClicked('top');
+  }
+
+  onDistributeHCenterButtonClicked() {
+    this.listener.onDistributeButtonClicked('hcenter');
+  }
+
+  onDistributeBottomButtonClicked() {
+    this.listener.onDistributeButtonClicked('bottom');
+  }
+
+  onDistributeLeftButtonClicked() {
+    this.listener.onDistributeButtonClicked('left');
+  }
+
+  onDistributeVCenterButtonClicked() {
+    this.listener.onDistributeButtonClicked('vcenter');
+  }
+
+  onDistributeRightButtonClicked() {
+    this.listener.onDistributeButtonClicked('right');
   }
 
   // --- Drag Events
