@@ -190,6 +190,16 @@ h1,h2,h3 {
   border-radius: 2px;
 }
 
+.distribute-buttons:before {
+  content: '';
+  display: inline-block;
+  height: 16px;
+  background: #ccc;
+  width: 1px;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
 /*---------------------------] Default Area [-----------------------*/
 
 .control-panel--default-active {

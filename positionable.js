@@ -2739,32 +2739,63 @@ class PositionableElementAlignmentManager {
   }
 
   distributeElements(elements, edge) {
-    var elementMoves, min, max, distributeAmount;
+    var elementMoves, min, max, totalSize, distributeAmount, first;
 
     if (elements.length < 3) {
       return;
     }
 
-    elementMoves = this.getElementMoves(elements, edge);
+    min =  Infinity;
+    max = -Infinity;
+    totalSize = 0;
 
-    elementMoves.sort((a, b) => {
-      return a.current - b.current;
+    // Calculate the min and max positioning values as well
+    // as a total of the space being used by all elements.
+    elementMoves = elements.map(element => {
+      var rect, minEdge, maxEdge, size;
+
+      rect = element.el.getBoundingClientRect()
+
+      minEdge = rect[edge === 'hcenter' ? 'left' : 'top'];
+      maxEdge = rect[edge === 'hcenter' ? 'right' : 'bottom'];
+      size    = rect[edge === 'hcenter' ? 'width' : 'height'];
+
+      min = Math.min(minEdge, min);
+      max = Math.max(maxEdge, max);
+
+      totalSize += size;
+
+      return {
+        size: size,
+        current: minEdge,
+        element: element
+      }
     });
 
-    min = elementMoves[0].current;
-    max = elementMoves[elementMoves.length - 1].current;
+    // The distribution amount is defined as the total empty space
+    // available divided by the number of elements - 1.
+    distributeAmount = Math.round((max - min - totalSize) / (elements.length - 1));
 
-    distributeAmount = Math.round((max - min) / (elementMoves.length - 1));
+    // Taking the simple approach of sorting elements by one of their
+    // edge positions, in this case left or top. This may not be perfect
+    // for overlapping positions, however the behavior in this case is
+    // vague anyway, so it can be ignored here.
+    elementMoves.sort((a, b) => a.current - b.current);
 
-    // Moves can only be executed on elements between the edge values.
-    elementMoves = elementMoves.slice(1, -1);
+    // The two elements on each edge will not be moved, so remove them
+    // from the array here and keep a reference to the first to use as
+    // a starting point for the distribution.
+    first = elementMoves.shift();
+    elementMoves.pop();
 
-    elementMoves.forEach((em, i) => {
-      em.target = min + distributeAmount * (i + 1);
-    });
+    // Now step through all the middle elements and distribute them
+    // keeping a reference to the current position throughout.
+    elementMoves.reduce((pos, em) => {
+      em.target = pos + distributeAmount;
+      return em.target + em.size;
+    }, min + first.size);
 
     this.executeElementMoves(elementMoves, edge);
-
   }
 
   executeElementMoves(elementMoves, edge) {
@@ -3859,12 +3890,8 @@ class ControlPanel extends DraggableElement {
     this.setupClickEvent(root, 'align-left-button',         this.onAlignLeftButtonClicked);
     this.setupClickEvent(root, 'align-vcenter-button',      this.onAlignVCenterButtonClicked);
     this.setupClickEvent(root, 'align-right-button',        this.onAlignRightButtonClicked);
-    this.setupClickEvent(root, 'distribute-top-button',     this.onDistributeTopButtonClicked);
     this.setupClickEvent(root, 'distribute-hcenter-button', this.onDistributeHCenterButtonClicked);
-    this.setupClickEvent(root, 'distribute-bottom-button',  this.onDistributeBottomButtonClicked);
-    this.setupClickEvent(root, 'distribute-left-button',    this.onDistributeLeftButtonClicked);
     this.setupClickEvent(root, 'distribute-vcenter-button', this.onDistributeVCenterButtonClicked);
-    this.setupClickEvent(root, 'distribute-right-button',   this.onDistributeRightButtonClicked);
   }
 
   setupRenderedElements(root) {
@@ -4049,28 +4076,12 @@ class ControlPanel extends DraggableElement {
     this.listener.onAlignButtonClicked('right');
   }
 
-  onDistributeTopButtonClicked() {
-    this.listener.onDistributeButtonClicked('top');
-  }
-
   onDistributeHCenterButtonClicked() {
     this.listener.onDistributeButtonClicked('hcenter');
   }
 
-  onDistributeBottomButtonClicked() {
-    this.listener.onDistributeButtonClicked('bottom');
-  }
-
-  onDistributeLeftButtonClicked() {
-    this.listener.onDistributeButtonClicked('left');
-  }
-
   onDistributeVCenterButtonClicked() {
     this.listener.onDistributeButtonClicked('vcenter');
-  }
-
-  onDistributeRightButtonClicked() {
-    this.listener.onDistributeButtonClicked('right');
   }
 
   // --- Drag Events

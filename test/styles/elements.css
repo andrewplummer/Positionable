@@ -78,4 +78,18 @@
   width: 200px;
   height: 140px;
 }
-
+/*
+ * min top: 50
+ * max bottom: 559
+ * spread: 509
+ * total empty space: 160
+ * total space occupied: 349
+ * total distribution space: 53.33333
+ *
+ * 1: 50
+ * 3: 223
+ * 4: 356
+ * 2: 549
+ *
+ * 356!!
+*/
