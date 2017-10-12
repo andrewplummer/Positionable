@@ -2739,18 +2739,20 @@ class PositionableElementAlignmentManager {
   }
 
   distributeElements(elements, edge) {
-    var elementMoves, min, max, totalSize, distributeAmount, first;
+    var elementMoves, minClose, maxClose, maxFar, totalSize, totalSpace,
+        distributeAmount, first, last;
 
     if (elements.length < 3) {
       return;
     }
 
-    min =  Infinity;
-    max = -Infinity;
+    minClose =  Infinity;
+    maxClose = -Infinity;
+    maxFar   = -Infinity;
     totalSize = 0;
 
-    // Calculate the min and max positioning values as well
-    // as a total of the space being used by all elements.
+    // Calculate the min top/left, max top/left, and max bottom/right
+    // values as well as a total of the space being used by all elements.
     elementMoves = elements.map(element => {
       var rect, minEdge, maxEdge, size;
 
@@ -2760,40 +2762,72 @@ class PositionableElementAlignmentManager {
       maxEdge = rect[edge === 'hcenter' ? 'right' : 'bottom'];
       size    = rect[edge === 'hcenter' ? 'width' : 'height'];
 
-      min = Math.min(minEdge, min);
-      max = Math.max(maxEdge, max);
+      minClose = Math.min(minEdge, minClose);
+      maxClose = Math.max(minEdge, maxClose);
+      maxFar   = Math.max(maxEdge, maxFar);
 
       totalSize += size;
 
       return {
         size: size,
-        current: minEdge,
+        min: minEdge,
+        max: maxEdge,
         element: element
       }
     });
 
-    // The distribution amount is defined as the total empty space
-    // available divided by the number of elements - 1.
-    distributeAmount = Math.round((max - min - totalSize) / (elements.length - 1));
+    // Taking the simple approach of sorting elements by their top/left
+    // positions. This will maintain order when there is enough space
+    // to distribute, and also to align top/left edges when there is not.
+    elementMoves.sort((a, b) => a.min - b.min);
 
-    // Taking the simple approach of sorting elements by one of their
-    // edge positions, in this case left or top. This may not be perfect
-    // for overlapping positions, however the behavior in this case is
-    // vague anyway, so it can be ignored here.
-    elementMoves.sort((a, b) => a.current - b.current);
-
-    // The two elements on each edge will not be moved, so remove them
-    // from the array here and keep a reference to the first to use as
-    // a starting point for the distribution.
+    // The first element will never be moved, so remove it here.
     first = elementMoves.shift();
-    elementMoves.pop();
+    last  = elementMoves[elementMoves.length - 1];
 
-    // Now step through all the middle elements and distribute them
-    // keeping a reference to the current position throughout.
-    elementMoves.reduce((pos, em) => {
-      em.target = pos + distributeAmount;
-      return em.target + em.size;
-    }, min + first.size);
+    if (first.max > last.max) {
+      // If the first element is larger than all elements, then use the
+      // full space to distribute, and don't remove the last element, as
+      // it will need to be moved as well.
+      maxClose = maxFar;
+    } else {
+      // Otherwise the last element can be considered the far anchor and
+      // will also not be moved, so remove it here.
+      elementMoves.pop();
+    }
+
+    if (totalSize < maxFar - minClose) {
+
+      // If there is enough room to space all elements evenly, then
+      // we can step through them and add the distribution amount, taking
+      // the element dimensions into account.
+
+      totalSpace = maxFar - minClose;
+
+      distributeAmount = Math.round((totalSpace - totalSize) / (elementMoves.length + 1));
+
+      elementMoves.reduce((pos, em) => {
+        em.current = em.min;
+        em.target = pos + distributeAmount;
+        return em.target + em.size;
+      }, minClose + first.size);
+
+    } else {
+
+      // If there is not enough room to space all elements evenly, then
+      // expected behavior is indeterminate, so make a best effort by
+      // simply aligning the top/left edges.
+
+      totalSpace = maxClose - minClose;
+
+      distributeAmount = Math.round(totalSpace / (elementMoves.length + 1));
+
+      elementMoves.forEach((em, i) => {
+        em.current = em.min;
+        em.target  = minClose + distributeAmount * (i + 1);
+      });
+
+    }
 
     this.executeElementMoves(elementMoves, edge);
   }

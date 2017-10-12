@@ -76,9 +76,9 @@ describe('PositionableElementAlignmentManager', function(uiRoot) {
     // todo: visually test!
     manager.distribute(els, 'hcenter');
     assert.equal(els[0].el.style.left, '');
-    assert.equal(els[1].el.style.left, '766px');
-    assert.equal(els[2].el.style.left, '');
-    assert.equal(els[3].el.style.left, '673px');
+    assert.equal(els[1].el.style.left, '430px');
+    assert.equal(els[2].el.style.left, '605px');
+    assert.equal(els[3].el.style.left, '255px');
   });
 
   it('should distribute boxes by vertical center', function() {
