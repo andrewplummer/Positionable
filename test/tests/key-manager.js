@@ -7,12 +7,17 @@ describe('KeyManager', function(uiRoot) {
 
     constructor() {
       this.keyDownEvents = {};
+      this.keyUpEvents = {};
       this.commandKeyDownEvents = {};
     }
 
     onKeyDown(evt) {
       this.lastKeyDownEvent = evt;
       this.keyDownEvents[evt.key] = (this.keyDownEvents[evt.key] || 0) + 1;
+    }
+
+    onKeyUp(evt) {
+      this.keyUpEvents[evt.key] = (this.keyUpEvents[evt.key] || 0) + 1;
     }
 
     onCommandKeyDown(evt) {
@@ -36,16 +41,25 @@ describe('KeyManager', function(uiRoot) {
     manager.setupKey(KeyManager.S_KEY);
 
     fireDocumentKeyDown(KeyManager.A_KEY);
-    fireDocumentKeyDown(KeyManager.A_KEY);
     fireDocumentKeyDown(KeyManager.S_KEY);
     fireDocumentKeyDown(KeyManager.B_KEY);
+
+    fireDocumentKeyUp(KeyManager.A_KEY);
+    fireDocumentKeyUp(KeyManager.S_KEY);
+    fireDocumentKeyUp(KeyManager.B_KEY);
+
+    fireDocumentKeyDown(KeyManager.A_KEY);
+    fireDocumentKeyUp(KeyManager.A_KEY);
 
     // Ensure command key doesn't trigger.
     fireDocumentCommandKeyDown(KeyManager.A_KEY);
 
     assert.equal(listener.keyDownEvents['a'], 2);
     assert.equal(listener.keyDownEvents['s'], 1);
+    assert.equal(listener.keyUpEvents['a'], 2);
+    assert.equal(listener.keyUpEvents['s'], 1);
     assert.equal(listener.keyDownEvents['b'], undefined);
+    assert.equal(listener.keyUpEvents['b'], undefined);
 
   });
 

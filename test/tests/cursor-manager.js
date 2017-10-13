@@ -32,17 +32,39 @@ describe('CursorManager', function(uiRoot) {
     assert.equal(getBodyCursor(), match);
   }
 
-  it('should be able to set a drag cursor', function() {
-    manager.setDragCursor('move');
-    assert.equal(getBodyCursor(), 'move');
-    manager.clearDragCursor();
-    assert.equal(getBodyCursor(), 'auto');
-  });
+  // --- Hover Cursors
 
   it('should be able to set a hover cursor', function() {
     manager.setHoverCursor('move');
     assert.equal(getBodyCursor(), 'move');
     manager.clearHoverCursor();
+    assert.equal(getBodyCursor(), 'auto');
+  });
+
+  it('should be able to set a temporary hover cursor', function() {
+    manager.setHoverCursor('ew-resize');
+    assert.equal(getBodyCursor(), 'ew-resize');
+    manager.setTemporaryHoverCursor('move');
+    assert.equal(getBodyCursor(), 'move');
+    manager.clearTemporaryHoverCursor();
+    assert.equal(getBodyCursor(), 'ew-resize');
+    manager.setTemporaryHoverCursor('move');
+    assert.equal(getBodyCursor(), 'move');
+    manager.clearHoverCursor();
+    assert.equal(getBodyCursor(), 'auto');
+  });
+
+  it('should not set a temporary hover cursor if no hover cursor is set', function() {
+    manager.setTemporaryHoverCursor('move');
+    assert.equal(getBodyCursor(), 'auto');
+  });
+
+  // --- Drag Cursors
+
+  it('should be able to set a drag cursor', function() {
+    manager.setDragCursor('move');
+    assert.equal(getBodyCursor(), 'move');
+    manager.clearDragCursor();
     assert.equal(getBodyCursor(), 'auto');
   });
 

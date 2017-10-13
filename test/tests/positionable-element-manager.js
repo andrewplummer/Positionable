@@ -437,6 +437,32 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.top,  '25%');
   });
 
+  // --- Background Positioning
+
+  it('should move background', function() {
+    setupAbsolute();
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.left, '');
+    assert.equal(el.style.top,  '');
+    assert.equal(el.style.backgroundPosition,  '50px 50px');
+  });
+
+  it('should constrain background move', function() {
+    setupAbsolute();
+    shiftCtrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 160);
+    assert.equal(el.style.left, '');
+    assert.equal(el.style.top,  '');
+    assert.equal(el.style.backgroundPosition,  '50px 0px');
+  });
+
+  it('should move background on resize handle drag while ctrl key down', function() {
+    setupAbsolute();
+    ctrlDragElement(getUiElement(el, '.resize-handle-nw'), 100, 100, 150, 150);
+    assert.equal(el.style.left, '');
+    assert.equal(el.style.top,  '');
+    assert.equal(el.style.backgroundPosition,  '50px 50px');
+  });
+
   // --- Resize
 
   it('should resize', function() {

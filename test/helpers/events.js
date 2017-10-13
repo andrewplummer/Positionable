@@ -95,6 +95,16 @@ function shiftDragElement(el) {
   fireDragElement(el, coords, { shiftKey: true });
 }
 
+function ctrlDragElement(el) {
+  var coords = Array.prototype.slice.call(arguments, 1);
+  fireDragElement(el, coords, { ctrlKey: true });
+}
+
+function shiftCtrlDragElement(el) {
+  var coords = Array.prototype.slice.call(arguments, 1);
+  fireDragElement(el, coords, { shiftKey: true, ctrlKey: true });
+}
+
 function fireDocumentMouseMove(x, y, opt) {
   fireMouseMove(document.documentElement, x, y, opt);
 }
@@ -128,12 +138,24 @@ function fireKeyDown(el, key, opt) {
   fireKeyEvent('keydown', el, key, opt);
 }
 
+function fireKeyUp(el, key, opt) {
+  fireKeyEvent('keyup', el, key, opt);
+}
+
 function fireDocumentKeyDown(key, opt) {
   fireKeyDown(document.documentElement, key, opt);
 }
 
 function fireDocumentCommandKeyDown(key) {
   fireKeyDown(document.documentElement, key, { metaKey: true });
+}
+
+function fireDocumentKeyUp(key, opt) {
+  fireKeyUp(document.documentElement, key, opt);
+}
+
+function fireDocumentCommandKeyUp(key) {
+  fireKeyUp(document.documentElement, key, { metaKey: true });
 }
 
 /*-------------------------] Form Events [--------------------------*/

@@ -769,11 +769,13 @@ class CursorManager {
   }
 
   setDragCursor(cursor) {
-    this.setCursor('drag', cursor);
+    this.dragCursor = cursor;
+    this.render();
   }
 
   clearDragCursor() {
-    this.setCursor('drag', '');
+    this.dragCursor = '';
+    this.render();
   }
 
   // --- Hover Cursors
@@ -787,22 +789,33 @@ class CursorManager {
   }
 
   setHoverCursor(cursor) {
-    this.setCursor('hover', cursor);
+    this.hoverCursor = cursor;
+    this.render();
   }
 
   clearHoverCursor() {
-    this.setCursor('hover', '');
+    this.hoverCursor = '';
+    this.temporaryHoverCursor = '';
+    this.render();
+  }
+
+  setTemporaryHoverCursor(cursor) {
+    if (!this.hoverCursor) {
+      return;
+    }
+    this.temporaryHoverCursor = cursor;
+    this.render();
+  }
+
+  clearTemporaryHoverCursor() {
+    this.temporaryHoverCursor = '';
+    this.render();
   }
 
   // --- Private
 
-  setCursor(type, cursor) {
-    this[type + 'Cursor'] = cursor;
-    this.render();
-  }
-
   render() {
-    this.style.cursor = this.dragCursor || this.hoverCursor || '';
+    this.style.cursor = this.dragCursor || this.temporaryHoverCursor || this.hoverCursor || '';
   }
 
   getResizeCursor(name, rotation) {
@@ -2074,6 +2087,41 @@ class PositionableElement extends BrowserEventTarget {
     this.renderBox();
   }
 
+  moveBackground(x, y, constrain) {
+    var p = this.getConstrainedMovePosition(x, y, constrain);
+    this.backgroundImage = this.getLastState().backgroundImage.clone();
+    this.backgroundImage.move(p.x, p.y);
+    this.renderBackgroundImage();
+    //this.cssBox = this.getLastState().cssBox.clone();
+    //this.cssBox.move(p.x, p.y);
+    //this.renderBox();
+
+    //var lastPosition, rotation, pos;
+
+    //lastPosition = this.getLastState().backgroundImage.getPosition();
+    //rotation = this.transform.getRotation();
+
+
+    /*
+    */
+
+    /*
+    if (rotation) {
+      last = last.rotate(rotation);
+    }
+    */
+
+    //pos = this.getDraggedPosition(x, y, constrain, lastPosition);
+
+    /*
+    if (rotation) {
+      offset = offset.rotate(-rotation);
+    }
+    */
+
+    //this.setBackgroundPosition(pos);
+  }
+
   getConstrainedMovePosition(x, y, constrain) {
     var absX, absY;
     if (constrain) {
@@ -2092,27 +2140,8 @@ class PositionableElement extends BrowserEventTarget {
     this.cssBox.render(this.el.style);
   }
 
-  moveBackground(x, y, constrain) {
-    var lastPosition, rotation, pos;
-
-    lastPosition = this.getLastState().backgroundImage.getPosition();
-    rotation = this.transform.getRotation();
-
-    /*
-    if (rotation) {
-      last = last.rotate(rotation);
-    }
-    */
-
-    pos = this.getDraggedPosition(x, y, constrain, lastPosition);
-
-    /*
-    if (rotation) {
-      offset = offset.rotate(-rotation);
-    }
-    */
-
-    this.setBackgroundPosition(pos);
+  renderBackgroundImage() {
+    this.backgroundImage.render(this.el.style);
   }
 
   // TODO: rename? ... this will be called for nudging as well...
@@ -2692,6 +2721,11 @@ class KeyManager extends BrowserEventTarget {
   static get MODIFIER_NONE()    { return 1; }
   static get MODIFIER_COMMAND() { return 2; }
 
+  static get SHIFT_KEY()   { return 'Shift'; }
+  static get CONTROL_KEY() { return 'Control'; }
+  static get ALT_KEY()     { return 'Alt'; }
+  static get META_KEY()    { return 'Meta'; }
+
   static get UP_KEY()    { return 'ArrowUp';    }
   static get DOWN_KEY()  { return 'ArrowDown';  }
   static get LEFT_KEY()  { return 'ArrowLeft';  }
@@ -2699,10 +2733,6 @@ class KeyManager extends BrowserEventTarget {
 
   /*
   static get ENTER() { return 13; }
-  static get SHIFT() { return 16; }
-  static get CTRL()  { return 17; }
-  static get ALT()   { return 18; }
-  static get CMD()   { return 91; }
   */
 
   static get A_KEY() { return 'a'; }
@@ -2733,6 +2763,7 @@ class KeyManager extends BrowserEventTarget {
 
   setupEvents() {
     this.bindEvent('keydown', this.onKeyDown);
+    this.bindEvent('keyup',   this.onKeyUp);
   }
 
   addKeyHandler(key, modifier) {
@@ -2754,9 +2785,17 @@ class KeyManager extends BrowserEventTarget {
     }
   }
 
+  onKeyUp(evt) {
+    if (this.handledKeys[evt.key]) {
+      this.listener.onKeyUp(evt);
+    }
+  }
+
   isDisabledKeyCombination(evt) {
     // Only handling simple keys and command keys for now.
-    return evt.shiftKey || evt.ctrlKey || evt.altKey;
+    return (evt.shiftKey && evt.key !== KeyManager.SHIFT_KEY) ||
+           (evt.ctrlKey && evt.key !== KeyManager.CONTROL_KEY) ||
+           (evt.altKey && evt.key !== KeyManager.ALT_KEY);
   }
 
 }
@@ -2982,6 +3021,8 @@ class AppController {
   setupKeyManager() {
     this.keyManager = new KeyManager(this);
 
+    this.keyManager.setupKey(KeyManager.CONTROL_KEY);
+
     this.keyManager.setupKey(KeyManager.A_KEY);
     this.keyManager.setupKey(KeyManager.B_KEY);
     this.keyManager.setupKey(KeyManager.M_KEY);
@@ -3142,7 +3183,19 @@ class AppController {
   // --- Key Events
 
   onKeyDown(evt) {
-    console.info('keydown!', evt.key);
+    switch (evt.key) {
+      case KeyManager.CONTROL_KEY:
+        this.cursorManager.setTemporaryHoverCursor('move');
+      break;
+    }
+  }
+
+  onKeyUp(evt) {
+    switch (evt.key) {
+      case KeyManager.CONTROL_KEY:
+        this.cursorManager.clearTemporaryHoverCursor('move');
+      break;
+    }
   }
 
   onCommandKeyDown(evt) {
@@ -3458,15 +3511,7 @@ class PositionableElementManager {
 
   onPositionDragMove(evt, handle, element) {
     this.onElementDragMove();
-    this.focusedElements.forEach(el => {
-      var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
-      var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
-      if (evt.ctrlKey) {
-        el.moveBackground(x, y, evt.drag.constrained)
-      } else {
-        el.move(x, y, evt.drag.constrained)
-      }
-    });
+    this.applyPositionDrag(evt, evt.ctrlKey);
     this.listener.onPositionDragMove(evt, handle, element);
   }
 
@@ -3516,25 +3561,11 @@ class PositionableElementManager {
   }
 
   onResizeDragMove(evt, handle, element) {
-    var vector, rotation;
-
-    // When resizing, any rotation is relative to the current
-    // dragging element, not each individual element, so if
-    // you are dragging a rotated se handle away from its anchor,
-    // all other boxes will resize in a uniform fashion. This
-    // is why rotation needs to be compensated for here, not in
-    // each element's resize method.
-    vector   = new Point(evt.drag.x, evt.drag.y);
-    rotation = element.getRotation();
-    if (rotation) {
-      vector = vector.rotate(-rotation);
+    if (evt.ctrlKey) {
+      this.applyPositionDrag(evt, true);
+    } else {
+      this.applyResizeDrag(evt, handle, element);
     }
-
-    this.onElementDragMove();
-    this.focusedElements.forEach(el => {
-      el.resize(vector, handle.name, evt.drag.constrained);
-    });
-    this.listener.onResizeDragMove(evt, handle, element);
   }
 
   onResizeDragStop(evt, handle, element) {
@@ -3847,6 +3878,42 @@ class PositionableElementManager {
     });
   }
   */
+
+  // --- Position Dragging
+
+  applyPositionDrag(evt, isBackground) {
+    this.focusedElements.forEach(el => {
+      var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
+      var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
+      if (evt.ctrlKey) {
+        el.moveBackground(x, y, evt.drag.constrained)
+      } else {
+        el.move(x, y, evt.drag.constrained)
+      }
+    });
+  }
+
+  applyResizeDrag(evt, handle, element) {
+    var vector, rotation;
+
+    // When resizing, any rotation is relative to the current
+    // dragging element, not each individual element, so if
+    // you are dragging a rotated se handle away from its anchor,
+    // all other boxes will resize in a uniform fashion. This
+    // is why rotation needs to be compensated for here, not in
+    // each element's resize method.
+    vector   = new Point(evt.drag.x, evt.drag.y);
+    rotation = element.getRotation();
+    if (rotation) {
+      vector = vector.rotate(-rotation);
+    }
+
+    this.onElementDragMove();
+    this.focusedElements.forEach(el => {
+      el.resize(vector, handle.name, evt.drag.constrained);
+    });
+    this.listener.onResizeDragMove(evt, handle, element);
+  }
 
   // --- Calculations
 
@@ -7201,6 +7268,17 @@ class BackgroundImage {
   }
 
   // --- Positioning
+
+  move(x, y) {
+    this.cssLeft.px += x;
+    this.cssTop.px  += y;
+  }
+
+  // --- Rendering
+
+  render(style) {
+    style.backgroundPosition = [this.cssLeft, this.cssTop].join(' ');
+  }
 
   getPosition() {
     return new Point(this.cssLeft.px, this.cssTop.px);
