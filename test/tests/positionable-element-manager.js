@@ -363,8 +363,22 @@ describe('PositionableElementManager', function(uiRoot) {
 
   it('should move', function() {
     setupAbsolute();
-    dragElement(getUiElement(el, '.position-handle'), 0, 0, 50, 50);
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.left, '150px');
+    assert.equal(el.style.top,  '150px');
+  });
+
+  it('should constrain move horizontally', function() {
+    setupAbsolute();
+    shiftDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 160);
+    assert.equal(el.style.left, '150px');
+    assert.equal(el.style.top,  '100px');
+  });
+
+  it('should constrain move vertically', function() {
+    setupAbsolute();
+    shiftDragElement(getUiElement(el, '.position-handle'), 150, 150, 160, 200);
+    assert.equal(el.style.left, '100px');
     assert.equal(el.style.top,  '150px');
   });
 

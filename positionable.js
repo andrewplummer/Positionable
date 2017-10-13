@@ -3461,11 +3461,10 @@ class PositionableElementManager {
     this.focusedElements.forEach(el => {
       var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
       var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
-      var constrain = evt.drag.constrain;
       if (evt.ctrlKey) {
-        el.moveBackground(x, y, constrain)
+        el.moveBackground(x, y, evt.drag.constrained)
       } else {
-        el.move(x, y, constrain)
+        el.move(x, y, evt.drag.constrained)
       }
     });
     this.listener.onPositionDragMove(evt, handle, element);
@@ -3533,7 +3532,7 @@ class PositionableElementManager {
 
     this.onElementDragMove();
     this.focusedElements.forEach(el => {
-      el.resize(vector, handle.name, evt.shiftKey);
+      el.resize(vector, handle.name, evt.drag.constrained);
     });
     this.listener.onResizeDragMove(evt, handle, element);
   }
