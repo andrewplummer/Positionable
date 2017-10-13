@@ -1,10 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="32px" height="27px" viewBox="0 0 32 27" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <!-- Generator: Sketch 41.2 (35397) - http://www.bohemiancoding.com/sketch -->
-    <title>Shape</title>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>align-bottom</title>
     <desc>Created with Sketch.</desc>
     <defs></defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <path d="M0,1.77635684e-15 L0,2 L32,2 L32,1.77635684e-15 L0,1.77635684e-15 Z M6.625,3.625 L6.625,17.625 L14.625,17.625 L14.625,3.625 L6.625,3.625 Z M18.344,3.625 L18.344,27 L26.344,27 L26.344,3.625 L18.344,3.625 Z" id="Shape" fill="#000000" transform="translate(16.000000, 13.500000) rotate(-180.000000) translate(-16.000000, -13.500000) "></path>
+        <g id="align-bottom" fill="#000000">
+            <rect id="Rectangle" transform="translate(8.000000, 13.500000) rotate(-270.000000) translate(-8.000000, -13.500000) " x="7.5" y="6.5" width="1" height="14"></rect>
+            <rect id="Rectangle-2" transform="translate(5.000000, 9.500000) rotate(-90.000000) translate(-5.000000, -9.500000) " x="2.5" y="7.5" width="5" height="4"></rect>
+            <rect id="Rectangle-2" transform="translate(11.000000, 7.000000) rotate(-90.000000) translate(-11.000000, -7.000000) " x="6" y="5" width="10" height="4"></rect>
+        </g>
     </g>
 </svg>

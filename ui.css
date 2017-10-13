@@ -173,13 +173,18 @@ h1,h2,h3 {
 /*---------------------------] Alignment Area [-----------------------*/
 
 .control-panel--align-active {
-  width: 480px;
+  width: 280px;
   height: 110px;
+}
+
+.align-area-button-frame {
+  white-space: nowrap;
 }
 
 .align-area-header {
   font-size: 16px;
   margin-bottom: .3em;
+  white-space: nowrap;
 }
 
 .align-area-button {

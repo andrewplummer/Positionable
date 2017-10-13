@@ -111,6 +111,31 @@ function fireShiftDocumentMouseUp(x, y) {
   fireDocumentMouseUp(x, y, { shiftKey: true });
 }
 
+/*-------------------------] Key Events [--------------------------*/
+
+function fireKeyEvent(type, el, key, opt) {
+  opt = Object.assign({
+    key: key,
+    view: window,
+    bubbles: true,
+    cancelable: true
+  }, opt);
+  var evt = new KeyboardEvent(type, opt)
+  el.dispatchEvent(evt);
+}
+
+function fireKeyDown(el, key, opt) {
+  fireKeyEvent('keydown', el, key, opt);
+}
+
+function fireDocumentKeyDown(key, opt) {
+  fireKeyDown(document.documentElement, key, opt);
+}
+
+function fireDocumentCommandKeyDown(key) {
+  fireKeyDown(document.documentElement, key, { metaKey: true });
+}
+
 /*-------------------------] Form Events [--------------------------*/
 
 function fireSubmitEvent(el) {

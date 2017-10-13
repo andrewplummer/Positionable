@@ -241,7 +241,7 @@ class NudgeManager {
   start() {
     this.startTime = new Date();
     this.resizeOffset = new Point(0, 0);
-    elementManager.pushState();
+    //elementManager.pushState();
   }
 
   next() {
@@ -291,6 +291,7 @@ class NudgeManager {
 
 /*-------------------------] KeyEventManager [--------------------------*/
 
+/*
 class KeyEventManager {
 
   static get LEFT()  { return 37; }
@@ -346,14 +347,12 @@ class KeyEventManager {
     document.documentElement.addEventListener(name, handler.bind(this));
   }
 
-  /*
   delegateEventToElementManager(name, target) {
     var evtName = name.slice(2).toLowerCase();
     this.setupHandler(evtName, function(evt) {
       elementManager[name](evt);
     }, target);
   }
-  */
 
   setupKey(name, allowsCommand) {
     var code = KeyEventManager[name.toUpperCase()];
@@ -507,6 +506,7 @@ class KeyEventManager {
   }
 
 }
+*/
 
 /*-------------------------] Element [--------------------------*/
 
@@ -1663,7 +1663,7 @@ class PositionableElement extends BrowserEventTarget {
 
     // TODO: make sure this property is exported as well!
     if (matcher.getProperty('position') === 'static') {
-      this.el.style.position = 'absolute';
+      el.style.position = 'absolute';
     }
 
     this.cssBox = CSSBox.fromMatcher(matcher);
@@ -1865,7 +1865,7 @@ class PositionableElement extends BrowserEventTarget {
     console.info('SPRITE:', sprite);
 
     if (sprite) {
-      this.pushState();
+      //this.pushState();
       this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
       this.box.right  = this.box.left + sprite.getWidth();
       // TODO: don't have target!
@@ -2251,10 +2251,11 @@ class PositionableElement extends BrowserEventTarget {
 
   render() {
     // TODO: update separately instead of render??
-    this.updatePosition();
-    this.renderSize();
+    this.renderBox();
+    //this.updatePosition();
+    //this.renderSize();
     this.renderTransform();
-    this.updateBackgroundPosition();
+    //this.updateBackgroundPosition();
     this.renderZIndex();
   }
 
@@ -2684,6 +2685,82 @@ class PositionableElementOutputManager {
 
 }
 
+/*-------------------------] KeyManager [--------------------------*/
+
+class KeyManager extends BrowserEventTarget {
+
+  static get MODIFIER_NONE()    { return 1; }
+  static get MODIFIER_COMMAND() { return 2; }
+
+  static get UP_KEY()    { return 'ArrowUp';    }
+  static get DOWN_KEY()  { return 'ArrowDown';  }
+  static get LEFT_KEY()  { return 'ArrowLeft';  }
+  static get RIGHT_KEY() { return 'ArrowRight'; }
+
+  /*
+  static get ENTER() { return 13; }
+  static get SHIFT() { return 16; }
+  static get CTRL()  { return 17; }
+  static get ALT()   { return 18; }
+  static get CMD()   { return 91; }
+  */
+
+  static get A_KEY() { return 'a'; }
+  static get B_KEY() { return 'b'; }
+  static get C_KEY() { return 'c'; }
+  static get M_KEY() { return 'm'; }
+  static get S_KEY() { return 's'; }
+  static get R_KEY() { return 'r'; }
+  static get Z_KEY() { return 'z'; }
+
+  constructor(listener) {
+    super(document.documentElement);
+    this.listener = listener;
+
+    this.handledKeys = {};
+    this.setupEvents();
+  }
+
+  setupKey(key) {
+    this.addKeyHandler(key, KeyManager.MODIFIER_NONE);
+  }
+
+  setupCommandKey(key) {
+    this.addKeyHandler(key, KeyManager.MODIFIER_COMMAND);
+  }
+
+  // --- Private
+
+  setupEvents() {
+    this.bindEvent('keydown', this.onKeyDown);
+  }
+
+  addKeyHandler(key, modifier) {
+    var current = this.handledKeys[key] || 0;
+    this.handledKeys[key] = current + modifier;
+  }
+
+  onKeyDown(evt) {
+    var mod = this.handledKeys[evt.key];
+    if (mod === undefined || this.isDisabledKeyCombination(evt)) {
+      return;
+    }
+    if (mod & KeyManager.MODIFIER_NONE && !evt.metaKey) {
+      evt.preventDefault();
+      this.listener.onKeyDown(evt);
+    } else if (mod & KeyManager.MODIFIER_COMMAND && evt.metaKey) {
+      evt.preventDefault();
+      this.listener.onCommandKeyDown(evt);
+    }
+  }
+
+  isDisabledKeyCombination(evt) {
+    // Only handling simple keys and command keys for now.
+    return evt.shiftKey || evt.ctrlKey || evt.altKey;
+  }
+
+}
+
 /*-------------------------] PositionableElementAlignmentManager [--------------------------*/
 
 class PositionableElementAlignmentManager {
@@ -2896,8 +2973,26 @@ class AppController {
     this.elementManager = new PositionableElementManager(this);
     this.controlPanel   = new ControlPanel(uiRoot, this);
 
+    this.setupKeyManager();
+
     new DragSelection(uiRoot, this);
     new LoadingAnimation(uiRoot, this).show();
+  }
+
+  setupKeyManager() {
+    this.keyManager = new KeyManager(this);
+
+    this.keyManager.setupKey(KeyManager.A_KEY);
+    this.keyManager.setupKey(KeyManager.B_KEY);
+    this.keyManager.setupKey(KeyManager.M_KEY);
+    this.keyManager.setupKey(KeyManager.S_KEY);
+    this.keyManager.setupKey(KeyManager.R_KEY);
+    this.keyManager.setupKey(KeyManager.Z_KEY);
+
+    this.keyManager.setupCommandKey(KeyManager.A_KEY);
+    this.keyManager.setupCommandKey(KeyManager.S_KEY);
+    this.keyManager.setupCommandKey(KeyManager.C_KEY);
+    this.keyManager.setupCommandKey(KeyManager.Z_KEY);
   }
 
   onFocusedElementsChanged() {
@@ -3042,6 +3137,24 @@ class AppController {
   onRotationDragStop(evt, handle, element) {
     console.info('ROTATION DRAG STOP');
     this.cursorManager.clearDragCursor();
+  }
+
+  // --- Key Events
+
+  onKeyDown(evt) {
+    console.info('keydown!', evt.key);
+  }
+
+  onCommandKeyDown(evt) {
+    switch (evt.key) {
+      case KeyManager.A_KEY:
+        this.elementManager.focusAll();
+        break;
+      case KeyManager.Z_KEY:
+        this.elementManager.undo();
+        break;
+    }
+    console.info('command keydown!', evt.key);
   }
 
   /*
@@ -3234,8 +3347,16 @@ class PositionableElementManager {
 
   }
 
+  focusAll() {
+    this.setFocused(this.elements);
+  }
+
   unfocusAll() {
     this.setFocused([]);
+  }
+
+  undo() {
+    this.focusedElements.forEach(element => element.undo());
   }
 
   /*
@@ -3585,6 +3706,7 @@ class PositionableElementManager {
 
   // --- Alignment
 
+  /*
   alignTop() {
     this.alignElements('top', function(el, minTop) {
       el.box.setPosition(new Point(el.box.left, minTop));
@@ -3725,6 +3847,7 @@ class PositionableElementManager {
       el.updatePosition();
     });
   }
+  */
 
   // --- Calculations
 
@@ -6460,23 +6583,29 @@ class CSSCompositeTransform {
   }
 
   getRotation() {
-    return this.findOrAppendRotationFunction().values[0].deg || 0;
+    var func = this.getRotationFunction();
+    return func ? func.values[0].deg : 0;
   }
 
   setRotation(deg) {
-    this.findOrAppendRotationFunction().values[0].deg = deg;
+    var func = this.getRotationFunction();
+    if (func) {
+      func.values[0].deg = deg;
+    } else {
+      func = new CSSCompositeTransformFunction(CSSCompositeTransformFunction.ROTATE, [new CSSDegreeValue(deg)]);
+      this.functions.push(func);
+    }
   }
 
+  /*
   addRotation(amt) {
     this.setRotation(this.getRotation() + amt);
   }
+  */
 
   getTranslation () {
     var func = this.getTranslationFunction();
-    if (func) {
-      return new Point(func.values[0].px, func.values[1].px);
-    }
-    return new Point(0, 0);
+    return func ? new Point(func.values[0].px, func.values[1].px) : new Point(0, 0);
   }
 
   setTranslation (p) {
@@ -6489,24 +6618,10 @@ class CSSCompositeTransform {
       // TODO: standardize precision for translation and make sure it works when one exists already
       var xVal = new CSSPixelValue(p.x, true);
       var yVal = new CSSPixelValue(p.y, true);
+      func = new CSSCompositeTransformFunction(CSSCompositeTransformFunction.TRANSLATE, [xVal, yVal])
       // Ensure that translate comes first, otherwise anchors will not work.
-      this.functions.unshift(new CSSCompositeTransformFunction('translate', [xVal, yVal]));
+      this.functions.unshift(func);
     }
-  }
-
-  findOrAppendRotationFunction() {
-    return this.findTransformFunction(CSSCompositeTransformFunction.ROTATE) ||
-           this.appendRotationFunction();
-  }
-
-  findTransformFunction(type) {
-    return this.functions.find(f => f.name === type);
-  }
-
-  appendRotationFunction() {
-    var func = new CSSCompositeTransformFunction('rotate', [new CSSDegreeValue()]);
-    this.functions.push(func);
-    return func;
   }
 
   getRotationFunction() {
