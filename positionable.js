@@ -7345,58 +7345,45 @@ class CSSBackgroundImage {
       var img = new Image();
       this.spriteRecognizer = new SpriteRecognizer(img);
       img.addEventListener('load', this.onImageLoaded.bind(this));
-      img.src = this.url;
+      img.addEventListener('error', this.onImageErrored.bind(this));
+      this.fetchDomainSafeUrl(this.url).then(url => img.src = url).catch(url => this.onImageErrored());
       this.img = img;
-      /*
-      if (this.isXDomainImage(url)) {
-        return this.loadXDomainImage(url);
-      } else {
-        return this.loadSameDomainImage(url);
-      }
-      */
     }
   }
 
-  isXDomainImage(url) {
-    return !CSSBackgroundImage.SAME_DOMAIN_REG.test(url) &&
-           !CSSBackgroundImage.DATA_URI_REG.test(url);
-  }
-
-  /*
-  loadPixelData(url) {
-    var xDomain = !SpriteRecognizer.ORIGIN_REG.test(url);
-  }
-
-  loadImage(obj) {
-    if (obj.error) {
-      throwError('Positionable: "' + obj.url + '" could not be loaded!');
+  fetchDomainSafeUrl(url) {
+    if (this.isDomainSafeUrl(url)) {
+      // URL is domain safe, so return immediately.
+      return Promise.resolve(url);
+    } else {
+      return new Promise((resolve, reject) => {
+        // The background page is the only context in which pixel data from X-Domain
+        // images can be loaded so call out to it and tell it to load the data for this url.
+        var message = { message: 'convert_image_url_to_data_url', url: url };
+        chrome.runtime.sendMessage(message, response => {
+          if (response.success) {
+            resolve(response.data);
+          } else {
+            reject(response.url);
+          }
+        });
+      });
     }
-    var url = obj;
-    var img = new Image();
-    img.addEventListener('load', this.handleImageLoaded.bind(this));
-    img.src = url;
-  }
-  */
-
-  loadSameDomainImage(url) {
-    var img = new Image();
-    img.addEventListener('load', this.onImageLoaded.bind(this));
-    img.src = url;
-    return img;
   }
 
-  // TODO: test me somehow
-  loadXDomainImage(url) {
-    // The background page is the only context in which pixel data from X-Domain
-    // images can be loaded so call out to it and tell it to load the data for this url.
-    var message = { message: 'convert_image_url_to_data_url', url: url };
-    chrome.runtime.sendMessage(message, this.onImageLoaded.bind(this));
+  isDomainSafeUrl(url) {
+    return CSSBackgroundImage.SAME_DOMAIN_REG.test(url) ||
+           CSSBackgroundImage.DATA_URI_REG.test(url);
   }
 
   onImageLoaded() {
     this.spriteRecognizer.loadImageData(this.img);
     this.checkPercentageDimension(this.cssLeft, this.img);
     this.checkPercentageDimension(this.cssTop,  this.img);
+  }
+
+  onImageErrored() {
+    throwError('Could not load ' + this.url, false);
   }
 
   checkPercentageDimension(cssDimension, img) {

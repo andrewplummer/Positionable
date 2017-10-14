@@ -11,10 +11,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       try {
         data = canvas.toDataURL();
       } catch(e) {
-        sendResponse({ error: true, url: request.url });
+        sendResponse({ success: false, url: request.url });
         return;
       }
-      sendResponse(data);
+      sendResponse({ success: true, data: data });
+    });
+    img.addEventListener('error', function() {
+      sendResponse({ success: false, url: request.url });
     });
     img.src = request.url;
   }
