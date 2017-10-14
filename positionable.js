@@ -54,7 +54,6 @@ const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 
 // TODO: remove??
 const EXTENSION_CLASS_PREFIX = 'positionable-extension-';
-const EXTENSION_ORIGIN_REG   = new RegExp('^' + location.origin.replace(/([\/.])/g, '\\$1'));
 
 /*-------------------------] Utilities [--------------------------*/
 
@@ -2312,6 +2311,7 @@ class PositionableElement extends BrowserEventTarget {
     //this.updatePosition();
     //this.renderSize();
     this.renderTransform();
+    this.renderBackgroundImage();
     //this.updateBackgroundPosition();
     this.renderZIndex();
   }
@@ -6629,7 +6629,7 @@ class CSSRuleMatcher {
     // Must use computed styles here,
     // otherwise the url may not include the host.
     var backgroundImage = this.computedStyles['backgroundImage'];
-    // It seems the initial value of backgroundPosition is 0% 0%,
+    // It seems the computed initial value of backgroundPosition is 0% 0%,
     // so prevent defaulting to percentage values by using only matcheds styles.
     var backgroundPosition = this.getMatchedProperty('backgroundPosition') || 'initial';
     return BackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
@@ -6982,7 +6982,7 @@ class CSSPixelValue extends CSSValue {
   }
 
   get px() {
-    return this.isAuto() ? 0 : this.val;
+    return this.isNull() || this.isAuto() ? 0 : this.val;
   }
 
   set px(val) {
@@ -7190,8 +7190,9 @@ class CSSViewportValue extends CSSValue {
 // TODO: MOVE
 class BackgroundImage {
 
-  static get ORIGIN_REG() { return EXTENSION_ORIGIN_REG; };
-  static get URL_REG() { return /url\(["']?(.+?)["']?\)/i };
+  static get SAME_DOMAIN_REG() { return new RegExp('^' + location.origin.replace(/([\/.])/g, '\\$1')); };
+  static get DATA_URI_REG()    { return /^data:/; };
+  static get URL_REG()         { return /url\(["']?(.+?)["']?\)/i };
 
   static fromStyles(backgroundImage, backgroundPosition, el) {
     var cssLeft, cssTop, pos, urlMatch, url;
@@ -7203,8 +7204,8 @@ class BackgroundImage {
     }
 
     if (backgroundPosition === 'initial') {
-      cssLeft = new CSSPixelValue(0);
-      cssTop  = new CSSPixelValue(0);
+      cssLeft = new CSSPixelValue();
+      cssTop  = new CSSPixelValue();
     } else {
       if (backgroundPosition.split(',').length > 1) {
         throwError('Only one background image allowed per element');
@@ -7238,7 +7239,7 @@ class BackgroundImage {
 
   loadImage(url) {
     if (url) {
-      if (BackgroundImage.ORIGIN_REG.test(url)) {
+      if (BackgroundImage.SAME_DOMAIN_REG.test(url) || BackgroundImage.DATA_URI_REG.test(url)) {
         this.loadSameDomainImage(url);
       } else {
         this.loadXDomainImage(url);
@@ -7311,7 +7312,13 @@ class BackgroundImage {
   // --- Rendering
 
   render(style) {
-    style.backgroundPosition = [this.cssLeft, this.cssTop].join(' ');
+    var val;
+    if (this.cssLeft.isNull() && this.cssTop.isNull()) {
+      val = '';
+    } else {
+      val = [this.cssLeft.toString() || '0px', this.cssTop.toString() || '0px'].join(' ');
+    }
+    style.backgroundPosition = val;
   }
 
   getPosition() {

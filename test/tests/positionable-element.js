@@ -275,6 +275,19 @@ describe('PositionableElement', function(uiRoot) {
 
   });
 
+  it('should be able to undo background move', function() {
+    el = appendAbsoluteBox();
+    p = new PositionableElement(el, listener);
+
+    p.pushState();
+    p.moveBackground(200, 200);
+    assert.equal(el.style.backgroundPosition,  '200px 200px');
+
+    p.undo();
+    assert.equal(el.style.backgroundPosition,  '');
+
+  });
+
   // --- Other
 
   it('should receive correct rotation events after a move', function() {
