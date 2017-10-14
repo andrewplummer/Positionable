@@ -1651,8 +1651,8 @@ class PositionableElement extends BrowserEventTarget {
 
   static get UI_FOCUSED_CLASS() { return 'ui--focused' };
 
-  static get PEEKING_DIMENSIONS()   { return 500 };
-  static get DOUBLE_CLICK_TIMEOUT() { return 500 };
+  static get PEEKING_DIMENSIONS()        { return 500 };
+  static get CTRL_DOUBLE_CLICK_TIMEOUT() { return 500 };
 
   static get ROTATION_SNAPPING() { return 22.5 };
 
@@ -1695,8 +1695,7 @@ class PositionableElement extends BrowserEventTarget {
     this.bindEvent('click', this.onClick);
     this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('mousedown', this.onMouseDown);
-    // TODO: what to do here?
-    //this.bindEvent('contextmenu', this.onContextMenu);
+    this.bindEvent('contextmenu', this.onContextMenu);
   }
 
   setupInitialState() {
@@ -1952,26 +1951,21 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  /*
   onContextMenu(evt) {
     if (evt.ctrlKey) {
       evt.preventDefault();
       this.handleCtrlDoubleClick(evt);
     }
   }
-  */
 
-  // TODO: what is this?
-  /*
   handleCtrlDoubleClick(evt) {
-    if (this.doubleClickTimer) {
+    if (this.ctrlDoubleClickTimer) {
       this.onDoubleClick(evt)
     }
-    this.doubleClickTimer = setTimeout(function() {
-      this.doubleClickTimer = null;
-    }.bind(this), PositionableElement.DOUBLE_CLICK_TIMEOUT);
+    this.ctrlDoubleClickTimer = setTimeout(() => {
+      this.ctrlDoubleClickTimer = null;
+    }, PositionableElement.CTRL_DOUBLE_CLICK_TIMEOUT);
   }
-  */
 
   // --- Focusing
 
