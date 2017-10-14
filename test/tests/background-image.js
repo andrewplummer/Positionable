@@ -4,7 +4,7 @@ describe('BackgroundImage', function(uiRoot) {
   var el, backgroundImage;
 
   setup(function() {
-    el = appendBackgroundImageBox();
+    el = appendAbsoluteBox();
   });
 
   teardown(function() {
