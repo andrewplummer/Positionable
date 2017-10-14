@@ -82,7 +82,7 @@ describe('OutputManager', function(uiRoot) {
 
     assert.equal(manager.getPositionHeader(element), '100px, 100px');
     assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
-    assert.equal(manager.getZIndexHeader(element), '2');
+    assert.equal(manager.getZIndexHeader(element), '');
     assert.equal(manager.getTransformHeader(element), '');
 
   });

@@ -1749,8 +1749,8 @@ class PositionableElement extends BrowserEventTarget {
     */
 
     this.cssZIndex = matcher.getZIndex();
-    this.cssTransform = matcher.getTransform(el);
-    this.cssBackgroundImage = matcher.getBackgroundImage(el);
+    this.cssTransform = matcher.getTransform();
+    this.cssBackgroundImage = matcher.getBackgroundImage();
   }
 
   /*
@@ -1931,14 +1931,11 @@ class PositionableElement extends BrowserEventTarget {
   */
 
   snapToSprite(evt) {
-    var evtX, evtY, rect, center, origin, pos, coords, bounds, dim, iPos;
+    var rect, center, origin, pos, coords, bounds, dim, iPos;
 
     if (!this.cssBackgroundImage.hasImage()) {
       return;
     }
-
-    evtX = this.isFixed ? evt.clientX : evt.pageX;
-    evtY = this.isFixed ? evt.clientY : evt.pageY;
 
     // Here we need to find the position of the click event in the element's
     // coordinate system, taking into account any rotation. The cssBox
@@ -1958,7 +1955,7 @@ class PositionableElement extends BrowserEventTarget {
 
     // We can now get the event coordinates by getting the offset
     // to the center and removing any rotation.
-    pos    = new Point(evtX, evtY);
+    pos    = new Point(evt.clientX, evt.clientY);
     coords = center.add(pos.subtract(center).rotate(-this.getRotation())).subtract(origin);
 
     // Finally get any sprite bounds that may exist for these coordinates.
@@ -1978,15 +1975,20 @@ class PositionableElement extends BrowserEventTarget {
       // off the end once we're done.
 
       this.pushState();
-      this.cssBackgroundImage.setPosition(-bounds.left, -bounds.top);
       this.resize(nwOffset, 'nw', false);
 
       this.pushState();
       this.resize(seOffset, 'se', false);
 
+      // Note that we need to set the background position after resizing
+      // here for percentage based background positions, as they use the
+      // container size as a reference.
+      this.cssBackgroundImage.setPosition(-bounds.left, -bounds.top);
+
       this.states.pop();
 
       this.renderBackgroundPosition();
+      this.listener.onBackgroundImageSnap(this);
     }
   }
 
@@ -2583,7 +2585,7 @@ class OutputManager {
   }
 
   getZIndexHeader(element) {
-    return element.cssZIndex.toString();
+    return element.cssZIndex.getHeader();
   }
 
   getTransformHeader(element) {
@@ -3258,6 +3260,15 @@ class AppController {
     this.cursorManager.clearDragCursor();
   }
 
+  // --- Background Image Events
+
+  onBackgroundImageSnap(element) {
+    this.renderElementPosition(element);
+    this.renderElementDimensions(element);
+    this.renderElementTransform(element);
+    this.renderElementBackgroundPosition(element);
+  }
+
   // --- Dimensions Updated Events
 
   onPositionUpdated(element) {
@@ -3712,6 +3723,12 @@ class PositionableElementManager {
 
   onRotationDragStop(evt, handle, element) {
     this.listener.onRotationDragStop(evt, handle, element);
+  }
+
+  // --- Background Image Events
+
+  onBackgroundImageSnap(element) {
+    this.listener.onBackgroundImageSnap(element);
   }
 
   /*
@@ -5698,7 +5715,6 @@ class SpriteRecognizer {
 
   constructor(img) {
     this.img = img;
-    this.map = {};
   }
 
   getSpriteBoundsForCoordinate(coord) {
@@ -5747,6 +5763,9 @@ class SpriteRecognizer {
     context = canvas.getContext('2d');
     context.drawImage(img, 0, 0);
     this.pixelData = context.getImageData(0, 0, img.width, img.height).data;
+    this.width  = img.width;
+    this.height = img.height;
+    this.map = new Array(this.width * this.height);
   }
 
   testAdjacentPixels(pixel, bounds, queue) {
@@ -5769,38 +5788,34 @@ class SpriteRecognizer {
       bounds.bottom = Math.max(bounds.bottom, pixel.y);
       queue.push(pixel);
       this.setBounds(pixel, bounds);
-    } else {
-      this.setBounds(pixel, null);
     }
   }
 
   isValidPixel(pixel) {
-    return pixel.x >= 0 && pixel.x < this.img.width &&
-           pixel.y >= 0 && pixel.y < this.img.height;
+    return pixel.x >= 0 && pixel.x < this.width &&
+           pixel.y >= 0 && pixel.y < this.height;
   }
 
   getAlphaForPixel(pixel) {
-    return this.pixelData[((this.img.width * pixel.y) + pixel.x) * 4 + 3];
+    return this.pixelData[(this.width * pixel.y + pixel.x) * 4 + 3];
   }
 
-  // --- Pixel data map
+  // --- Pixel Map
 
   getBounds(pixel) {
-    var key = this.getPixelKey(pixel);
-    return this.map[key];
+    return this.map[this.getPixelIndex(pixel)];
   }
 
   setBounds(pixel, bounds) {
-    var key = this.getPixelKey(pixel);
-    this.map[key] = bounds;
+    this.map[this.getPixelIndex(pixel)] = bounds;
   }
 
   pixelHasBeenTested(pixel) {
-    return this.map.hasOwnProperty(this.getPixelKey(pixel));
+    return this.map.hasOwnProperty(this.getPixelIndex(pixel));
   }
 
-  getPixelKey(pixel) {
-    return pixel.x + ',' + pixel.y;
+  getPixelIndex(pixel) {
+    return this.width * pixel.y + pixel.x;
   }
 
 }
@@ -6684,7 +6699,7 @@ class CSSRuleMatcher {
   }
 
   getCSSValue(prop) {
-    return CSSValue.parse(this.getProperty(prop), prop, this.el.offsetParent);
+    return CSSValue.parse(this.getProperty(prop), prop, this.el);
 
     /* TODO: handle these
     if (str === 'auto' || str === '') {
@@ -6706,33 +6721,32 @@ class CSSRuleMatcher {
   }
 
   getMatchedCSSValue(prop) {
-    return CSSValue.parse(this.getMatchedProperty(prop), prop, this.el.offsetParent);
+    return CSSValue.parse(this.getMatchedProperty(prop), prop, this.el);
   }
 
   getZIndex() {
-    // TODO: shouldn't this be getMatchedProperty?
-    return CSSValue.parseZIndex(this.getProperty('zIndex'));
+    return this.getCSSValue('zIndex');
   }
 
-  getTransform(el) {
+  getTransform() {
     var str = this.getProperty('transform');
     if (!str || str === 'none') {
       return new CSSCompositeTransform();
     } else if (str.match(/matrix/)) {
       return CSSMatrixTransform.parse(str);
     } else {
-      return CSSCompositeTransform.parse(str, el);
+      return CSSCompositeTransform.parse(str, this.el);
     }
   }
 
-  getBackgroundImage(el) {
+  getBackgroundImage() {
     // Must use computed styles here,
     // otherwise the url may not include the host.
     var backgroundImage = this.computedStyles['backgroundImage'];
     // It seems the computed initial value of backgroundPosition is 0% 0%,
     // so prevent defaulting to percentage values by using only matcheds styles.
     var backgroundPosition = this.getMatchedProperty('backgroundPosition') || 'initial';
-    return CSSBackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
+    return CSSBackgroundImage.fromStyles(backgroundImage, backgroundPosition, this.el);
   }
 
   getMatchedProperty(prop) {
@@ -6777,7 +6791,7 @@ class CSSCompositeTransform {
   static parse(str, el) {
     var reg = CSSCompositeTransform.PARSE_REG, functions = [], match;
     while (match = reg.exec(str)) {
-      functions.push(CSSCompositeTransformFunction.fromNameAndValues(match[1], match[2]));
+      functions.push(CSSCompositeTransformFunction.create(match[1], match[2], el));
     }
     return new CSSCompositeTransform(functions);
   }
@@ -6826,13 +6840,13 @@ class CSSCompositeTransform {
 
   getRotationFunction() {
     return this.functions.find(function(f) {
-      return f.name === CSSCompositeTransformFunction.ROTATE;
+      return f.prop === CSSCompositeTransformFunction.ROTATE;
     });
   }
 
   getTranslationFunction() {
     return this.functions.find(function(f) {
-      return f.name === CSSCompositeTransformFunction.TRANSLATE;
+      return f.prop === CSSCompositeTransformFunction.TRANSLATE;
     });
   }
 
@@ -6895,15 +6909,14 @@ class CSSCompositeTransformFunction {
   static get TRANSLATE()          { return 'translate' };
   static get ALLOWED_NAMES_REG()  { return /^rotate|(translate|scale|skew)[XY]?$/ };
 
-  static fromNameAndValues(name, values) {
-    var match, name, values;
+  static create(prop, values, el) {
 
-    if (!CSSCompositeTransformFunction.ALLOWED_NAMES_REG.test(name)) {
-      throwError('Transform ' + name + ' is not allowed. Only 2d transforms are supported.');
+    if (!CSSCompositeTransformFunction.ALLOWED_NAMES_REG.test(prop)) {
+      throwError('Transform ' + prop + ' is not allowed. Only 2d transforms are supported.');
     }
 
     values = values.split(',').map(function(str) {
-      var val = CSSValue.parse(str, name, null, true);
+      var val = CSSValue.parse(str, prop, el, true);
       if (val.unit === '%') {
         // Won't support percentages here as they would have to take scale
         // operations into account as well, which is too complex to handle.
@@ -6912,11 +6925,11 @@ class CSSCompositeTransformFunction {
       return val;
     });
 
-    return new CSSCompositeTransformFunction(name, values);
+    return new CSSCompositeTransformFunction(prop, values);
   }
 
-  constructor(name, values) {
-    this.name = name;
+  constructor(prop, values) {
+    this.prop = prop;
     this.values = values;
   }
 
@@ -6933,21 +6946,21 @@ class CSSCompositeTransformFunction {
   // transform: skewY(1.07rad);
 
   toString() {
-    return this.name + '(' + this.values.join(',') + ')';
+    return this.prop + '(' + this.values.join(',') + ')';
   }
 
   canMutate() {
-    return this.name === 'rotate' ||
-           this.name === 'translate' ||
-           this.name === 'translateX' ||
-           this.name === 'translateY';
+    return this.prop === 'rotate' ||
+           this.prop === 'translate' ||
+           this.prop === 'translateX' ||
+           this.prop === 'translateY';
   }
 
   clone() {
     var values = this.values.map(function(v) {
       return v.clone();
     });
-    return new CSSCompositeTransformFunction(this.name, values);
+    return new CSSCompositeTransformFunction(this.prop, values);
   }
 
 }
@@ -6984,7 +6997,7 @@ class CSSValue {
     this.precision = precision || 0;
   }
 
-  static parse(str, prop, offsetParent, subpixel) {
+  static parse(str, prop, el, subpixel) {
 
     if (!str) {
       return null;
@@ -6995,15 +7008,15 @@ class CSSValue {
       return new CSSValue('auto');
     }
 
-    var val   = parseFloat(str) || 0;
-    var match = str.match(/px|%|deg|rad|turn|v(w|h|min|max)$/);
-    var unit  = match ? match[0] : null;
+    var match = str.match(/([.-\d]+)(px|%|em|deg|rad|turn|v(?:w|h|min|max))?$/);
+    var val   = parseFloat(match[1]);
+    var unit  = match[2] || '';
 
     // TODO: START: put this somewhere
     switch (unit) {
 
-      case '%':
-        return CSSPercentValue.fromProperty(prop, val, offsetParent);
+      case '%':  return CSSPercentValue.create(val, prop, el);
+      case 'em': return CSSEmValue.create(val, el);
 
       case 'vw':
       case 'vh':
@@ -7016,17 +7029,12 @@ class CSSValue {
       case 'turn': return new CSSTurnValue(val);
       case 'px':   return new CSSPixelValue(val, subpixel);
 
+      // z-index may be unitless
+      case '': return new CSSValue(val);
+
       default:
         throwError('UHOHOHOHHO', val, unit);
     }
-  }
-
-  // TODO: more unitless props?
-  static parseZIndex (str) {
-    if (str === 'auto') {
-      return new CSSValue();
-    }
-    return new CSSValue(parseInt(str, 10));
   }
 
   /* TODO: ADD functions should not mutate, so this method either
@@ -7049,6 +7057,11 @@ class CSSValue {
 
   clone() {
     return new CSSValue(this.val, this.unit, this.precision);
+  }
+
+  getHeader() {
+    var str = this.toString();
+    return str === 'auto' ? '' : str;
   }
 
   toString() {
@@ -7082,7 +7095,7 @@ class CSSPixelValue extends CSSValue {
   }
 
   get px() {
-    return this.isNull() || this.isAuto() ? 0 : this.val;
+    return this.val || 0;
   }
 
   set px(val) {
@@ -7091,6 +7104,33 @@ class CSSPixelValue extends CSSValue {
 
   clone() {
     return new CSSPixelValue(this.val);
+  }
+
+}
+
+/*-------------------------] CSSEmValue [--------------------------*/
+
+class CSSEmValue extends CSSValue {
+
+  static create(val, el) {
+    return new CSSEmValue(val, parseFloat(window.getComputedStyle(el).fontSize));
+  }
+
+  constructor(val, fontSize) {
+    super(val, 'em', 2);
+    this.fontSize = fontSize;
+  }
+
+  get px() {
+    return (this.val || 0) * this.fontSize;
+  }
+
+  set px(px) {
+    this.val = px / this.fontSize;
+  }
+
+  clone() {
+    return new CSSEmValue(this.val, this.fontSize);
   }
 
 }
@@ -7165,11 +7205,13 @@ class CSSTurnValue extends CSSValue {
 
 class CSSPercentValue extends CSSValue {
 
-  static fromProperty(prop, val, offsetParent) {
+  static create(val, prop, el) {
     if (CSSPercentValue.isBackgroundProperty(prop)) {
-      return new CSSBackgroundPercentValue(val, prop, offsetParent);
+      return new CSSBackgroundPercentValue(val, prop, el);
     } else {
-      return new CSSPercentValue(val, prop, offsetParent);
+      var offsetElement = el.offsetParent;
+      var isFixed = !offsetElement || this.hasStaticBodyOffset(offsetElement);
+      return new CSSPercentValue(val, prop, el.offsetParent, isFixed);
     }
   }
 
@@ -7177,32 +7219,28 @@ class CSSPercentValue extends CSSValue {
     return prop === 'backgroundLeft' || prop === 'backgroundTop';
   }
 
-  constructor(val, prop, offsetParent) {
-    super(val, '%', 2);
-    this.prop         = prop;
-    this.offsetParent = offsetParent;
-    this.isFixed      = this.hasNoPositionedOffsetParent();
-  }
-
-  hasNoPositionedOffsetParent() {
-    return !this.offsetParent || this.hasStaticBodyOffset();
-  }
-
   // It seems that CSS/CSSOM has a bug/quirk where absolute elements are relative
   // to the viewport if the HTML and BODY are not positioned, however offsetParent
   // is still reported as the BODY, so check for this case.
-  hasStaticBodyOffset() {
-    return this.offsetParent === document.body &&
-           this.isStatic(document.body) &&
-           this.isStatic(document.documentElement);
+  static hasStaticBodyOffset(el) {
+    return el === document.body &&
+           this.isStaticPosition(document.body) &&
+           this.isStaticPosition(document.documentElement);
   }
 
-  isStatic(el) {
+  static isStaticPosition(el) {
     return window.getComputedStyle(el).position === 'static';
   }
 
+  constructor(val, prop, offsetElement, isFixed) {
+    super(val, '%', 2);
+    this.prop          = prop;
+    this.offsetElement = offsetElement;
+    this.isFixed       = isFixed;
+  }
+
   get px() {
-    return this.val / 100 * this.getOffset();
+    return (this.val || 0) / 100 * this.getOffset();
   }
 
   set px(px) {
@@ -7214,16 +7252,16 @@ class CSSPercentValue extends CSSValue {
       case 'left':
       case 'right':
       case 'width':
-        return this.isFixed ? window.innerWidth : this.offsetParent.offsetWidth;
+        return this.isFixed ? window.innerWidth : this.offsetElement.offsetWidth;
       case 'top':
       case 'bottom':
       case 'height':
-        return this.isFixed ? window.innerHeight : this.offsetParent.offsetHeight;
+        return this.isFixed ? window.innerHeight : this.offsetElement.offsetHeight;
     }
   }
 
   clone() {
-    return new CSSPercentValue(this.val, this.prop, this.offsetParent);
+    return new CSSPercentValue(this.val, this.prop, this.offsetElement, this.isFixed);
   }
 
 }
@@ -7232,8 +7270,8 @@ class CSSPercentValue extends CSSValue {
 
 class CSSBackgroundPercentValue extends CSSPercentValue {
 
-  constructor(val, prop, target, img) {
-    super(prop, val, target);
+  constructor(val, prop, offsetElement, img) {
+    super(val, prop, offsetElement);
     this.img = img;
   }
 
@@ -7241,15 +7279,15 @@ class CSSBackgroundPercentValue extends CSSPercentValue {
     this.img = img;
   }
 
-  getTargetValue() {
+  getOffset() {
     switch (this.prop) {
-      case 'backgroundTop': return this.target.clientHeight - this.img.height;
-      case 'backgroundLeft': return this.target.clientWidth - this.img.width;
+      case 'backgroundTop': return this.offsetElement.clientHeight - this.img.height;
+      case 'backgroundLeft': return this.offsetElement.clientWidth - this.img.width;
     }
   }
 
   clone() {
-    return new CSSBackgroundPercentValue(this.val, this.prop, this.target, this.img);
+    return new CSSBackgroundPercentValue(this.val, this.prop, this.offsetElement, this.img);
   }
 
 }

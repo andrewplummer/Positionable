@@ -84,7 +84,7 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(p.cssBox.cssV.px, 100);
     assert.equal(p.cssBox.cssWidth.px, 100);
     assert.equal(p.cssBox.cssHeight.px, 100);
-    assert.equal(p.cssZIndex.val, 2);
+    assert.equal(p.cssZIndex.val, 'auto');
     assert.equal(p.getRotation(), 0);
   });
 

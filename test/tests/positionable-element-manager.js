@@ -60,6 +60,11 @@ describe('PositionableElementManager', function(uiRoot) {
     onRotationDragStop() {
     }
 
+    // --- Background Image Events
+
+    onBackgroundImageSnap() {
+    }
+
     // --- Update Events
 
     onPositionUpdated() {
@@ -120,18 +125,42 @@ describe('PositionableElementManager', function(uiRoot) {
     manager.findElements();
   }
 
-  function setupBackgroundBox() {
-    el = appendBackgroundImageBox();
+  function setupEmBox(left, top, width, height, fontSize) {
+    el = appendAbsoluteBox();
+    el.style.left   = left;
+    el.style.top    = top;
+    el.style.width  = width;
+    el.style.height = height;
+    el.style.fontSize = fontSize;
     manager.findElements();
+  }
+
+  function setupBackgroundBox(backgroundPosition) {
+    el = appendBackgroundImageBox();
+    if (backgroundPosition) {
+      el.style.backgroundPosition = backgroundPosition;
+    }
+    manager.findElements();
+    forceBackgroundImageLoad();
   }
 
   function setupRotatedBackgroundBox() {
     el = appendRotatedBackgroundImageBox();
     manager.findElements();
+    forceBackgroundImageLoad();
+  }
+
+  function forceBackgroundImageLoad() {
+    // Force image loaded event to keep everything synchronous.
+    // This can be done since the image is using a dataUri
+    var backgroundImage = manager.elements[0].cssBackgroundImage;
+    backgroundImage.img.src = backgroundImage.url;
+    backgroundImage.onImageLoaded();
   }
 
   function getElementZIndex(el) {
-    return window.getComputedStyle(el).zIndex;
+    var zIndex = window.getComputedStyle(el).zIndex;
+    return zIndex === 'auto' ? 0 : zIndex;
   }
 
   function setupPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
@@ -461,6 +490,13 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.top,  '25%');
   });
 
+  it('should move boxes positioned by em', function() {
+    setupEmBox('5em', '5em', '5em', '5em', '25px');
+    dragElement(getUiElement(el, '.position-handle'), 100, 100, 300, 300);
+    assert.equal(el.style.left, '13em');
+    assert.equal(el.style.top,  '13em');
+  });
+
   // --- Background Positioning
 
   it('should move background', function() {
@@ -485,6 +521,12 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.left, '');
     assert.equal(el.style.top,  '');
     assert.equal(el.style.backgroundPosition,  '50px 50px');
+  });
+
+  it('should move background using percent values', function() {
+    setupBackgroundBox('10% 10%');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '63.19% 63.19%');
   });
 
   // --- Resize
@@ -822,23 +864,27 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should snap to sprite on double click', function() {
     setupBackgroundBox();
 
-    // Force image loaded event to keep everything synchronous.
-    // This can be done since the image is using a dataUri
-    manager.elements[0].cssBackgroundImage.onImageLoaded();
-
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     assert.equal(el.style.left,   '121px');
     assert.equal(el.style.top,    '141px');
     assert.equal(el.style.width,  '2px');
     assert.equal(el.style.height, '2px');
+    assert.equal(el.style.backgroundPosition, '-1px -1px');
+  });
+
+  it('should snap to sprite using percent value', function() {
+    setupBackgroundBox('10% 10%');
+
+    fireDoubleClick(getUiElement(el, '.position-handle'), 113, 113);
+    assert.equal(el.style.left,   '112px');
+    assert.equal(el.style.top,    '112px');
+    assert.equal(el.style.width,  '2px');
+    assert.equal(el.style.height, '2px');
+    assert.equal(el.style.backgroundPosition, '75% 75%');
   });
 
   it('should snap to sprite when box is rotated and undo', function() {
     setupRotatedBackgroundBox();
-
-    // Force image loaded event to keep everything synchronous.
-    // This can be done since the image is using a dataUri
-    manager.elements[0].cssBackgroundImage.onImageLoaded();
 
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     assert.equal(el.style.left,   '');
@@ -864,10 +910,6 @@ describe('PositionableElementManager', function(uiRoot) {
 
   it('should not snap to sprite after multiple drags with ctrl', function() {
     setupBackgroundBox();
-
-    // Force image loaded event to keep everything synchronous.
-    // This can be done since the image is using a dataUri
-    manager.elements[0].cssBackgroundImage.onImageLoaded();
 
     ctrlDragElement(getUiElement(el, '.position-handle'), 121, 141, 150, 150);
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
