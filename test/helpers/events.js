@@ -64,8 +64,18 @@ function fireShiftMouseDownUp(el, x, y) {
   fireMouseUp(el, x, y, { shiftKey: true });
 }
 
-function fireShiftClick(el, x, y, opt) {
+function fireShiftClick(el, x, y) {
   fireMouseEvent('click', el, x, y, { shiftKey: true });
+}
+
+function fireCtrlClick(el, x, y, opt) {
+  fireMouseDown(el, x, y, { ctrlKey: true });
+  fireMouseUp(el, x, y, { ctrlKey: true });
+  fireContextMenu(el, x, y, { ctrlKey: true });
+}
+
+function fireContextMenu(el, x, y, opt) {
+  fireMouseEvent('contextmenu', el, x, y, opt);
 }
 
 /*-------------------------] Drag Events [--------------------------*/
@@ -83,11 +93,14 @@ function fireDragElement(el, coords, opt) {
     }
   }
   fireDocumentMouseUp(x, y, opt);
+  if (opt.ctrlKey) {
+    fireContextMenu(el, x, y, opt);
+  }
 }
 
 function dragElement(el) {
   var coords = Array.prototype.slice.call(arguments, 1);
-  fireDragElement(el, coords);
+  fireDragElement(el, coords, {});
 }
 
 function shiftDragElement(el) {

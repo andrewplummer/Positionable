@@ -8,6 +8,7 @@ describe('DragTarget', function(uiRoot) {
     constructor(el, allowInteraction) {
       super(el, allowInteraction);
       this.clicked = false;
+      this.doubleClicked = false;
       this.startIntents = 0;
       this.stopIntents  = 0;
       this.dragStarts   = 0;
@@ -40,6 +41,10 @@ describe('DragTarget', function(uiRoot) {
 
     onClick(evt) {
       this.clicked = true;
+    }
+
+    onDoubleClick(evt) {
+      this.doubleClicked = true;
     }
 
   }
@@ -246,6 +251,29 @@ describe('DragTarget', function(uiRoot) {
 
     assert.equal(target.dragStarts, 2);
     assert.equal(target.dragStops, 2);
+  });
+
+  it('should trigger double click', function() {
+    setupStatic();
+    target.allowDoubleClick();
+    fireDoubleClick(el, 100, 100);
+    assert.equal(target.doubleClicked, true);
+  });
+
+  it('should trigger double click with ctrl key', function() {
+    setupStatic();
+    target.allowDoubleClick();
+    fireCtrlClick(el, 100, 100);
+    fireCtrlClick(el, 100, 100);
+    assert.equal(target.doubleClicked, true);
+  });
+
+  it('should not trigger double click after drag started', function() {
+    setupStatic();
+    target.allowDoubleClick();
+    ctrlDragElement(el, 100, 100, 200, 200);
+    ctrlDragElement(el, 100, 100, 200, 200);
+    assert.equal(target.doubleClicked, false);
   });
 
 });

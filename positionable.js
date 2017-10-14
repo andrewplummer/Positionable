@@ -953,6 +953,7 @@ class MouseEventTarget extends BrowserEventTarget {
 class DragTarget extends BrowserEventTarget {
 
   static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,form,label,select,code,pre,span'; }
+  static get CTRL_DOUBLE_CLICK_TIMEOUT()     { return 500 };
 
   constructor(el) {
     super(el);
@@ -964,6 +965,11 @@ class DragTarget extends BrowserEventTarget {
   allowCtrlKeyReset() {
     this.keyManager = new KeyManager(this);
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
+  }
+
+  allowDoubleClick() {
+    this.bindEvent('dblclick', this.onDoubleClick);
+    this.bindEvent('contextmenu', this.onContextMenu);
   }
 
   disableEventsForInteractiveElements() {
@@ -1139,14 +1145,23 @@ class DragTarget extends BrowserEventTarget {
     }
   }
 
+  onContextMenu(evt) {
+    if (evt.ctrlKey) {
+      evt.preventDefault();
+      this.handleCtrlDoubleClick(evt);
+    }
+  }
+
   // --- Overrides
 
   onClick(evt) {}
+  onDoubleClick(evt) {}
 
   onDragIntentStart(evt) {}
   onDragIntentStop(evt)  {}
 
   onDragStart(evt) {
+    this.ctrlDoubleClickTimer = null;
     this.disableUserSelect();
   }
 
@@ -1191,6 +1206,15 @@ class DragTarget extends BrowserEventTarget {
 
   stopEventPropagation(evt) {
     evt.stopPropagation();
+  }
+
+  handleCtrlDoubleClick(evt) {
+    if (this.ctrlDoubleClickTimer) {
+      this.onDoubleClick(evt)
+    }
+    this.ctrlDoubleClickTimer = setTimeout(() => {
+      this.ctrlDoubleClickTimer = null;
+    }, DragTarget.CTRL_DOUBLE_CLICK_TIMEOUT);
   }
 
   // TODO: can this be removed?
@@ -1364,6 +1388,7 @@ class PositionHandle extends DragTarget {
   constructor(root, listener) {
     super(root.getElementById('position-handle'));
     this.allowCtrlKeyReset();
+    this.allowDoubleClick();
     this.setupDragIntents();
 
     this.listener = listener;
@@ -1410,6 +1435,10 @@ class PositionHandle extends DragTarget {
     this.listener.onPositionHandleDragStop(evt, this);
   }
 
+  onDoubleClick(evt) {
+    this.listener.onPositionHandleDoubleClick(evt, this);
+  }
+
 }
 
 /*-------------------------] ResizeHandle [--------------------------*/
@@ -1420,6 +1449,7 @@ class ResizeHandle extends DragTarget {
   constructor(root, name, listener) {
     super(root.getElementById('resize-handle-' + name));
     this.allowCtrlKeyReset();
+    this.allowDoubleClick();
     this.setupDragIntents();
 
     this.name = name;
@@ -1466,6 +1496,10 @@ class ResizeHandle extends DragTarget {
   onDragStop(evt) {
     super.onDragStop(evt);
     this.listener.onResizeHandleDragStop(evt, this);
+  }
+
+  onDoubleClick(evt) {
+    this.listener.onResizeHandleDoubleClick(evt, this);
   }
 
   // --- Actions
@@ -1652,7 +1686,6 @@ class PositionableElement extends BrowserEventTarget {
   static get UI_FOCUSED_CLASS() { return 'ui--focused' };
 
   static get PEEKING_DIMENSIONS()        { return 500 };
-  static get CTRL_DOUBLE_CLICK_TIMEOUT() { return 500 };
 
   static get ROTATION_SNAPPING() { return 22.5 };
 
@@ -1693,9 +1726,7 @@ class PositionableElement extends BrowserEventTarget {
 
   setupEvents() {
     this.bindEvent('click', this.onClick);
-    this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('mousedown', this.onMouseDown);
-    this.bindEvent('contextmenu', this.onContextMenu);
   }
 
   setupInitialState() {
@@ -1819,6 +1850,10 @@ class PositionableElement extends BrowserEventTarget {
     this.listener.onPositionDragStop(evt, handle, this);
   }
 
+  onPositionHandleDoubleClick(evt, handle) {
+    this.snapToSprite(evt);
+  }
+
   // --- Resize Handle Drag Events
 
   onResizeHandleDragIntentStart(evt, handle) {
@@ -1839,6 +1874,10 @@ class PositionableElement extends BrowserEventTarget {
 
   onResizeHandleDragStop(evt, handle) {
     this.listener.onResizeDragStop(evt, handle, this);
+  }
+
+  onResizeHandleDoubleClick(evt, handle) {
+    this.snapToSprite(evt);
   }
 
   // --- Rotation Handle Drag Events
@@ -1891,7 +1930,7 @@ class PositionableElement extends BrowserEventTarget {
   }
   */
 
-  onDoubleClick(evt) {
+  snapToSprite(evt) {
     var evtX, evtY, rect, center, origin, pos, coords, bounds, dim, iPos;
 
     if (!this.cssBackgroundImage.hasImage()) {
@@ -1949,22 +1988,6 @@ class PositionableElement extends BrowserEventTarget {
 
       this.renderBackgroundPosition();
     }
-  }
-
-  onContextMenu(evt) {
-    if (evt.ctrlKey) {
-      evt.preventDefault();
-      this.handleCtrlDoubleClick(evt);
-    }
-  }
-
-  handleCtrlDoubleClick(evt) {
-    if (this.ctrlDoubleClickTimer) {
-      this.onDoubleClick(evt)
-    }
-    this.ctrlDoubleClickTimer = setTimeout(() => {
-      this.ctrlDoubleClickTimer = null;
-    }, PositionableElement.CTRL_DOUBLE_CLICK_TIMEOUT);
   }
 
   // --- Focusing
@@ -4182,10 +4205,13 @@ class ControlPanel extends DraggableElement {
 
     this.listener = listener;
 
+    this.defaultH = this.cssH;
+    this.defaultV = this.cssV;
+
     this.setupAreas(root);
     this.setupUiEvents(root);
     this.setupRenderedElements(root);
-    this.setupDoubleClick();
+    this.allowDoubleClick();
   }
 
   setupAreas(root) {
@@ -4229,12 +4255,6 @@ class ControlPanel extends DraggableElement {
       evt.stopPropagation();
       handler.call(this, evt);
     });
-  }
-
-  setupDoubleClick() {
-    this.defaultH = this.cssH;
-    this.defaultV = this.cssV;
-    this.bindEvent('dblclick', this.onDoubleClick);
   }
 
   onDoubleClick() {
@@ -5683,6 +5703,11 @@ class SpriteRecognizer {
 
   getSpriteBoundsForCoordinate(coord) {
     var pixel = coord.round(), alpha, bounds, queue;
+
+    // Bail if the pixel is not within image bounds.
+    if (!this.isValidPixel(pixel)) {
+      return;
+    }
 
     // Detect alpha under current pixel.
     alpha = this.getAlphaForPixel(pixel);

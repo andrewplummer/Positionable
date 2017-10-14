@@ -826,7 +826,7 @@ describe('PositionableElementManager', function(uiRoot) {
     // This can be done since the image is using a dataUri
     manager.elements[0].cssBackgroundImage.onImageLoaded();
 
-    fireDoubleClick(el, 121, 141);
+    fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     assert.equal(el.style.left,   '121px');
     assert.equal(el.style.top,    '141px');
     assert.equal(el.style.width,  '2px');
@@ -840,13 +840,13 @@ describe('PositionableElementManager', function(uiRoot) {
     // This can be done since the image is using a dataUri
     manager.elements[0].cssBackgroundImage.onImageLoaded();
 
-    fireDoubleClick(el, 121, 141);
+    fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     assert.equal(el.style.left,   '');
     assert.equal(el.style.top,    '');
     assert.equal(el.style.width,  '');
     assert.equal(el.style.height, '');
 
-    fireDoubleClick(el, 135, 124);
+    fireDoubleClick(getUiElement(el, '.position-handle'), 135, 124);
     assert.equal(el.style.left,   '121px');
     assert.equal(el.style.top,    '141px');
     assert.equal(el.style.width,  '2px');
@@ -860,6 +860,23 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.height, '100px');
     assert.equal(el.style.transform, 'rotate(45deg)');
 
+  });
+
+  it('should not snap to sprite after multiple drags with ctrl', function() {
+    setupBackgroundBox();
+
+    // Force image loaded event to keep everything synchronous.
+    // This can be done since the image is using a dataUri
+    manager.elements[0].cssBackgroundImage.onImageLoaded();
+
+    ctrlDragElement(getUiElement(el, '.position-handle'), 121, 141, 150, 150);
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+
+    assert.equal(el.style.backgroundPosition, '99px 99px');
+    assert.equal(el.style.left,   '');
+    assert.equal(el.style.top,    '');
+    assert.equal(el.style.width,  '');
+    assert.equal(el.style.height, '');
   });
 
 });
