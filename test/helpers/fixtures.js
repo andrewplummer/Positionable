@@ -44,6 +44,10 @@ function appendSubpixelTransformedBox(className, parent) {
   return appendFixture(['box', 'subpixel-transformed-box', className], parent);
 }
 
+function appendBackgroundImageBox(className, parent) {
+  return appendFixture(['box', 'background-image-box', className], parent);
+}
+
 function appendNestedBox() {
   var container = appendRelativeBox();
   return appendFixture(['box', 'absolute-box'], container);

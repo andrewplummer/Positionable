@@ -62,7 +62,13 @@ describe('ControlPanel', function(uiRoot) {
 
   // --- Rendering Element Area
 
+  it('should not render element components if area not active', function() {
+    panel.renderElementSelector('.foo');
+    assert.equal(getUiElement(document.documentElement, '#element-area-selector').textContent, '');
+  });
+
   it('should render element area with single element', function() {
+    panel.showElementArea();
     panel.renderElementSelector('.foo');
     panel.renderElementPosition('50px, 50px');
     panel.renderElementDimensions('100px, 100px');
@@ -76,6 +82,7 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   it('should not render elements with empty fields', function() {
+    panel.showElementArea();
     panel.renderElementZIndex('');
     panel.renderElementTransform('');
     assert.equal(getUiElement(document.documentElement, '#element-area-zindex').style.display, 'none');
@@ -88,6 +95,14 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(getUiElement(document.documentElement, '#element-area-transform').style.display, '');
     assert.equal(getUiElement(document.documentElement, '#element-area-zindex').textContent, '10z');
     assert.equal(getUiElement(document.documentElement, '#element-area-transform').textContent, '50deg');
+  });
+
+  it('should render background position and hide when not active', function() {
+    var className = 'control-panel--element-background-active';
+    panel.showElementArea();
+    panel.renderElementBackgroundPosition('20px 40px');
+    assert.equal(getUiElement(document.documentElement, '#element-area-background-position').textContent, '20px 40px');
+    assert.isTrue(getUiElement(document.documentElement, '#control-panel').classList.contains(className));
   });
 
   // --- Rendering Align Area

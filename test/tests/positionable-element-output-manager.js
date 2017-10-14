@@ -37,6 +37,11 @@ describe('PositionableElementOutputManager', function(uiRoot) {
     return new PositionableElement(el);
   }
 
+  function appendBackgroundImagePositionableElement() {
+    var el = appendBackgroundImageBox();
+    return new PositionableElement(el);
+  }
+
   it('should get correct selector', function() {
     var element1 = appendPositionableElement();
     var element2 = appendPositionableElement();
@@ -100,6 +105,11 @@ describe('PositionableElementOutputManager', function(uiRoot) {
   it('should get correct header for a rotated and translated box using decimals', function() {
     var element = appendSubpixelTransformedPositionableElement();
     assert.equal(manager.getTransformHeader(element), '45.33deg, 20.23px, 30.21px');
+  });
+
+  it('should get correct background image', function() {
+    var element = appendBackgroundImagePositionableElement();
+    assert.equal(manager.getBackgroundPositionHeader(element), '20px, 40px');
   });
 
 });

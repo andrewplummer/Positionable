@@ -60,6 +60,20 @@ describe('PositionableElementManager', function(uiRoot) {
     onRotationDragStop() {
     }
 
+    // --- Update Events
+
+    onPositionUpdated() {
+    }
+
+    onBackgroundPositionUpdated() {
+    }
+
+    onDimensionsUpdated() {
+    }
+
+    onRotationUpdated() {
+    }
+
   }
 
   setup(function() {

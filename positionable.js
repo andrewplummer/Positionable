@@ -1719,7 +1719,7 @@ class PositionableElement extends BrowserEventTarget {
 
     this.cssZIndex = matcher.getZIndex();
     this.cssTransform = matcher.getTransform(el);
-    this.backgroundImage = matcher.getBackgroundImage(el);
+    this.cssBackgroundPosition = matcher.getBackgroundPosition(el);
   }
 
   /*
@@ -1893,7 +1893,7 @@ class PositionableElement extends BrowserEventTarget {
 
   onDoubleClick(evt) {
 
-    if (!this.backgroundImage.hasImage()) {
+    if (!this.cssBackgroundPosition.hasImage()) {
       return;
     }
 
@@ -1901,7 +1901,7 @@ class PositionableElement extends BrowserEventTarget {
     var y = evt.clientY + window.scrollY;
     var p = new Point(x, y).subtract(this.box.getPosition());
     //var coords = this.box.getCoords(point, this.transform.getRotation()).subtract(this.backgroundImage.getPosition());
-    var sprite = this.backgroundImage.getSpriteBounds(p);
+    var sprite = this.cssBackgroundPosition.getSpriteBounds(p);
     console.info('SPRITE:', sprite);
 
     if (sprite) {
@@ -2116,16 +2116,16 @@ class PositionableElement extends BrowserEventTarget {
 
   moveBackground(x, y, constrain) {
     var p = this.getConstrainedMovePosition(x, y, constrain);
-    this.backgroundImage = this.getLastState().backgroundImage.clone();
-    this.backgroundImage.move(p.x, p.y);
-    this.renderBackgroundImage();
+    this.cssBackgroundPosition = this.getLastState().cssBackgroundPosition.clone();
+    this.cssBackgroundPosition.move(p.x, p.y);
+    this.renderBackgroundPosition();
     //this.cssBox = this.getLastState().cssBox.clone();
     //this.cssBox.move(p.x, p.y);
     //this.renderBox();
 
     //var lastPosition, rotation, pos;
 
-    //lastPosition = this.getLastState().backgroundImage.getPosition();
+    //lastPosition = this.getLastState().backgroundPosition.getPosition();
     //rotation = this.transform.getRotation();
 
 
@@ -2163,14 +2163,6 @@ class PositionableElement extends BrowserEventTarget {
     return new Point(x, y);
   }
 
-  renderBox() {
-    this.cssBox.render(this.el.style);
-  }
-
-  renderBackgroundImage() {
-    this.backgroundImage.render(this.el.style);
-  }
-
   // TODO: rename? ... this will be called for nudging as well...
   getDraggedPosition(x, y, constrain, lastPosition) {
     var pos, absX, absY;
@@ -2198,7 +2190,7 @@ class PositionableElement extends BrowserEventTarget {
       cssBox: this.cssBox.clone(),
       cssZIndex: this.cssZIndex.clone(),
       cssTransform: this.cssTransform.clone(),
-      backgroundImage: this.backgroundImage.clone()
+      cssBackgroundPosition: this.cssBackgroundPosition.clone()
     });
   }
 
@@ -2215,7 +2207,7 @@ class PositionableElement extends BrowserEventTarget {
     this.cssZIndex = state.cssZIndex;
     this.cssTransform = state.cssTransform;
     //this.position = state.position;
-    this.backgroundImage = state.backgroundImage;
+    this.cssBackgroundPosition = state.cssBackgroundPosition;
     this.render();
   }
 
@@ -2224,7 +2216,7 @@ class PositionableElement extends BrowserEventTarget {
   // --- Peeking
 
   peek(on) {
-    if (on && !this.backgroundImage.hasImage()) {
+    if (on && !this.cssBackgroundPosition.hasImage()) {
       this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
       this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
     } else {
@@ -2259,10 +2251,12 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Transform
 
+  /*
   setBackgroundPosition(p) {
     this.backgroundImage.setPosition(p);
     this.updateBackgroundPosition();
   }
+  */
 
   // TODO: remove?
   /*
@@ -2274,6 +2268,7 @@ class PositionableElement extends BrowserEventTarget {
   }
   */
 
+  /*
   incrementBackgroundPosition(vector) {
     if (this.backgroundImage.hasImage()) {
       return;
@@ -2302,6 +2297,7 @@ class PositionableElement extends BrowserEventTarget {
     this.zIndex.add(vector.y);
     this.renderZIndex();
   }
+  */
 
   // --- Rendering
 
@@ -2311,9 +2307,17 @@ class PositionableElement extends BrowserEventTarget {
     //this.updatePosition();
     //this.renderSize();
     this.renderTransform();
-    this.renderBackgroundImage();
+    this.renderBackgroundPosition();
     //this.updateBackgroundPosition();
     this.renderZIndex();
+  }
+
+  renderBox() {
+    this.cssBox.render(this.el.style);
+  }
+
+  renderBackgroundPosition() {
+    this.cssBackgroundPosition.render(this.el.style);
   }
 
   /*
@@ -2343,11 +2347,13 @@ class PositionableElement extends BrowserEventTarget {
     this.el.style.transform = this.cssTransform;
   }
 
+  /*
   updateBackgroundPosition() {
     if (this.backgroundImage.hasImage()) {
       this.el.style.backgroundPosition = this.backgroundImage.getPositionString();
     }
   }
+  */
 
   renderZIndex() {
     this.el.style.zIndex = this.cssZIndex;
@@ -2546,6 +2552,10 @@ class PositionableElementOutputManager {
     return element.cssTransform.getHeader();
   }
 
+  getBackgroundPositionHeader(element) {
+    return element.cssBackgroundPosition.getHeader();
+  }
+
   // --- Private
 
   getFirstClass(list) {
@@ -2686,6 +2696,7 @@ class PositionableElementOutputManager {
   }
   */
 
+  /*
   propertyIsUnchanged(prop, val1, val2) {
     var state = this.states[0];
     if (!state) {
@@ -2722,6 +2733,7 @@ class PositionableElementOutputManager {
       'background-position': this.backgroundImage.getPosition()
     }
   }
+  */
 
   getTabCharacter(name) {
     switch(name) {
@@ -3070,8 +3082,8 @@ class AppController {
       this.renderAlignArea(elements);
       this.controlPanel.showAlignArea();
     } else if (elements.length === 1) {
-      this.renderElementArea(elements[0]);
       this.controlPanel.showElementArea();
+      this.renderElementArea(elements);
     } else {
       this.controlPanel.showDefaultArea();
     }
@@ -3144,7 +3156,6 @@ class AppController {
 
   onPositionDragMove(evt, handle, element) {
     console.info('POSITION DRAG MOVE');
-    this.renderElementPosition(element);
   }
 
   onPositionDragStop(evt, handle, element) {
@@ -3175,8 +3186,6 @@ class AppController {
 
   onResizeDragMove(evt, handle, element) {
     console.info('RESIZE DRAG MOVE');
-    this.renderElementDimensions(element);
-    this.renderElementTransform(element);
   }
 
   onResizeDragStop(evt, handle, element) {
@@ -3204,12 +3213,30 @@ class AppController {
   onRotationDragMove(evt, handle, element) {
     console.info('ROTATION DRAG MOVE');
     this.cursorManager.setRotateDragCursor(evt.rotation.abs);
-    this.renderElementTransform(element);
   }
 
   onRotationDragStop(evt, handle, element) {
     console.info('ROTATION DRAG STOP');
     this.cursorManager.clearDragCursor();
+  }
+
+  // --- Dimensions Updated Events
+
+  onPositionUpdated(element) {
+    this.renderElementPosition(element);
+  }
+
+  onDimensionsUpdated(element) {
+    this.renderElementDimensions(element);
+    this.renderElementTransform(element);
+  }
+
+  onBackgroundPositionUpdated(element) {
+    this.renderElementBackgroundPosition(element);
+  }
+
+  onRotationUpdated(element) {
+    this.renderElementTransform(element);
   }
 
   // --- Key Events
@@ -3237,6 +3264,7 @@ class AppController {
         break;
       case KeyManager.Z_KEY:
         this.elementManager.undo();
+        this.renderElementArea(this.elementManager.getFocusedElements());
         break;
     }
     console.info('command keydown!', evt.key);
@@ -3279,12 +3307,18 @@ class AppController {
 
   // --- Control Panel Element Rendering
 
-  renderElementArea(element) {
+  renderElementArea(elements) {
+    var element;
+    if (elements.length !== 1) {
+      return;
+    }
+    element = elements[0];
     this.renderElementSelector(element);
     this.renderElementPosition(element);
     this.renderElementDimensions(element);
     this.renderElementZIndex(element);
     this.renderElementTransform(element);
+    this.renderElementBackgroundPosition(element);
   }
 
   renderElementSelector(element) {
@@ -3305,6 +3339,10 @@ class AppController {
 
   renderElementTransform(element) {
     this.controlPanel.renderElementTransform(this.elementOutputManager.getTransformHeader(element));
+  }
+
+  renderElementBackgroundPosition(element) {
+    this.controlPanel.renderElementBackgroundPosition(this.elementOutputManager.getBackgroundPositionHeader(element));
   }
 
   // --- Control Panel Align Rendering
@@ -3545,6 +3583,11 @@ class PositionableElementManager {
     this.onElementDragMove();
     this.applyPositionDrag(evt, evt.ctrlKey);
     this.listener.onPositionDragMove(evt, handle, element);
+    if (evt.ctrlKey) {
+      this.listener.onBackgroundPositionUpdated(element);
+    } else {
+      this.listener.onPositionUpdated(element);
+    }
   }
 
   onPositionDragStop(evt, handle, element) {
@@ -3595,9 +3638,12 @@ class PositionableElementManager {
   onResizeDragMove(evt, handle, element) {
     if (evt.ctrlKey) {
       this.applyPositionDrag(evt, true);
+      this.listener.onBackgroundPositionUpdated(element);
     } else {
       this.applyResizeDrag(evt, handle, element);
+      this.listener.onDimensionsUpdated(element);
     }
+    this.listener.onResizeDragMove(evt, handle, element);
   }
 
   onResizeDragStop(evt, handle, element) {
@@ -3623,6 +3669,7 @@ class PositionableElementManager {
     this.onElementDragMove();
     this.focusedElements.forEach(el => el.rotate(evt.rotation.offset, evt.shiftKey));
     this.listener.onRotationDragMove(evt, handle, element);
+    this.listener.onRotationUpdated(element);
   }
 
   onRotationDragStop(evt, handle, element) {
@@ -3944,7 +3991,6 @@ class PositionableElementManager {
     this.focusedElements.forEach(el => {
       el.resize(vector, handle.name, evt.drag.constrained);
     });
-    this.listener.onResizeDragMove(evt, handle, element);
   }
 
   // --- Calculations
@@ -4115,6 +4161,7 @@ class DragSelection extends DragTarget {
 class ControlPanel extends DraggableElement {
 
   static get ACTIVE_CLASS() { return 'control-panel--active'; }
+  static get BACKGROUND_POSITION_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
 
   constructor(root, listener) {
     super(root.getElementById('control-panel'));
@@ -4153,13 +4200,14 @@ class ControlPanel extends DraggableElement {
 
   setupRenderedElements(root) {
     this.renderedElements = {
-      'multiple':   new Element(root.getElementById('align-area-header')),
-      'selector':   new Element(root.getElementById('element-area-selector')),
-      'position':   new Element(root.getElementById('element-area-position')),
-      'dimensions': new Element(root.getElementById('element-area-dimensions')),
-      'zIndex':     new Element(root.getElementById('element-area-zindex')),
-      'transform':  new Element(root.getElementById('element-area-transform')),
-      'distributeButtons': new Element(root.getElementById('distribute-buttons'))
+      'multiple':           new Element(root.getElementById('align-area-header')),
+      'selector':           new Element(root.getElementById('element-area-selector')),
+      'position':           new Element(root.getElementById('element-area-position')),
+      'dimensions':         new Element(root.getElementById('element-area-dimensions')),
+      'zIndex':             new Element(root.getElementById('element-area-zindex')),
+      'transform':          new Element(root.getElementById('element-area-transform')),
+      'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
+      'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
     };
   }
 
@@ -4265,26 +4313,38 @@ class ControlPanel extends DraggableElement {
   }
 
   renderElementSelector(selector) {
-    this.renderOrHide(this.renderedElements.selector, selector);
+    this.renderElementDetails(this.renderedElements.selector, selector);
   }
 
   renderElementPosition(position) {
-    this.renderOrHide(this.renderedElements.position, position);
+    this.renderElementDetails(this.renderedElements.position, position);
   }
 
   renderElementDimensions(dimensions) {
-    this.renderOrHide(this.renderedElements.dimensions, dimensions);
+    this.renderElementDetails(this.renderedElements.dimensions, dimensions);
   }
 
   renderElementZIndex(zIndex) {
-    this.renderOrHide(this.renderedElements.zIndex, zIndex, 'z');
+    this.renderElementDetails(this.renderedElements.zIndex, zIndex, 'z');
   }
 
   renderElementTransform(transform) {
-    this.renderOrHide(this.renderedElements.transform, transform);
+    this.renderElementDetails(this.renderedElements.transform, transform);
   }
 
-  renderOrHide(el, text, append) {
+  renderElementBackgroundPosition(backgroundPosition) {
+    this.renderElementDetails(this.renderedElements.backgroundPosition, backgroundPosition);
+    if (backgroundPosition) {
+      this.addClass(ControlPanel.BACKGROUND_POSITION_ACTIVE_CLASS);
+    } else {
+      this.removeClass(ControlPanel.BACKGROUND_POSITION_ACTIVE_CLASS);
+    }
+  }
+
+  renderElementDetails(el, text, append) {
+    if (this.activeArea !== this.elementArea) {
+      return;
+    }
     if (text) {
       el.text(text + (append || ''));
       el.unhide();
@@ -6625,14 +6685,14 @@ class CSSRuleMatcher {
     }
   }
 
-  getBackgroundImage(el) {
+  getBackgroundPosition(el) {
     // Must use computed styles here,
     // otherwise the url may not include the host.
     var backgroundImage = this.computedStyles['backgroundImage'];
     // It seems the computed initial value of backgroundPosition is 0% 0%,
     // so prevent defaulting to percentage values by using only matcheds styles.
     var backgroundPosition = this.getMatchedProperty('backgroundPosition') || 'initial';
-    return BackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
+    return CSSBackgroundPosition.fromStyles(backgroundPosition, backgroundPosition, el);
   }
 
   getMatchedProperty(prop) {
@@ -7185,10 +7245,10 @@ class CSSViewportValue extends CSSValue {
 
 }
 
-/*-------------------------] CSSBackground [--------------------------*/
+/*-------------------------] CSSBackgroundPosition [--------------------------*/
 
 // TODO: MOVE
-class BackgroundImage {
+class CSSBackgroundPosition {
 
   static get SAME_DOMAIN_REG() { return new RegExp('^' + location.origin.replace(/([\/.])/g, '\\$1')); };
   static get DATA_URI_REG()    { return /^data:/; };
@@ -7197,7 +7257,7 @@ class BackgroundImage {
   static fromStyles(backgroundImage, backgroundPosition, el) {
     var cssLeft, cssTop, pos, urlMatch, url;
 
-    urlMatch = backgroundImage.match(BackgroundImage.URL_REG);
+    urlMatch = backgroundImage.match(CSSBackgroundPosition.URL_REG);
 
     if (urlMatch) {
       url = urlMatch[1];
@@ -7215,7 +7275,7 @@ class BackgroundImage {
       cssTop  = CSSValue.parse(pos[1], 'backgroundTop', el);
     }
 
-    return new BackgroundImage(url, cssLeft, cssTop);
+    return new CSSBackgroundPosition(url, cssLeft, cssTop);
     //x = CSSValue.parse(xy[0], el, 'width');
     //y = CSSValue.parse(xy[1], el, 'height');
 
@@ -7239,12 +7299,17 @@ class BackgroundImage {
 
   loadImage(url) {
     if (url) {
-      if (BackgroundImage.SAME_DOMAIN_REG.test(url) || BackgroundImage.DATA_URI_REG.test(url)) {
-        this.loadSameDomainImage(url);
-      } else {
+      if (this.isXDomainImage(url)) {
         this.loadXDomainImage(url);
+      } else {
+        this.loadSameDomainImage(url);
       }
     }
+  }
+
+  isXDomainImage(url) {
+    return !CSSBackgroundPosition.SAME_DOMAIN_REG.test(url) &&
+           !CSSBackgroundPosition.DATA_URI_REG.test(url);
   }
 
   /*
@@ -7302,6 +7367,14 @@ class BackgroundImage {
     return this.spriteRecognizer.getSpriteForCoordinate(imgCoord);
   }
 
+  getHeader() {
+    return this.toString(', ');
+  }
+
+  render(style) {
+    style.backgroundPosition = this.toString();
+  }
+
   // --- Positioning
 
   move(x, y) {
@@ -7309,18 +7382,15 @@ class BackgroundImage {
     this.cssTop.px  += y;
   }
 
-  // --- Rendering
-
-  render(style) {
-    var val;
+  toString(join) {
     if (this.cssLeft.isNull() && this.cssTop.isNull()) {
-      val = '';
+      return '';
     } else {
-      val = [this.cssLeft.toString() || '0px', this.cssTop.toString() || '0px'].join(' ');
+      return [this.cssLeft.toString() || '0px', this.cssTop.toString() || '0px'].join(join || ' ');
     }
-    style.backgroundPosition = val;
   }
 
+  /*
   getPosition() {
     return new Point(this.cssLeft.px, this.cssTop.px);
   }
@@ -7333,9 +7403,10 @@ class BackgroundImage {
   getPositionString() {
     return [this.cssLeft, this.cssTop].join(' ');
   }
+  */
 
   clone() {
-    return new BackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone());
+    return new CSSBackgroundPosition(this.img, this.cssLeft.clone(), this.cssTop.clone());
   }
 
 }

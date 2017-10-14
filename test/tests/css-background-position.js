@@ -1,7 +1,7 @@
 
-describe('BackgroundImage', function(uiRoot) {
+describe('CSSBackgroundPosition', function(uiRoot) {
 
-  var el, backgroundImage;
+  var el, backgroundPosition;
 
   setup(function() {
     el = appendAbsoluteBox();
@@ -12,15 +12,15 @@ describe('BackgroundImage', function(uiRoot) {
   });
 
   it('should not render a null background position', function() {
-    backgroundImage = BackgroundImage.fromStyles('', 'initial');
-    backgroundImage.render(el.style);
+    backgroundPosition = CSSBackgroundPosition.fromStyles('', 'initial');
+    backgroundPosition.render(el.style);
     assert.equal(el.style.backgroundPosition, '');
   });
 
   it('should render a set background position', function() {
-    backgroundImage = BackgroundImage.fromStyles('', 'initial');
-    backgroundImage.move(100, 100);
-    backgroundImage.render(el.style);
+    backgroundPosition = CSSBackgroundPosition.fromStyles('', 'initial');
+    backgroundPosition.move(100, 100);
+    backgroundPosition.render(el.style);
     assert.equal(el.style.backgroundPosition, '100px 100px');
   });
 
