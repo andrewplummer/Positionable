@@ -141,6 +141,24 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(el.style.top, '100px');
   });
 
+  // --- Background Moving
+
+  it('should be able to move the background image', function() {
+    el = appendAbsoluteBox();
+    p = new PositionableElement(el, listener);
+    p.pushState();
+    p.moveBackground(200, 200);
+    assert.equal(el.style.backgroundPosition,  '200px 200px');
+  });
+
+  it('should be able to move the background image on a rotated box', function() {
+    el = appendRotatedBox();
+    p = new PositionableElement(el, listener);
+    p.pushState();
+    p.moveBackground(100, 100);
+    assert.equal(el.style.backgroundPosition,  '141px 0px');
+  });
+
   // --- Resizing
 
   it('should resize', function() {

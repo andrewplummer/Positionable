@@ -2150,42 +2150,15 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   moveBackground(x, y, constrain) {
-    var p = this.getConstrainedMovePosition(x, y, constrain);
+    var p = this.getConstrainedMovePosition(x, y, constrain, true);
     this.cssBackgroundImage = this.getLastState().cssBackgroundImage.clone();
     this.cssBackgroundImage.move(p.x, p.y);
     this.renderBackgroundPosition();
-    //this.cssBox = this.getLastState().cssBox.clone();
-    //this.cssBox.move(p.x, p.y);
-    //this.renderBox();
-
-    //var lastPosition, rotation, pos;
-
-    //lastPosition = this.getLastState().backgroundPosition.getPosition();
-    //rotation = this.transform.getRotation();
-
-
-    /*
-    */
-
-    /*
-    if (rotation) {
-      last = last.rotate(rotation);
-    }
-    */
-
-    //pos = this.getDraggedPosition(x, y, constrain, lastPosition);
-
-    /*
-    if (rotation) {
-      offset = offset.rotate(-rotation);
-    }
-    */
-
-    //this.setBackgroundPosition(pos);
   }
 
-  getConstrainedMovePosition(x, y, constrain) {
-    var absX, absY;
+  getConstrainedMovePosition(x, y, constrain, removeRotation) {
+    var absX, absY, p;
+
     if (constrain) {
       absX = Math.abs(x);
       absY = Math.abs(y);
@@ -2195,7 +2168,14 @@ class PositionableElement extends BrowserEventTarget {
         y = 0;
       }
     }
-    return new Point(x, y);
+
+    p = new Point(x, y);
+
+    if (removeRotation) {
+      p = p.rotate(-this.getRotation());
+    }
+
+    return p;
   }
 
   // TODO: rename? ... this will be called for nudging as well...
