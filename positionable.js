@@ -955,20 +955,28 @@ class DragTarget extends BrowserEventTarget {
 
   static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,form,label,select,code,pre,span'; }
 
-  constructor(el, allowInteraction) {
-    super(el, allowInteraction);
+  constructor(el) {
+    super(el);
     this.setupDragEvents();
     this.dragging = false;
     this.hovering = false;
+  }
 
-    if (allowInteraction) {
-      this.disableEventsForInteractiveElements();
-    }
+  allowCtrlKeyReset() {
+    this.keyManager = new KeyManager(this);
+    this.keyManager.setupKey(KeyManager.CTRL_KEY);
+  }
+
+  disableEventsForInteractiveElements() {
+    var els = this.el.querySelectorAll(DragTarget.INTERACTIVE_ELEMENTS_SELECTOR);
+    els.forEach(el => {
+      el.addEventListener('mousedown', this.stopEventPropagation);
+      el.addEventListener('click', this.stopEventPropagation);
+    });
   }
 
   // --- Setup
 
-  // TODO: use a flag here instead to use intents or not?
   setupDragIntents() {
     this.bindEvent('mouseover', this.onMouseOver);
     this.bindEvent('mouseout', this.onMouseOut);
@@ -1094,6 +1102,14 @@ class DragTarget extends BrowserEventTarget {
     });
   }
 
+  onKeyDown(evt) {
+    this.resetDrag();
+  }
+
+  onKeyUp(evt) {
+    this.resetDrag();
+  }
+
   // --- Data
 
   setEventDrag(evt) {
@@ -1146,6 +1162,14 @@ class DragTarget extends BrowserEventTarget {
 
   // --- Private
 
+  resetDrag() {
+    if (this.dragging) {
+      var lastMouseEvent = this.lastMouseEvent;
+      this.onMouseUp(lastMouseEvent);
+      this.onMouseDown(lastMouseEvent);
+    }
+  }
+
   disableUserSelect() {
     document.documentElement.style.userSelect = 'none';
   }
@@ -1166,14 +1190,6 @@ class DragTarget extends BrowserEventTarget {
     }
   }
 
-  disableEventsForInteractiveElements() {
-    var els = this.el.querySelectorAll(DragTarget.INTERACTIVE_ELEMENTS_SELECTOR);
-    els.forEach(el => {
-      el.addEventListener('mousedown', this.stopEventPropagation);
-      el.addEventListener('click', this.stopEventPropagation);
-    });
-  }
-
   stopEventPropagation(evt) {
     evt.stopPropagation();
   }
@@ -1192,9 +1208,8 @@ class DraggableElement extends DragTarget {
   //static get DRAGGABLE_CLASS()       { return 'draggable-element'; }
   //static get DRAGGING_ACTIVE_CLASS() { return 'draggable-element--active'; }
 
-  constructor(el, allowInteraction) {
-    super(el, allowInteraction);
-    this.setupDragIntents();
+  constructor(el) {
+    super(el);
     this.setupPosition();
   }
 
@@ -1349,8 +1364,10 @@ class PositionHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, listener) {
     super(root.getElementById('position-handle'));
-    this.listener = listener;
+    this.allowCtrlKeyReset();
     this.setupDragIntents();
+
+    this.listener = listener;
     /*
     //this.setup(target, name);
     this.addClass('sizing-handle');
@@ -1403,9 +1420,11 @@ class ResizeHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, name, listener) {
     super(root.getElementById('resize-handle-' + name));
+    this.allowCtrlKeyReset();
+    this.setupDragIntents();
+
     this.name = name;
     this.listener = listener;
-    this.setupDragIntents();
 
     /*
     //this.setup(target, name);
@@ -1550,8 +1569,9 @@ class RotationHandle extends DragTarget {
 
   constructor(root, listener) {
     super(root.getElementById('rotation-handle'));
-    this.listener = listener;
     this.setupDragIntents();
+
+    this.listener = listener;
   }
 
   onDragIntentStart(evt) {
@@ -2730,7 +2750,7 @@ class KeyManager extends BrowserEventTarget {
   static get MODIFIER_COMMAND() { return 2; }
 
   static get SHIFT_KEY()   { return 'Shift'; }
-  static get CONTROL_KEY() { return 'Control'; }
+  static get CTRL_KEY()    { return 'Control'; }
   static get ALT_KEY()     { return 'Alt'; }
   static get META_KEY()    { return 'Meta'; }
 
@@ -2802,7 +2822,7 @@ class KeyManager extends BrowserEventTarget {
   isDisabledKeyCombination(evt) {
     // Only handling simple keys and command keys for now.
     return (evt.shiftKey && evt.key !== KeyManager.SHIFT_KEY) ||
-           (evt.ctrlKey && evt.key !== KeyManager.CONTROL_KEY) ||
+           (evt.ctrlKey && evt.key !== KeyManager.CTRL_KEY) ||
            (evt.altKey && evt.key !== KeyManager.ALT_KEY);
   }
 
@@ -3029,7 +3049,7 @@ class AppController {
   setupKeyManager() {
     this.keyManager = new KeyManager(this);
 
-    this.keyManager.setupKey(KeyManager.CONTROL_KEY);
+    this.keyManager.setupKey(KeyManager.CTRL_KEY);
 
     this.keyManager.setupKey(KeyManager.A_KEY);
     this.keyManager.setupKey(KeyManager.B_KEY);
@@ -3196,7 +3216,7 @@ class AppController {
 
   onKeyDown(evt) {
     switch (evt.key) {
-      case KeyManager.CONTROL_KEY:
+      case KeyManager.CTRL_KEY:
         this.cursorManager.setPriorityHoverCursor('move');
       break;
     }
@@ -3204,7 +3224,7 @@ class AppController {
 
   onKeyUp(evt) {
     switch (evt.key) {
-      case KeyManager.CONTROL_KEY:
+      case KeyManager.CTRL_KEY:
         this.cursorManager.clearPriorityHoverCursor('move');
       break;
     }
@@ -4097,7 +4117,9 @@ class ControlPanel extends DraggableElement {
   static get ACTIVE_CLASS() { return 'control-panel--active'; }
 
   constructor(root, listener) {
-    super(root.getElementById('control-panel'), true);
+    super(root.getElementById('control-panel'));
+    this.disableEventsForInteractiveElements();
+
     this.listener = listener;
 
     this.setupAreas(root);

@@ -41,39 +41,39 @@ describe('CursorManager', function(uiRoot) {
     assert.equal(getBodyCursor(), 'auto');
   });
 
-  it('should be able to set a temporary hover cursor', function() {
+  it('should be able to set a priority hover cursor', function() {
     manager.setHoverCursor('ew-resize');
     assert.equal(getBodyCursor(), 'ew-resize');
-    manager.setTemporaryHoverCursor('move');
+    manager.setPriorityHoverCursor('move');
     assert.equal(getBodyCursor(), 'move');
-    manager.clearTemporaryHoverCursor();
+    manager.clearPriorityHoverCursor();
     assert.equal(getBodyCursor(), 'ew-resize');
-    manager.setTemporaryHoverCursor('move');
+    manager.setPriorityHoverCursor('move');
     assert.equal(getBodyCursor(), 'move');
     manager.clearHoverCursor();
     assert.equal(getBodyCursor(), 'auto');
   });
 
-  it('should show the temporary hover cursor after the normal one has been set', function() {
-    manager.setTemporaryHoverCursor('move');
+  it('should show the priority hover cursor after the normal one has been set', function() {
+    manager.setPriorityHoverCursor('move');
     assert.equal(getBodyCursor(), 'auto');
     manager.setHoverCursor('ew-resize');
     assert.equal(getBodyCursor(), 'move');
-    manager.clearTemporaryHoverCursor();
+    manager.clearPriorityHoverCursor();
     assert.equal(getBodyCursor(), 'ew-resize');
     manager.clearHoverCursor();
     assert.equal(getBodyCursor(), 'auto');
   });
 
-  it('should retain the temporary hover cursor even when the main hover cursor has been cleared', function() {
-    manager.setTemporaryHoverCursor('move');
+  it('should retain the priority hover cursor even when the main hover cursor has been cleared', function() {
+    manager.setPriorityHoverCursor('move');
     manager.setHoverCursor('ew-resize');
     assert.equal(getBodyCursor(), 'move');
     manager.clearHoverCursor();
     assert.equal(getBodyCursor(), 'auto');
     manager.setHoverCursor('ew-resize');
     assert.equal(getBodyCursor(), 'move');
-    manager.clearTemporaryHoverCursor();
+    manager.clearPriorityHoverCursor();
     manager.clearHoverCursor();
   });
 

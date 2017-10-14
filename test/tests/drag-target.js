@@ -10,6 +10,8 @@ describe('DragTarget', function(uiRoot) {
       this.clicked = false;
       this.startIntents = 0;
       this.stopIntents  = 0;
+      this.dragStarts   = 0;
+      this.dragStops    = 0;
       this.setupDragIntents();
     }
 
@@ -23,6 +25,7 @@ describe('DragTarget', function(uiRoot) {
 
     onDragStart(evt) {
       super.onDragStart(evt);
+      this.dragStarts += 1;
     }
 
     onDragMove(evt) {
@@ -32,6 +35,7 @@ describe('DragTarget', function(uiRoot) {
 
     onDragStop(evt) {
       super.onDragStop(evt);
+      this.dragStops += 1;
     }
 
     onClick(evt) {
@@ -197,7 +201,8 @@ describe('DragTarget', function(uiRoot) {
     var label  = appendChild(el, 'label');
     var select = appendChild(el, 'select');
 
-    target = new Target(el, true);
+    target = new Target(el);
+    target.disableEventsForInteractiveElements();
 
     dragElement(p,      0, 0, 50, 50);
     dragElement(h1,     0, 0, 50, 50);
@@ -225,6 +230,22 @@ describe('DragTarget', function(uiRoot) {
     assert.equal(document.documentElement.style.userSelect, 'none');
     fireDocumentMouseUp(50, 100);
     assert.equal(document.documentElement.style.userSelect, '');
+  });
+
+  it('should allow ctrl key to restart drag', function() {
+    el = appendAbsoluteBox();
+    target = new Target(el);
+    target.allowCtrlKeyReset();
+
+    fireMouseDown(el, 50, 50);
+    fireDocumentMouseMove(50, 100);
+    fireDocumentKeyDown(KeyManager.CTRL_KEY);
+    fireDocumentMouseMove(50, 150);
+    fireDocumentKeyUp(KeyManager.CTRL_KEY);
+    fireDocumentMouseUp(50, 100);
+
+    assert.equal(target.dragStarts, 2);
+    assert.equal(target.dragStops, 2);
   });
 
 });
