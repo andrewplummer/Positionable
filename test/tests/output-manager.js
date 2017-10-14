@@ -1,11 +1,11 @@
 
-describe('PositionableElementOutputManager', function(uiRoot) {
+describe('OutputManager', function(uiRoot) {
 
   var settings, manager;
 
   setup(function() {
     settings = new Settings({}, new MockLocalStorage(), uiRoot);
-    manager  = new PositionableElementOutputManager(settings);
+    manager  = new OutputManager(settings);
   });
 
   teardown(function() {

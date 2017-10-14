@@ -1,11 +1,11 @@
 
-describe('PositionableElementAlignmentManager', function(uiRoot) {
+describe('AlignmentManager', function(uiRoot) {
 
   var els, manager;
 
   setup(function() {
     setupElements();
-    manager = new PositionableElementAlignmentManager();
+    manager = new AlignmentManager();
   });
 
   teardown(function() {

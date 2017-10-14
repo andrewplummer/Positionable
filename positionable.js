@@ -2502,9 +2502,9 @@ class PositionableElement extends BrowserEventTarget {
 
 }
 
-/*-------------------------] PositionableElementOutputManager [--------------------------*/
+/*-------------------------] OutputManager [--------------------------*/
 
-class PositionableElementOutputManager {
+class OutputManager {
 
   static get NULL_SELECTOR() { return '[element]'; };
 
@@ -2531,7 +2531,7 @@ class PositionableElementOutputManager {
   }
 
   getSelectorWithDefault(element) {
-    return this.getSelector(element) || PositionableElementOutputManager.NULL_SELECTOR;
+    return this.getSelector(element) || OutputManager.NULL_SELECTOR;
   }
 
   // --- Property Headers
@@ -2560,7 +2560,7 @@ class PositionableElementOutputManager {
 
   getFirstClass(list) {
     var first = list[0];
-    return first ? '.' + first : PositionableElementOutputManager.NULL_SELECTOR;
+    return first ? '.' + first : OutputManager.NULL_SELECTOR;
   }
 
   getTagName(el) {
@@ -2840,9 +2840,9 @@ class KeyManager extends BrowserEventTarget {
 
 }
 
-/*-------------------------] PositionableElementAlignmentManager [--------------------------*/
+/*-------------------------] AlignmentManager [--------------------------*/
 
-class PositionableElementAlignmentManager {
+class AlignmentManager {
 
   align(elements, edge) {
     if (elements.length < 2) {
@@ -3037,8 +3037,8 @@ class AppController {
   constructor(uiRoot) {
 
     this.settings = new Settings(this, localStorage, uiRoot);
-    this.elementOutputManager = new PositionableElementOutputManager(this.settings);
-    this.elementAlignmentManager = new PositionableElementAlignmentManager();
+    this.elementOutputManager = new OutputManager(this.settings);
+    this.elementAlignmentManager = new AlignmentManager();
 
     this.body = new Element(document.body);
 
