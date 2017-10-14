@@ -55,14 +55,10 @@ h1,h2,h3 {
 .drag-selection {
   position: fixed;
   z-index: 9999996;
-  display: none;
   opacity: .5;
   background: rgba(0,0,0,.1);
   pointer-events: none;
-}
-
-.drag-selection--active {
-  display: block;
+  display: none;
 }
 
 .drag-selection-border {

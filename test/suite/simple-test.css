@@ -42,7 +42,12 @@ ul {
 }
 
 .test-fixtures {
-  display: none;
+  /*
+   * Note we are using getBoundingClientRect, which requires the
+   * elements to be rendered, even if they are not displayed, so
+   * using visibility: hidden here.
+   */
+  visibility: hidden;
 }
 
 .test-runtime {

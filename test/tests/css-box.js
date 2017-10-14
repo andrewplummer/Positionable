@@ -24,8 +24,8 @@ describe('CSSBox', function(uiRoot) {
 
   it('should be able to get its position', function() {
     setupNormal();
-    assert.equal(box.getPosition().x, 100);
-    assert.equal(box.getPosition().y, 100);
+    assert.equal(box.getOffsetPosition().x, 100);
+    assert.equal(box.getOffsetPosition().y, 100);
   });
 
   it('should be able to get its dimensions', function() {

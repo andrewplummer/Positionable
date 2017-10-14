@@ -1695,7 +1695,8 @@ class PositionableElement extends BrowserEventTarget {
     this.bindEvent('click', this.onClick);
     this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('mousedown', this.onMouseDown);
-    this.bindEvent('contextmenu', this.onContextMenu);
+    // TODO: what to do here?
+    //this.bindEvent('contextmenu', this.onContextMenu);
   }
 
   setupInitialState() {
@@ -1719,7 +1720,7 @@ class PositionableElement extends BrowserEventTarget {
 
     this.cssZIndex = matcher.getZIndex();
     this.cssTransform = matcher.getTransform(el);
-    this.cssBackgroundPosition = matcher.getBackgroundPosition(el);
+    this.cssBackgroundImage = matcher.getBackgroundImage(el);
   }
 
   /*
@@ -1892,37 +1893,76 @@ class PositionableElement extends BrowserEventTarget {
   */
 
   onDoubleClick(evt) {
+    var evtX, evtY, rect, center, origin, pos, coords, bounds, dim, iPos;
 
-    if (!this.cssBackgroundPosition.hasImage()) {
+    if (!this.cssBackgroundImage.hasImage()) {
       return;
     }
 
-    var x = evt.clientX + window.scrollX;
-    var y = evt.clientY + window.scrollY;
-    var p = new Point(x, y).subtract(this.box.getPosition());
-    //var coords = this.box.getCoords(point, this.transform.getRotation()).subtract(this.backgroundImage.getPosition());
-    var sprite = this.cssBackgroundPosition.getSpriteBounds(p);
-    console.info('SPRITE:', sprite);
+    evtX = this.isFixed ? evt.clientX : evt.pageX;
+    evtY = this.isFixed ? evt.clientY : evt.pageY;
 
-    if (sprite) {
-      //this.pushState();
-      this.setBackgroundPosition(new Point(-sprite.left, -sprite.top));
-      this.box.right  = this.box.left + sprite.getWidth();
-      // TODO: don't have target!
-      this.box.bottom = this.box.top  + sprite.getHeight();
-      this.render();
-      statusBar.update();
+    // Here we need to find the position of the click event in the element's
+    // coordinate system, taking into account any rotation. The cssBox
+    // representing this element may be positioned top/left or bottom/right,
+    // however, so using getBoundingClientRect here and taking advantage of
+    // the fact that the center will always be the same regardless of rotation
+    // so that we can reconstruct the page/viewport origin (top/left) and
+    // use this to get the coordinates.
+
+    // Start by getting the element's center point.
+    rect = this.el.getBoundingClientRect();
+    center = new Point(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
+
+    // The non-rotated origin can be found by subtracting the
+    // box dimensions from the element's center.
+    origin = center.add(this.cssBox.getDimensions().multiply(-.5));
+
+    // We can now get the event coordinates by getting the offset
+    // to the center and removing any rotation.
+    pos    = new Point(evtX, evtY);
+    coords = center.add(pos.subtract(center).rotate(-this.getRotation())).subtract(origin);
+
+    // Finally get any sprite bounds that may exist for these coordinates.
+    bounds = this.cssBackgroundImage.getSpriteBounds(coords);
+
+    if (bounds) {
+      dim  = this.cssBox.getDimensions();
+      iPos = this.cssBackgroundImage.getPosition();
+
+      var nwOffset = new Point(iPos.x + bounds.left, iPos.y + bounds.top);
+      var seOffset = new Point(iPos.x + bounds.right - dim.x, iPos.y + bounds.bottom - dim.y);
+
+      // Resizing the element uses calculations based on the last state
+      // on the assumption that only one resize direction will be updated
+      // between states. Rather than complicating that logic, it's simpler
+      // here to simply push another state after resizing once, then pop it
+      // off the end once we're done.
+
+      this.pushState();
+      this.cssBackgroundImage.setPosition(-bounds.left, -bounds.top);
+      this.resize(nwOffset, 'nw', false);
+
+      this.pushState();
+      this.resize(seOffset, 'se', false);
+
+      this.states.pop();
+
+      this.renderBackgroundPosition();
     }
   }
 
+  /*
   onContextMenu(evt) {
     if (evt.ctrlKey) {
       evt.preventDefault();
       this.handleCtrlDoubleClick(evt);
     }
   }
+  */
 
   // TODO: what is this?
+  /*
   handleCtrlDoubleClick(evt) {
     if (this.doubleClickTimer) {
       this.onDoubleClick(evt)
@@ -1931,6 +1971,7 @@ class PositionableElement extends BrowserEventTarget {
       this.doubleClickTimer = null;
     }.bind(this), PositionableElement.DOUBLE_CLICK_TIMEOUT);
   }
+  */
 
   // --- Focusing
 
@@ -1970,7 +2011,7 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  resize(vector, dir, constrain, isAbsolute) {
+  resize(vector, dir, constrain) {
     var lastState, lastBox, nextBox, ratio, rotation;
 
     lastState = this.getLastState();
@@ -1998,7 +2039,7 @@ class PositionableElement extends BrowserEventTarget {
     }
 
     this.cssBox = nextBox;
-    this.cssBox.render(this.el.style);
+    this.renderBox();
   }
 
   getAnchorOffset(dir, lastBox, nextBox, rotation) {
@@ -2029,7 +2070,7 @@ class PositionableElement extends BrowserEventTarget {
     // it does need to be in an X/Y coordinate system as the result will
     // be used for setting translation, so the final result needs to be
     // multiplied by the box normal to flip any inverted axes of the box.
-    return cssBox.getPosition().add(boxCenterOffset).add(anchorOffsetFromCenter).multiply(boxNormal);
+    return cssBox.getOffsetPosition().add(boxCenterOffset).add(anchorOffsetFromCenter).multiply(boxNormal);
   }
 
   getBoxNormal(cssBox) {
@@ -2116,8 +2157,8 @@ class PositionableElement extends BrowserEventTarget {
 
   moveBackground(x, y, constrain) {
     var p = this.getConstrainedMovePosition(x, y, constrain);
-    this.cssBackgroundPosition = this.getLastState().cssBackgroundPosition.clone();
-    this.cssBackgroundPosition.move(p.x, p.y);
+    this.cssBackgroundImage = this.getLastState().cssBackgroundImage.clone();
+    this.cssBackgroundImage.move(p.x, p.y);
     this.renderBackgroundPosition();
     //this.cssBox = this.getLastState().cssBox.clone();
     //this.cssBox.move(p.x, p.y);
@@ -2190,7 +2231,7 @@ class PositionableElement extends BrowserEventTarget {
       cssBox: this.cssBox.clone(),
       cssZIndex: this.cssZIndex.clone(),
       cssTransform: this.cssTransform.clone(),
-      cssBackgroundPosition: this.cssBackgroundPosition.clone()
+      cssBackgroundImage: this.cssBackgroundImage.clone()
     });
   }
 
@@ -2207,7 +2248,7 @@ class PositionableElement extends BrowserEventTarget {
     this.cssZIndex = state.cssZIndex;
     this.cssTransform = state.cssTransform;
     //this.position = state.position;
-    this.cssBackgroundPosition = state.cssBackgroundPosition;
+    this.cssBackgroundImage = state.cssBackgroundImage;
     this.render();
   }
 
@@ -2216,7 +2257,7 @@ class PositionableElement extends BrowserEventTarget {
   // --- Peeking
 
   peek(on) {
-    if (on && !this.cssBackgroundPosition.hasImage()) {
+    if (on && !this.cssBackgroundImage.hasImage()) {
       this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
       this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
     } else {
@@ -2317,7 +2358,7 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   renderBackgroundPosition() {
-    this.cssBackgroundPosition.render(this.el.style);
+    this.cssBackgroundImage.renderPosition(this.el.style);
   }
 
   /*
@@ -2553,7 +2594,7 @@ class OutputManager {
   }
 
   getBackgroundPositionHeader(element) {
-    return element.cssBackgroundPosition.getHeader();
+    return element.cssBackgroundImage.getPositionHeader();
   }
 
   // --- Private
@@ -4079,8 +4120,6 @@ class PositionableElementManager {
 // TODO: mouse coords are not aligning with box perfectly (looks like scrollbar issues)
 class DragSelection extends DragTarget {
 
-  static get ACTIVE_CLASS() { return 'drag-selection--active'; }
-
   constructor(root, listener) {
     super(document.documentElement);
     this.listener = listener;
@@ -4096,7 +4135,7 @@ class DragSelection extends DragTarget {
   onDragStart(evt) {
     super.onDragStart(evt);
     this.dragStartBox = CSSBox.fromPixelValues(evt.clientX, evt.clientY, 0, 0);
-    this.ui.addClass(DragSelection.ACTIVE_CLASS);
+    this.ui.show();
     this.listener.onDragSelectionStart(this);
   }
 
@@ -4113,8 +4152,8 @@ class DragSelection extends DragTarget {
 
   onDragStop(evt) {
     super.onDragStop(evt);
-    this.ui.removeClass(DragSelection.ACTIVE_CLASS);
     this.listener.onDragSelectionStop(this);
+    this.ui.hide();
   }
 
   onClick() {
@@ -5661,31 +5700,14 @@ class CopyAnimation extends Animation {
 
 /*-------------------------] SpriteRecognizer [--------------------------*/
 
-const SR_ORIGIN_REG = new RegExp('^' + location.origin.replace(/([\/.])/g, '\\$1'));
-const SR_EXTENSION_REG = /^chrome-extension:\/\//;
-
 class SpriteRecognizer {
-
-  static get ORIGIN_REG()    { return SR_ORIGIN_REG; }
-  static get EXTENSION_REG() { return SR_EXTENSION_REG; }
 
   constructor(img) {
     this.img = img;
     this.map = {};
-    this.loadPixelData(img);
   }
 
-  loadPixelData(img) {
-    var canvas, context;
-    canvas = document.createElement('canvas');
-    canvas.setAttribute('width', img.width);
-    canvas.setAttribute('height', img.height);
-    context = canvas.getContext('2d');
-    context.drawImage(img, 0, 0);
-    this.pixelData = context.getImageData(0, 0, img.width, img.height).data;
-  }
-
-  getSpriteForCoordinate(coord) {
+  getSpriteBoundsForCoordinate(coord) {
     var pixel = coord.round(), alpha, bounds, queue;
 
     // Detect alpha under current pixel.
@@ -5708,7 +5730,24 @@ class SpriteRecognizer {
       this.testAdjacentPixels(pixel, bounds, queue);
     } while(pixel = queue.shift());
 
+    // Bounds are zero indexed, so to
+    // include the last pixel push out by 1.
+    bounds.right  += 1;
+    bounds.bottom += 1;
+
     return bounds;
+  }
+
+  // --- Private
+
+  loadImageData() {
+    var img = this.img, canvas, context;
+    canvas = document.createElement('canvas');
+    canvas.setAttribute('width', img.width);
+    canvas.setAttribute('height', img.height);
+    context = canvas.getContext('2d');
+    context.drawImage(img, 0, 0);
+    this.pixelData = context.getImageData(0, 0, img.width, img.height).data;
   }
 
   testAdjacentPixels(pixel, bounds, queue) {
@@ -5737,8 +5776,8 @@ class SpriteRecognizer {
   }
 
   isValidPixel(pixel) {
-    return pixel.x >= 0 && pixel.x <= this.img.width &&
-           pixel.y >= 0 && pixel.y <= this.img.height;
+    return pixel.x >= 0 && pixel.x < this.img.width &&
+           pixel.y >= 0 && pixel.y < this.img.height;
   }
 
   getAlphaForPixel(pixel) {
@@ -5825,6 +5864,9 @@ class Point {
   */
 
   rotate(deg) {
+    if (deg === 0) {
+      return new Point(this.x, this.y);
+    }
     var rad = Point.degToRad(deg);
     var x = this.x * Math.cos(rad) - this.y * Math.sin(rad);
     var y = this.x * Math.sin(rad) + this.y * Math.cos(rad);
@@ -5878,12 +5920,11 @@ class Point {
 // TODO: remove rotation!
 class Rectangle {
 
-  constructor(top, right, bottom, left, rotation) {
+  constructor(top, right, bottom, left) {
     this.top      = top    || 0;
     this.right    = right  || 0;
     this.bottom   = bottom || 0;
     this.left     = left   || 0;
-    this.rotation = rotation || 0;
   }
 
   getWidth(r) {
@@ -5947,7 +5988,7 @@ class Rectangle {
   */
 
   clone() {
-    return new Rectangle(this.top, this.right, this.bottom, this.left, this.rotation);
+    return new Rectangle(this.top, this.right, this.bottom, this.left);
   }
 
 }
@@ -6285,7 +6326,7 @@ class CSSBox {
     return cssPos.isInverted();
   }
 
-  getPosition() {
+  getOffsetPosition() {
     return new Point(this.cssH.px, this.cssV.px);
   }
 
@@ -6685,14 +6726,14 @@ class CSSRuleMatcher {
     }
   }
 
-  getBackgroundPosition(el) {
+  getBackgroundImage(el) {
     // Must use computed styles here,
     // otherwise the url may not include the host.
     var backgroundImage = this.computedStyles['backgroundImage'];
     // It seems the computed initial value of backgroundPosition is 0% 0%,
     // so prevent defaulting to percentage values by using only matcheds styles.
     var backgroundPosition = this.getMatchedProperty('backgroundPosition') || 'initial';
-    return CSSBackgroundPosition.fromStyles(backgroundPosition, backgroundPosition, el);
+    return CSSBackgroundImage.fromStyles(backgroundImage, backgroundPosition, el);
   }
 
   getMatchedProperty(prop) {
@@ -7245,10 +7286,10 @@ class CSSViewportValue extends CSSValue {
 
 }
 
-/*-------------------------] CSSBackgroundPosition [--------------------------*/
+/*-------------------------] CSSBackgroundImage [--------------------------*/
 
 // TODO: MOVE
-class CSSBackgroundPosition {
+class CSSBackgroundImage {
 
   static get SAME_DOMAIN_REG() { return new RegExp('^' + location.origin.replace(/([\/.])/g, '\\$1')); };
   static get DATA_URI_REG()    { return /^data:/; };
@@ -7257,7 +7298,7 @@ class CSSBackgroundPosition {
   static fromStyles(backgroundImage, backgroundPosition, el) {
     var cssLeft, cssTop, pos, urlMatch, url;
 
-    urlMatch = backgroundImage.match(CSSBackgroundPosition.URL_REG);
+    urlMatch = backgroundImage.match(CSSBackgroundImage.URL_REG);
 
     if (urlMatch) {
       url = urlMatch[1];
@@ -7275,7 +7316,7 @@ class CSSBackgroundPosition {
       cssTop  = CSSValue.parse(pos[1], 'backgroundTop', el);
     }
 
-    return new CSSBackgroundPosition(url, cssLeft, cssTop);
+    return new CSSBackgroundImage(url, cssLeft, cssTop);
     //x = CSSValue.parse(xy[0], el, 'width');
     //y = CSSValue.parse(xy[1], el, 'height');
 
@@ -7288,28 +7329,38 @@ class CSSBackgroundPosition {
     //return new CSSPoint(x, y);
   }
 
-  constructor(url, cssLeft, cssTop) {
-    this.url     = url;
-    this.cssLeft = cssLeft;
-    this.cssTop  = cssTop;
-    this.loadImage(url);
+  constructor(url, cssLeft, cssTop, img, spriteRecognizer) {
+    this.url              = url;
+    this.cssLeft          = cssLeft;
+    this.cssTop           = cssTop;
+    this.img              = img;
+    this.spriteRecognizer = spriteRecognizer;
+
+    this.setup();
   }
 
   // --- Setup
 
-  loadImage(url) {
-    if (url) {
+  setup() {
+    if (this.url && !this.img) {
+      var img = new Image();
+      this.spriteRecognizer = new SpriteRecognizer(img);
+      img.addEventListener('load', this.onImageLoaded.bind(this));
+      img.src = this.url;
+      this.img = img;
+      /*
       if (this.isXDomainImage(url)) {
-        this.loadXDomainImage(url);
+        return this.loadXDomainImage(url);
       } else {
-        this.loadSameDomainImage(url);
+        return this.loadSameDomainImage(url);
       }
+      */
     }
   }
 
   isXDomainImage(url) {
-    return !CSSBackgroundPosition.SAME_DOMAIN_REG.test(url) &&
-           !CSSBackgroundPosition.DATA_URI_REG.test(url);
+    return !CSSBackgroundImage.SAME_DOMAIN_REG.test(url) &&
+           !CSSBackgroundImage.DATA_URI_REG.test(url);
   }
 
   /*
@@ -7332,8 +7383,10 @@ class CSSBackgroundPosition {
     var img = new Image();
     img.addEventListener('load', this.onImageLoaded.bind(this));
     img.src = url;
+    return img;
   }
 
+  // TODO: test me somehow
   loadXDomainImage(url) {
     // The background page is the only context in which pixel data from X-Domain
     // images can be loaded so call out to it and tell it to load the data for this url.
@@ -7341,11 +7394,10 @@ class CSSBackgroundPosition {
     chrome.runtime.sendMessage(message, this.onImageLoaded.bind(this));
   }
 
-  onImageLoaded(evt) {
-    var img = evt.target;
-    this.spriteRecognizer = new SpriteRecognizer(img);
-    this.checkPercentageDimension(this.cssLeft, img);
-    this.checkPercentageDimension(this.cssTop,  img);
+  onImageLoaded() {
+    this.spriteRecognizer.loadImageData(this.img);
+    this.checkPercentageDimension(this.cssLeft, this.img);
+    this.checkPercentageDimension(this.cssTop,  this.img);
   }
 
   checkPercentageDimension(cssDimension, img) {
@@ -7364,15 +7416,15 @@ class CSSBackgroundPosition {
     // The coordinate in the image's xy coordinate system,
     // minus any positioning offset.
     var imgCoord = coord.subtract(this.getPosition());
-    return this.spriteRecognizer.getSpriteForCoordinate(imgCoord);
+    return this.spriteRecognizer.getSpriteBoundsForCoordinate(imgCoord);
   }
 
-  getHeader() {
-    return this.toString(', ');
+  getPositionHeader() {
+    return this.getPositionString(', ');
   }
 
-  render(style) {
-    style.backgroundPosition = this.toString();
+  renderPosition(style) {
+    style.backgroundPosition = this.getPositionString();
   }
 
   // --- Positioning
@@ -7382,7 +7434,7 @@ class CSSBackgroundPosition {
     this.cssTop.px  += y;
   }
 
-  toString(join) {
+  getPositionString(join) {
     if (this.cssLeft.isNull() && this.cssTop.isNull()) {
       return '';
     } else {
@@ -7390,23 +7442,19 @@ class CSSBackgroundPosition {
     }
   }
 
-  /*
   getPosition() {
     return new Point(this.cssLeft.px, this.cssTop.px);
   }
 
-  setPosition(p) {
-    this.cssLeft.px = p.x;
-    this.cssTop.px  = p.y;
+  setPosition(x, y) {
+    this.cssLeft.px = x;
+    this.cssTop.px  = y;
   }
-
-  getPositionString() {
-    return [this.cssLeft, this.cssTop].join(' ');
-  }
-  */
 
   clone() {
-    return new CSSBackgroundPosition(this.img, this.cssLeft.clone(), this.cssTop.clone());
+    // The background image data itself is never assumed to be changed, so there's
+    // no need to clone the image or sprite recognizer when cloning.
+    return new CSSBackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone(), this.img, this.spriteRecognizer);
   }
 
 }

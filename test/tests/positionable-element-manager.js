@@ -120,6 +120,16 @@ describe('PositionableElementManager', function(uiRoot) {
     manager.findElements();
   }
 
+  function setupBackgroundBox() {
+    el = appendBackgroundImageBox();
+    manager.findElements();
+  }
+
+  function setupRotatedBackgroundBox() {
+    el = appendRotatedBackgroundImageBox();
+    manager.findElements();
+  }
+
   function getElementZIndex(el) {
     return window.getComputedStyle(el).zIndex;
   }
@@ -804,6 +814,43 @@ describe('PositionableElementManager', function(uiRoot) {
     dragElement(getUiElement(els[1], '.rotation-handle'), 150, 200, 100, 100);
     assert.equal(els[0].style.transform, 'rotate(225deg)');
     assert.equal(els[1].style.transform, 'rotate(180deg)');
+
+  });
+
+  // --- Background Image
+
+  it('should snap to sprite on double click', function() {
+    setupBackgroundBox();
+
+    // Force image loaded event to keep everything synchronous.
+    // This can be done since the image is using a dataUri
+    manager.elements[0].cssBackgroundImage.onImageLoaded();
+
+    fireDoubleClick(el, 121, 141);
+    assert.equal(el.style.left,   '121px');
+    assert.equal(el.style.top,    '141px');
+    assert.equal(el.style.width,  '2px');
+    assert.equal(el.style.height, '2px');
+  });
+
+  it('should snap to sprite when box is rotated', function() {
+    setupRotatedBackgroundBox();
+
+    // Force image loaded event to keep everything synchronous.
+    // This can be done since the image is using a dataUri
+    manager.elements[0].cssBackgroundImage.onImageLoaded();
+
+    fireDoubleClick(el, 121, 141);
+    assert.equal(el.style.left,   '');
+    assert.equal(el.style.top,    '');
+    assert.equal(el.style.width,  '');
+    assert.equal(el.style.height, '');
+
+    fireDoubleClick(el, 135, 124);
+    assert.equal(el.style.left,   '121px');
+    assert.equal(el.style.top,    '141px');
+    assert.equal(el.style.width,  '2px');
+    assert.equal(el.style.height, '2px');
 
   });
 

@@ -6,11 +6,11 @@
 // rotation, translation, etc, so should only be used in straightfoward
 // testing cases.
 
-(function() {
+function mockGetBoundingClientRect(el) {
 
-  window.Element.prototype.getBoundingClientRect = function() {
+  el.getBoundingClientRect = function() {
     return getComputedBoundingClientRect(this);
-  }
+  };
 
   function getComputedBoundingClientRect(el) {
     var rect = getRect(el), next;
@@ -80,4 +80,4 @@
     throw new Error('getBoundingClientRect mock failed');
   }
 
-})();
+}

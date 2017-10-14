@@ -3,6 +3,8 @@ describe('DragSelection', function(uiRoot) {
 
   var drag, listener;
 
+  mockGetBoundingClientRect(uiRoot.getElementById('drag-selection'));
+
   class Listener {
 
     constructor() {
