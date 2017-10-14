@@ -795,27 +795,35 @@ class CursorManager {
 
   clearHoverCursor() {
     this.hoverCursor = '';
-    this.temporaryHoverCursor = '';
     this.render();
   }
 
-  setTemporaryHoverCursor(cursor) {
-    if (!this.hoverCursor) {
-      return;
-    }
-    this.temporaryHoverCursor = cursor;
+  setPriorityHoverCursor(cursor) {
+    this.priorityHoverCursor = cursor;
     this.render();
   }
 
-  clearTemporaryHoverCursor() {
-    this.temporaryHoverCursor = '';
+  clearPriorityHoverCursor() {
+    this.priorityHoverCursor = '';
     this.render();
   }
 
   // --- Private
 
   render() {
-    this.style.cursor = this.dragCursor || this.temporaryHoverCursor || this.hoverCursor || '';
+    this.style.cursor = this.getActiveCursor();
+  }
+
+  getActiveCursor() {
+    if (this.dragCursor) {
+      return this.dragCursor;
+    } else if (this.hoverCursor && this.priorityHoverCursor) {
+      return this.priorityHoverCursor;
+    } else if (this.hoverCursor) {
+      return this.hoverCursor;
+    } else {
+      return '';
+    }
   }
 
   getResizeCursor(name, rotation) {
@@ -3138,7 +3146,11 @@ class AppController {
 
   onResizeDragStart(evt, handle, element) {
     console.info('RESIZE DRAG START');
-    this.cursorManager.setResizeDragCursor(handle.name, element.getRotation());
+    if (evt.ctrlKey) {
+      this.cursorManager.setDragCursor('move');
+    } else {
+      this.cursorManager.setResizeDragCursor(handle.name, element.getRotation());
+    }
   }
 
   onResizeDragMove(evt, handle, element) {
@@ -3185,7 +3197,7 @@ class AppController {
   onKeyDown(evt) {
     switch (evt.key) {
       case KeyManager.CONTROL_KEY:
-        this.cursorManager.setTemporaryHoverCursor('move');
+        this.cursorManager.setPriorityHoverCursor('move');
       break;
     }
   }
@@ -3193,7 +3205,7 @@ class AppController {
   onKeyUp(evt) {
     switch (evt.key) {
       case KeyManager.CONTROL_KEY:
-        this.cursorManager.clearTemporaryHoverCursor('move');
+        this.cursorManager.clearPriorityHoverCursor('move');
       break;
     }
   }

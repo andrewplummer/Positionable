@@ -54,9 +54,27 @@ describe('CursorManager', function(uiRoot) {
     assert.equal(getBodyCursor(), 'auto');
   });
 
-  it('should not set a temporary hover cursor if no hover cursor is set', function() {
+  it('should show the temporary hover cursor after the normal one has been set', function() {
     manager.setTemporaryHoverCursor('move');
     assert.equal(getBodyCursor(), 'auto');
+    manager.setHoverCursor('ew-resize');
+    assert.equal(getBodyCursor(), 'move');
+    manager.clearTemporaryHoverCursor();
+    assert.equal(getBodyCursor(), 'ew-resize');
+    manager.clearHoverCursor();
+    assert.equal(getBodyCursor(), 'auto');
+  });
+
+  it('should retain the temporary hover cursor even when the main hover cursor has been cleared', function() {
+    manager.setTemporaryHoverCursor('move');
+    manager.setHoverCursor('ew-resize');
+    assert.equal(getBodyCursor(), 'move');
+    manager.clearHoverCursor();
+    assert.equal(getBodyCursor(), 'auto');
+    manager.setHoverCursor('ew-resize');
+    assert.equal(getBodyCursor(), 'move');
+    manager.clearTemporaryHoverCursor();
+    manager.clearHoverCursor();
   });
 
   // --- Drag Cursors
