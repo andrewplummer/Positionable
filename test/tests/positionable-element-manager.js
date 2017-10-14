@@ -833,7 +833,7 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.height, '2px');
   });
 
-  it('should snap to sprite when box is rotated', function() {
+  it('should snap to sprite when box is rotated and undo', function() {
     setupRotatedBackgroundBox();
 
     // Force image loaded event to keep everything synchronous.
@@ -851,6 +851,14 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.top,    '141px');
     assert.equal(el.style.width,  '2px');
     assert.equal(el.style.height, '2px');
+    assert.equal(el.style.transform, 'translate(13.86px, -17.46px) rotate(45deg)');
+
+    manager.elements[0].undo();
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, '100px');
+    assert.equal(el.style.transform, 'rotate(45deg)');
 
   });
 

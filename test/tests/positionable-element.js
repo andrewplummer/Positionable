@@ -288,6 +288,34 @@ describe('PositionableElement', function(uiRoot) {
 
   });
 
+  it('should restore transform to null after undo', function() {
+    el = appendAbsoluteBox();
+    p = new PositionableElement(el, listener);
+
+    p.pushState();
+    p.rotate(45);
+    assert.equal(el.style.transform,  'rotate(45deg)');
+
+    p.pushState();
+    p.resize(new Point(20, 20), 'nw');
+    assert.equal(el.style.transform,  'translate(-10px, 4.14px) rotate(45deg)');
+    assert.equal(el.style.top,  '120px');
+    assert.equal(el.style.left, '120px');
+    assert.equal(el.style.width, '80px');
+    assert.equal(el.style.height, '80px');
+
+    p.undo();
+    assert.equal(el.style.transform,  'rotate(45deg)');
+    assert.equal(el.style.top,  '100px');
+    assert.equal(el.style.left, '100px');
+    assert.equal(el.style.width, '100px');
+    assert.equal(el.style.height, '100px');
+
+    p.undo();
+    assert.equal(el.style.transform,  '');
+
+  });
+
   // --- Other
 
   it('should receive correct rotation events after a move', function() {

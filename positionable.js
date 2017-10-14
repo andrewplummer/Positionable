@@ -2244,10 +2244,10 @@ class PositionableElement extends BrowserEventTarget {
     if (!state) {
       return;
     }
+
     this.cssBox = state.cssBox;
     this.cssZIndex = state.cssZIndex;
     this.cssTransform = state.cssTransform;
-    //this.position = state.position;
     this.cssBackgroundImage = state.cssBackgroundImage;
     this.render();
   }
