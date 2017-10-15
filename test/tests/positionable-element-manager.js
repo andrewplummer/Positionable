@@ -921,4 +921,64 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.height, '');
   });
 
+  // --- Peeking
+
+  it('should be able to peek then resize and undo back to initial', function() {
+    setupBackgroundBox();
+    manager.focusAll();
+    manager.setPeekMode(true);
+
+    dragElement(getUiElement(el, '.resize-handle-se'), 600, 600, 700, 700);
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '600px');
+    assert.equal(el.style.height, '600px');
+
+    manager.setPeekMode(false);
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '600px');
+    assert.equal(el.style.height, '600px');
+
+    manager.undo();
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '500px');
+    assert.equal(el.style.height, '500px');
+
+    manager.undo();
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, '100px');
+  });
+
+  it('should be able to find undo states after a move and peek', function() {
+    setupBackgroundBox();
+    manager.focusAll();
+
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 250, 250);
+
+    manager.setPeekMode(true);
+    dragElement(getUiElement(el, '.resize-handle-se'), 700, 700, 800, 800);
+    manager.setPeekMode(false);
+
+    assert.equal(el.style.left,   '200px');
+    assert.equal(el.style.top,    '200px');
+    assert.equal(el.style.width,  '600px');
+    assert.equal(el.style.height, '600px');
+
+    manager.undo();
+    assert.equal(el.style.left,   '200px');
+    assert.equal(el.style.top,    '200px');
+    assert.equal(el.style.width,  '500px');
+    assert.equal(el.style.height, '500px');
+
+    manager.undo();
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, '100px');
+  });
+
 });

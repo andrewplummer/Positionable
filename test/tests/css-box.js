@@ -36,7 +36,7 @@ describe('CSSBox', function(uiRoot) {
 
   it('should be able to move', function() {
     setupNormal();
-    box.move(50, 50);
+    box.addOffsetPosition(50, 50);
     box.render(el.style);
     assert.equal(el.style.left,   '150px');
     assert.equal(el.style.top,    '150px');
@@ -46,7 +46,7 @@ describe('CSSBox', function(uiRoot) {
 
   it('should be able to move an inverted box', function() {
     setupInverted();
-    box.move(50, 50);
+    box.addOffsetPosition(50, 50);
     box.render(el.style);
     assert.equal(el.style.left,   '');
     assert.equal(el.style.top,    '');

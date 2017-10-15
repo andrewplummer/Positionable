@@ -58,6 +58,11 @@ describe('PositionableElement', function(uiRoot) {
     onRotationDragStop(evt) {
     }
 
+    // --- Background Image Events
+
+    onBackgroundImageSnap() {
+    }
+
   }
 
   setup(function() {
@@ -75,6 +80,14 @@ describe('PositionableElement', function(uiRoot) {
         offset: offset
       }
     }
+  }
+
+  function forceBackgroundImageLoad(element) {
+    // Force image loaded event to keep everything synchronous.
+    // This can be done since the image is using a dataUri
+    var backgroundImage = element.cssBackgroundImage;
+    backgroundImage.img.src = backgroundImage.url;
+    backgroundImage.onImageLoaded();
   }
 
   it('should set initial state from stylesheet', function() {
@@ -331,6 +344,124 @@ describe('PositionableElement', function(uiRoot) {
 
     p.undo();
     assert.equal(el.style.transform,  '');
+
+  });
+
+  // --- Background Snapping
+
+  it('should snap to a background sprite', function() {
+    el = appendBackgroundImageBox();
+    p = new PositionableElement(el, listener);
+    forceBackgroundImageLoad(p);
+
+    fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
+    assert.equal(el.style.top,    '141px');
+    assert.equal(el.style.left,   '121px');
+    assert.equal(el.style.width,  '2px');
+    assert.equal(el.style.height, '2px');
+  });
+
+  // --- Peeking
+
+  it('should allow peeking on an element with a background', function() {
+    el = appendBackgroundImageBox();
+    p = new PositionableElement(el, listener);
+    p.setPeekMode(true);
+    assert.equal(el.style.width, '500px');
+    assert.equal(el.style.height, '500px');
+  });
+
+  it('should not allow peeking on an element with no background', function() {
+    el = appendAbsoluteBox();
+    p = new PositionableElement(el, listener);
+    p.setPeekMode(true);
+    assert.equal(el.style.width, '');
+    assert.equal(el.style.height, '');
+  });
+
+  it('should be able to move while peeking', function() {
+    el = appendBackgroundImageBox();
+    p = new PositionableElement(el, listener);
+    forceBackgroundImageLoad(p);
+
+    p.pushState();
+    p.move(100, 100);
+    assert.equal(el.style.top,    '200px');
+    assert.equal(el.style.left,   '200px');
+
+    p.setPeekMode(true);
+    assert.equal(el.style.width,  '500px');
+    assert.equal(el.style.height, '500px');
+
+    p.setPeekMode(false);
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, '100px');
+
+    p.setPeekMode(true);
+    assert.equal(el.style.width,  '500px');
+    assert.equal(el.style.height, '500px');
+
+    p.move(200, 200);
+    p.setPeekMode(false);
+
+    assert.equal(el.style.top,    '300px');
+    assert.equal(el.style.left,   '300px');
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, '100px');
+  });
+
+  it('should be able to resize while peeking', function() {
+    el = appendBackgroundImageBox();
+    p = new PositionableElement(el, listener);
+
+    p.setPeekMode(true);
+    p.lockPeekMode();
+    p.pushState();
+    p.resize(new Point(30, 80), 'se');
+    p.setPeekMode(false);
+
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.width,  '530px');
+    assert.equal(el.style.height, '580px');
+  });
+
+  it('should be able to snap while peeking', function() {
+    el = appendBackgroundImageBox();
+    p = new PositionableElement(el, listener);
+    forceBackgroundImageLoad(p);
+
+    p.setPeekMode(true);
+    fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
+    p.setPeekMode(false);
+
+    assert.equal(el.style.top,    '141px');
+    assert.equal(el.style.left,   '121px');
+    assert.equal(el.style.width,  '2px');
+    assert.equal(el.style.height, '2px');
+  });
+
+  it('should be able to get back to initial state after peeking', function() {
+    el = appendBackgroundImageBox();
+    p = new PositionableElement(el, listener);
+    forceBackgroundImageLoad(p);
+
+    p.setPeekMode(true);
+    p.lockPeekMode();
+    p.pushState();
+    p.resize(new Point(30, 80), 'se');
+
+    p.undo();
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.width,  '500px');
+    assert.equal(el.style.height, '500px');
+
+    p.undo();
+    assert.equal(el.style.top,    '100px');
+    assert.equal(el.style.left,   '100px');
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, '100px');
 
   });
 

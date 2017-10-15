@@ -962,11 +962,6 @@ class DragTarget extends BrowserEventTarget {
     this.hovering = false;
   }
 
-  allowCtrlKeyReset() {
-    this.keyManager = new KeyManager(this);
-    this.keyManager.setupKey(KeyManager.CTRL_KEY);
-  }
-
   allowDoubleClick() {
     this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('contextmenu', this.onContextMenu);
@@ -1387,7 +1382,6 @@ class PositionHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, listener) {
     super(root.getElementById('position-handle'));
-    this.allowCtrlKeyReset();
     this.allowDoubleClick();
     this.setupDragIntents();
 
@@ -1448,7 +1442,6 @@ class ResizeHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, name, listener) {
     super(root.getElementById('resize-handle-' + name));
-    this.allowCtrlKeyReset();
     this.allowDoubleClick();
     this.setupDragIntents();
 
@@ -1683,13 +1676,10 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Constants
 
-  static get UI_FOCUSED_CLASS() { return 'ui--focused' };
-
-  static get PEEKING_DIMENSIONS()        { return 500 };
-
-  static get ROTATION_SNAPPING() { return 22.5 };
-
-  static get TOP_Z_INDEX() { return 9999995; }
+  static get UI_FOCUSED_CLASS()   { return 'ui--focused' };
+  static get PEEKING_DIMENSIONS() { return 500 };
+  static get ROTATION_SNAPPING()  { return 22.5 };
+  static get TOP_Z_INDEX()        { return 9999995; }
 
   constructor(el, listener) {
     super(el);
@@ -1931,7 +1921,7 @@ class PositionableElement extends BrowserEventTarget {
   */
 
   snapToSprite(evt) {
-    var rect, center, origin, pos, coords, bounds, dim, iPos;
+    var rect, center, origin, pos, coords, bounds, dim, cDim, iPos;
 
     if (!this.cssBackgroundImage.hasImage()) {
       return;
@@ -1951,7 +1941,9 @@ class PositionableElement extends BrowserEventTarget {
 
     // The non-rotated origin can be found by subtracting the
     // box dimensions from the element's center.
-    origin = center.add(this.cssBox.getDimensions().multiply(-.5));
+    dim  = this.cssBox.getDimensions();
+    cDim = this.isPeeking ? this.getPeekDimensions() : dim;
+    origin = center.add(cDim.multiply(-.5));
 
     // We can now get the event coordinates by getting the offset
     // to the center and removing any rotation.
@@ -1962,7 +1954,10 @@ class PositionableElement extends BrowserEventTarget {
     bounds = this.cssBackgroundImage.getSpriteBounds(coords);
 
     if (bounds) {
-      dim  = this.cssBox.getDimensions();
+
+      this.lockPeekMode();
+
+      dim = this.cssBox.getDimensions();
       iPos = this.cssBackgroundImage.getPosition();
 
       var nwOffset = new Point(iPos.x + bounds.left, iPos.y + bounds.top);
@@ -2170,7 +2165,7 @@ class PositionableElement extends BrowserEventTarget {
   move(x, y, constrain) {
     var p = this.getConstrainedMovePosition(x, y, constrain);
     this.cssBox = this.getLastState().cssBox.clone();
-    this.cssBox.move(p.x, p.y);
+    this.cssBox.addOffsetPosition(p.x, p.y);
     this.renderBox();
   }
 
@@ -2243,7 +2238,6 @@ class PositionableElement extends BrowserEventTarget {
     if (!state) {
       return;
     }
-
     this.cssBox = state.cssBox;
     this.cssZIndex = state.cssZIndex;
     this.cssTransform = state.cssTransform;
@@ -2255,16 +2249,30 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Peeking
 
-  peek(on) {
-    if (on && !this.cssBackgroundImage.hasImage()) {
-      this.el.style.width  = PositionableElement.PEEKING_DIMENSIONS + 'px';
-      this.el.style.height = PositionableElement.PEEKING_DIMENSIONS + 'px';
-    } else {
-      this.renderSize();
+  setPeekMode(on) {
+    if (this.cssBackgroundImage.hasImage()) {
+      this.isPeeking = on;
+      this.renderBox();
     }
   }
 
+  getPeekDimensions() {
+    return new Point(
+      PositionableElement.PEEKING_DIMENSIONS,
+      PositionableElement.PEEKING_DIMENSIONS
+    );
+  }
 
+  lockPeekMode() {
+    if (this.isPeeking) {
+      if (this.states.length === 0) {
+        this.pushState();
+      }
+      var p = this.getPeekDimensions();
+      this.cssBox.setDimensions(p.x, p.y);
+      this.setPeekMode(false);
+    }
+  }
 
   // --- Scrolling
 
@@ -2354,6 +2362,11 @@ class PositionableElement extends BrowserEventTarget {
 
   renderBox() {
     this.cssBox.render(this.el.style);
+    if (this.isPeeking) {
+      var p = this.getPeekDimensions();
+      this.el.style.width  = p.x + 'px';
+      this.el.style.height = p.y + 'px';
+    }
   }
 
   renderBackgroundPosition() {
@@ -2479,6 +2492,18 @@ class PositionableElement extends BrowserEventTarget {
   getEdgeValue(side) {
     var handle = this.getHandleForSide(side);
     return handle.getPosition()[this.getAxisForSide(side)];
+ }
+
+  resetDrag() {
+    this.handles.n.resetDrag();
+    this.handles.e.resetDrag();
+    this.handles.s.resetDrag();
+    this.handles.w.resetDrag();
+    this.handles.ne.resetDrag();
+    this.handles.se.resetDrag();
+    this.handles.sw.resetDrag();
+    this.handles.nw.resetDrag();
+    this.positionHandle.resetDrag();
   }
 
   /*
@@ -3102,6 +3127,7 @@ class AppController {
     this.keyManager = new KeyManager(this);
 
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
+    this.keyManager.setupKey(KeyManager.ALT_KEY);
 
     this.keyManager.setupKey(KeyManager.A_KEY);
     this.keyManager.setupKey(KeyManager.B_KEY);
@@ -3220,6 +3246,7 @@ class AppController {
     if (evt.ctrlKey) {
       this.cursorManager.setDragCursor('move');
     } else {
+      this.isResizing = true;
       this.cursorManager.setResizeDragCursor(handle.name, element.getRotation());
     }
   }
@@ -3231,6 +3258,7 @@ class AppController {
   onResizeDragStop(evt, handle, element) {
     console.info('RESIZE DRAG STOP');
     this.cursorManager.clearDragCursor();
+    this.isResizing = false;
   }
 
   // --- Rotation Drag Events
@@ -3247,6 +3275,7 @@ class AppController {
 
   onRotationDragStart(evt, handle, element) {
     console.info('ROTATION DRAG START');
+    this.isRotating = true;
     this.cursorManager.setRotateDragCursor(handle.name, element.getRotation());
   }
 
@@ -3257,6 +3286,7 @@ class AppController {
 
   onRotationDragStop(evt, handle, element) {
     console.info('ROTATION DRAG STOP');
+    this.isRotating = false;
     this.cursorManager.clearDragCursor();
   }
 
@@ -3294,6 +3324,12 @@ class AppController {
     switch (evt.key) {
       case KeyManager.CTRL_KEY:
         this.cursorManager.setPriorityHoverCursor('move');
+        this.elementManager.resetFocusedDrag();
+      break;
+      case KeyManager.ALT_KEY:
+        if (this.canPeek()) {
+          this.elementManager.setPeekMode(true);
+        }
       break;
     }
   }
@@ -3302,8 +3338,18 @@ class AppController {
     switch (evt.key) {
       case KeyManager.CTRL_KEY:
         this.cursorManager.clearPriorityHoverCursor('move');
+        this.elementManager.resetFocusedDrag();
+      break;
+      case KeyManager.ALT_KEY:
+        if (this.canPeek()) {
+          this.elementManager.setPeekMode(false);
+        }
       break;
     }
+  }
+
+  canPeek() {
+    return !this.isResizing && !this.isRotating;
   }
 
   onCommandKeyDown(evt) {
@@ -3477,9 +3523,16 @@ class PositionableElementManager {
   }
   */
 
+  lockPeekMode() {
+    this.focusedElements.forEach(el => el.lockPeekMode());
+  }
+
+  setPeekMode(on) {
+    this.focusedElements.forEach(el => el.setPeekMode(on));
+  }
+
   pushFocusedStates() {
-    // TODO: change to focused!
-    this.elements.forEach(el => el.pushState());
+    this.focusedElements.forEach(el => el.pushState());
   }
 
   isFocused(element) {
@@ -3528,7 +3581,7 @@ class PositionableElementManager {
   }
 
   undo() {
-    this.focusedElements.forEach(element => element.undo());
+    this.focusedElements.forEach(el => el.undo());
   }
 
   /*
@@ -3680,6 +3733,7 @@ class PositionableElementManager {
   }
 
   onResizeDragStart(evt, handle, element) {
+    this.lockPeekMode();
     this.pushFocusedStates();
     this.listener.onResizeDragStart(evt, handle, element);
   }
@@ -4125,6 +4179,10 @@ class PositionableElementManager {
 
   destroyAll() {
     this.elements.forEach(el => el.destroy());
+  }
+
+  resetFocusedDrag() {
+    this.focusedElements.forEach(el => el.resetDrag());
   }
 
 }
@@ -6270,11 +6328,6 @@ class CSSBox {
     cssDim.px = dpx;
   }
 
-  move(x, y) {
-    this.cssH.add(x);
-    this.cssV.add(y);
-  }
-
   getEdgeForDir(dir, axis) {
     if (axis === 'h') {
       switch(dir.slice(-1)) {
@@ -6344,8 +6397,18 @@ class CSSBox {
     return new Point(this.cssH.px, this.cssV.px);
   }
 
+  addOffsetPosition(x, y) {
+    this.cssH.add(x);
+    this.cssV.add(y);
+  }
+
   getDimensions() {
     return new Point(this.cssWidth.px, this.cssHeight.px);
+  }
+
+  setDimensions(x, y) {
+    this.cssWidth.px  = x;
+    this.cssHeight.px = y;
   }
 
   /*

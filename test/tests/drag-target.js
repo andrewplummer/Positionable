@@ -237,16 +237,14 @@ describe('DragTarget', function(uiRoot) {
     assert.equal(document.documentElement.style.userSelect, '');
   });
 
-  it('should allow ctrl key to restart drag', function() {
+  it('should be able to reset the drag', function() {
     el = appendAbsoluteBox();
     target = new Target(el);
-    target.allowCtrlKeyReset();
 
     fireMouseDown(el, 50, 50);
     fireDocumentMouseMove(50, 100);
-    fireDocumentKeyDown(KeyManager.CTRL_KEY);
+    target.resetDrag();
     fireDocumentMouseMove(50, 150);
-    fireDocumentKeyUp(KeyManager.CTRL_KEY);
     fireDocumentMouseUp(50, 100);
 
     assert.equal(target.dragStarts, 2);
