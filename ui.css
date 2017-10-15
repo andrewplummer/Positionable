@@ -187,6 +187,33 @@ h1,h2,h3 {
   opacity: .6;
 }
 
+.element-area-mode-container {
+  position: absolute;
+  top: 50%;
+  right: -15px;
+  margin-top: -30px;
+}
+
+.element-area-mode {
+  display: none;
+  width: 80px;
+  height: 60px;
+  font-size: 14px;
+}
+
+.element-area-mode--background {
+  margin-right: 5px;
+}
+
+.element-area-mode-icon {
+  display: block;
+  margin: 0 auto 5px auto;
+}
+
+.element-area-mode-text {
+  text-align: center;
+}
+
 .control-panel--element-background-active {
   height: 130px;
 }

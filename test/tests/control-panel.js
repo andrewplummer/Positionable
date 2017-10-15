@@ -105,6 +105,17 @@ describe('ControlPanel', function(uiRoot) {
     assert.isTrue(getUiElement(document.documentElement, '#control-panel').classList.contains(className));
   });
 
+  // --- Rendering Modes
+
+  it('should render mode area', function() {
+    panel.showElementArea();
+    panel.setMode('position');
+    assert.equal(getUiElement(document.documentElement, '#element-area-mode-position').style.display, 'block');
+    panel.setMode('background');
+    assert.equal(getUiElement(document.documentElement, '#element-area-mode-position').style.display, 'none');
+    assert.equal(getUiElement(document.documentElement, '#element-area-mode-background').style.display, 'block');
+  });
+
   // --- Rendering Align Area
 
   it('should render multiple selected', function() {

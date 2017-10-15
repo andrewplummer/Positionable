@@ -131,36 +131,136 @@ class NudgeManager {
   static get REPEAT_MID ()   { return 10; };
   static get REPEAT_FAST()   { return 5;  };
 
-  static get SHIFT_MULTIPLIER() { return 5; }
+  static get POSITION_MODE()   { return 'position';   }
+  static get ROTATE_MODE()     { return 'rotate';     }
+  static get Z_INDEX_MODE()    { return 'z-index';    }
+  static get RESIZE_NW_MODE()  { return 'resize-nw';  }
+  static get RESIZE_SE_MODE()  { return 'resize-se';  }
+  static get BACKGROUND_MODE() { return 'background'; }
 
-  static get POSITION_MODE()    { return 'position';            }
-  static get ROTATE_MODE()      { return 'rotate';              }
-  static get RESIZE_NW_MODE()   { return 'resize-nw';           }
-  static get RESIZE_SE_MODE()   { return 'resize-se';           }
-  static get BG_POSITION_MODE() { return 'background-position'; }
-  static get Z_INDEX_MODE()     { return 'z-index';             }
+  static get MULTIPLIER() { return 5; }
 
-  constructor() {
-    this.resetNudges();
-    this.resetTimeout();
-    this.setMode(NudgeManager.POSITION_MODE);
+  constructor(listener) {
+    this.listener = listener;
+    this.vectors  = {};
+
+    this.setPositionMode();
+    this.setMultiplier(false);
     this.checkNextNudge = this.checkNextNudge.bind(this);
   }
 
-  // --- Init
-
-  resetNudges() {
-    this.nudges = {};
-  }
-
-  resetTimeout() {
-    this.timer = clearTimeout(this.timer);
+  addDirection(dir) {
+    if (!this.isNudging()) {
+      this.start();
+    }
+    this.vectors[dir] = true;
+    this.next();
   }
 
   // --- Modes
 
+  setPositionMode() {
+    this.setMode(NudgeManager.POSITION_MODE);
+  }
+
+  toggleResizeMode() {
+    this.toggleMode(NudgeManager.RESIZE_SE_MODE);
+  }
+
+  toggleRotateMode() {
+    this.toggleMode(NudgeManager.ROTATE_MODE);
+  }
+
+  toggleBackgroundMode() {
+    this.toggleMode(NudgeManager.BACKGROUND_MODE);
+  }
+
+  toggleZIndexMode() {
+    this.toggleMode(NudgeManager.Z_INDEX_MODE);
+  }
+
+  // --- Multiplier
+
+  setMultiplier(on) {
+    this.multiplier = on ? NudgeManager.MULTIPLIER : 1;
+  }
+
+  // --- Private
+
+  dispatchNudge(x, y) {
+    var evt = new CustomEvent('nudge');
+    if (this.isMode(NudgeManager.RESIZE_NW_MODE)) {
+      evt.dir = 'nw';
+    } else if (this.isMode(NudgeManager.RESIZE_SE_MODE)) {
+      evt.dir = 'se';
+    }
+    this.vector.x += x;
+    this.vector.y += y;
+    evt.x = this.vector.x;
+    evt.y = this.vector.y;
+    evt.mode = this.mode;
+    this.listener.onNudgeMove(evt);
+  }
+
+  removeDirection(dir) {
+    this.vectors[dir] = false;
+    if (!this.isNudging()) {
+      this.resetTimeout();
+      this.listener.onNudgeStop(this.mode);
+    }
+  }
+
+  start() {
+    this.vector = new Point(0, 0);
+    this.startTime = new Date();
+    this.listener.onNudgeStart(this.mode);
+  }
+
+  next() {
+    var vectors, nudgeX, nudgeY;
+
+    if (this.timer !== undefined) {
+      return;
+    }
+
+    vectors = this.vectors;
+    nudgeX  = 0;
+    nudgeY  = 0;
+
+    if (vectors.up) {
+      nudgeY -= 1;
+    }
+    if (vectors.down) {
+      nudgeY += 1;
+    }
+    if (vectors.left) {
+      nudgeX -= 1;
+    }
+    if (vectors.right) {
+      nudgeX += 1;
+    }
+
+    this.dispatchNudge(nudgeX * this.multiplier, nudgeY * this.multiplier);
+    this.timer = setTimeout(this.checkNextNudge, this.getDelay());
+  }
+
+  checkNextNudge() {
+    this.timer = undefined;
+    if (this.isNudging()) {
+      this.next();
+    }
+  }
+
+  isNudging() {
+    var vectors = this.vectors;
+    return !!(vectors.up || vectors.down || vectors.left || vectors.right);
+  }
+
   setMode(mode) {
-    this.mode = mode;
+    if (this.mode !== mode) {
+      this.mode = mode;
+      this.listener.onNudgeModeChanged(mode);
+    }
   }
 
   toggleMode(mode) {
@@ -169,108 +269,18 @@ class NudgeManager {
       // Resize NW -> Resize SE
       // All other modes toggle back to position mode.
       if (mode === NudgeManager.RESIZE_SE_MODE) {
-        this.mode = NudgeManager.RESIZE_NW_MODE;
+        mode = NudgeManager.RESIZE_NW_MODE;
       } else if (mode === NudgeManager.RESIZE_NW_MODE) {
-        this.mode = NudgeManager.RESIZE_SE_MODE;
+        mode = NudgeManager.RESIZE_SE_MODE;
       } else {
-        this.mode = NudgeManager.POSITION_MODE;
+        mode = NudgeManager.POSITION_MODE;
       }
-    } else {
-      this.mode = mode;
     }
+    this.setMode(mode);
   }
 
   isMode(mode) {
     return this.mode === mode;
-  }
-
-  // --- Multiplier
-
-  setMultiplier(on) {
-    this.multiplier = on;
-  }
-
-  getMultiplier() {
-    return this.multiplier ? NudgeManager.SHIFT_MULTIPLIER : 1;
-  }
-
-  // --- States
-
-  isNudging() {
-    var nudges = this.nudges;
-    return !!(nudges.up || nudges.down || nudges.left || nudges.right);
-  }
-
-  // --- Actions
-
-  dispatchNudge(vector) {
-    if (this.isMode(NudgeManager.RESIZE_NW_MODE)) {
-      this.resizeOffset = this.resizeOffset.add(vector);
-      elementManager.resize(this.resizeOffset, 'nw');
-    } else if (this.isMode(NudgeManager.RESIZE_SE_MODE)) {
-      this.resizeOffset = this.resizeOffset.add(vector);
-      elementManager.resize(this.resizeOffset, 'se');
-    } else if (this.isMode(NudgeManager.BG_POSITION_MODE)) {
-      elementManager.incrementBackgroundPosition(vector);
-    } else if (this.isMode(NudgeManager.Z_INDEX_MODE)) {
-      elementManager.incrementZIndex(vector);
-    } else if (this.isMode(NudgeManager.ROTATE_MODE)) {
-      elementManager.incrementRotation(vector);
-    } else {
-      elementManager.incrementPosition(vector);
-    }
-    statusBar.update();
-  }
-
-  addDirection(dir) {
-    if (!this.isNudging()) {
-      this.start();
-    }
-    this.nudges[dir] = true;
-    this.next();
-  }
-
-  removeDirection(dir) {
-    this.nudges[dir] = false;
-    if (!this.isNudging()) {
-      this.resetTimeout();
-    }
-  }
-
-  start() {
-    this.startTime = new Date();
-    this.resizeOffset = new Point(0, 0);
-    //elementManager.pushState();
-  }
-
-  next() {
-    if (this.timer) return;
-    var nudges, nudgeX, nudgeY, mult;
-
-    nudges = this.nudges;
-    nudgeX = 0;
-    nudgeY = 0;
-    mult = this.getMultiplier();
-
-    if (nudges.up) {
-      nudgeY = -1;
-    } else if (nudges.down) {
-      nudgeY = 1;
-    }
-    if (nudges.left) {
-      nudgeX = -1;
-    } else if (nudges.right) {
-      nudgeX = 1;
-    }
-    this.dispatchNudge(new Point(nudgeX * mult, nudgeY * mult));
-    this.timer = setTimeout(this.checkNextNudge, this.getDelay());
-  }
-
-  checkNextNudge() {
-    this.timer = null;
-    if (this.isNudging()) {
-      this.next();
-    }
   }
 
   getDelay() {
@@ -284,6 +294,14 @@ class NudgeManager {
     } else {
       return NudgeManager.DELAY_TO_SLOW;
     }
+  }
+
+  resetTimeout() {
+    this.timer = clearTimeout(this.timer);
+  }
+
+  destroy() {
+    this.resetTimeout();
   }
 
 }
@@ -747,8 +765,6 @@ class ShadowDomInjector {
 /*-------------------------] CursorManager [--------------------------*/
 
 class CursorManager {
-
-  static get MOVE_CURSOR()     { return 'move'; }
 
   constructor(basePath) {
     this.basePath = basePath;
@@ -2898,8 +2914,7 @@ class KeyManager extends BrowserEventTarget {
 
   isDisabledKeyCombination(evt) {
     // Only handling simple keys and command keys for now.
-    return (evt.shiftKey && evt.key !== KeyManager.SHIFT_KEY) ||
-           (evt.ctrlKey && evt.key !== KeyManager.CTRL_KEY) ||
+    return (evt.ctrlKey && evt.key !== KeyManager.CTRL_KEY) ||
            (evt.altKey && evt.key !== KeyManager.ALT_KEY);
   }
 
@@ -3116,6 +3131,7 @@ class AppController {
     // TODO: order here?
     this.elementManager = new PositionableElementManager(this);
     this.controlPanel   = new ControlPanel(uiRoot, this);
+    this.nudgeManager   = new NudgeManager(this);
 
     this.setupKeyManager();
 
@@ -3126,6 +3142,7 @@ class AppController {
   setupKeyManager() {
     this.keyManager = new KeyManager(this);
 
+    this.keyManager.setupKey(KeyManager.SHIFT_KEY);
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
     this.keyManager.setupKey(KeyManager.ALT_KEY);
 
@@ -3135,6 +3152,11 @@ class AppController {
     this.keyManager.setupKey(KeyManager.S_KEY);
     this.keyManager.setupKey(KeyManager.R_KEY);
     this.keyManager.setupKey(KeyManager.Z_KEY);
+
+    this.keyManager.setupKey(KeyManager.UP_KEY);
+    this.keyManager.setupKey(KeyManager.LEFT_KEY);
+    this.keyManager.setupKey(KeyManager.DOWN_KEY);
+    this.keyManager.setupKey(KeyManager.RIGHT_KEY);
 
     this.keyManager.setupCommandKey(KeyManager.A_KEY);
     this.keyManager.setupCommandKey(KeyManager.S_KEY);
@@ -3321,7 +3343,13 @@ class AppController {
   // --- Key Events
 
   onKeyDown(evt) {
+
     switch (evt.key) {
+
+      // Meta Keys
+      case KeyManager.SHIFT_KEY:
+        this.nudgeManager.setMultiplier(true);
+      break;
       case KeyManager.CTRL_KEY:
         this.cursorManager.setPriorityHoverCursor('move');
         this.elementManager.resetFocusedDrag();
@@ -3331,11 +3359,30 @@ class AppController {
           this.elementManager.setPeekMode(true);
         }
       break;
+
+      // Arrow Keys
+      case KeyManager.UP_KEY:    this.nudgeManager.addDirection('up');    break;
+      case KeyManager.DOWN_KEY:  this.nudgeManager.addDirection('down');  break;
+      case KeyManager.LEFT_KEY:  this.nudgeManager.addDirection('left');  break;
+      case KeyManager.RIGHT_KEY: this.nudgeManager.addDirection('right'); break;
+
+      // Other Keys
+      case KeyManager.M_KEY: this.nudgeManager.setPositionMode();      break;
+      case KeyManager.S_KEY: this.nudgeManager.toggleResizeMode();     break;
+      case KeyManager.R_KEY: this.nudgeManager.toggleRotateMode();     break;
+      case KeyManager.Z_KEY: this.nudgeManager.toggleZIndexMode();     break;
+      case KeyManager.B_KEY: this.nudgeManager.toggleBackgroundMode(); break;
     }
   }
 
   onKeyUp(evt) {
+
     switch (evt.key) {
+
+      // Meta Keys
+      case KeyManager.SHIFT_KEY:
+        this.nudgeManager.setMultiplier(false);
+      break;
       case KeyManager.CTRL_KEY:
         this.cursorManager.clearPriorityHoverCursor('move');
         this.elementManager.resetFocusedDrag();
@@ -3345,6 +3392,13 @@ class AppController {
           this.elementManager.setPeekMode(false);
         }
       break;
+
+      // Arrow Keys
+      case KeyManager.UP_KEY:    this.nudgeManager.removeDirection('up');    break;
+      case KeyManager.DOWN_KEY:  this.nudgeManager.removeDirection('down');  break;
+      case KeyManager.LEFT_KEY:  this.nudgeManager.removeDirection('left');  break;
+      case KeyManager.RIGHT_KEY: this.nudgeManager.removeDirection('right'); break;
+
     }
   }
 
@@ -3362,7 +3416,6 @@ class AppController {
         this.renderElementArea(this.elementManager.getFocusedElements());
         break;
     }
-    console.info('command keydown!', evt.key);
   }
 
   /*
@@ -3371,6 +3424,30 @@ class AppController {
   }
   */
 
+  // --- Nudge Events
+
+  onNudgeStart(evt) {
+    this.elementManager.pushFocusedStates();
+  }
+
+  onNudgeMove(evt) {
+    switch (evt.mode) {
+      case NudgeManager.POSITION_MODE:
+        this.elementManager.applyPositionNudge(evt.x, evt.y);
+        break;
+      case NudgeManager.RESIZE_SE_MODE:
+      case NudgeManager.RESIZE_NW_MODE:
+        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.dir, this.cursorManager);
+        break;
+    }
+  }
+
+  onNudgeStop(evt) {
+  }
+
+  onNudgeModeChanged(mode) {
+    this.controlPanel.setMode(mode);
+  }
 
   // --- Control Panel Drag Events
 
@@ -4067,6 +4144,20 @@ class PositionableElementManager {
   }
   */
 
+  // --- Nudging
+
+  applyPositionNudge(x, y) {
+    this.focusedElements.forEach(el => el.move(x, y));
+  }
+
+  applyResizeNudge(x, y, dir, cursorManager) {
+    var vector = new Point(x, y);
+
+    this.focusedElements.forEach(el => {
+      el.resize(vector, dir)
+    });
+  }
+
   // --- Position Dragging
 
   applyPositionDrag(evt, isBackground) {
@@ -4321,8 +4412,33 @@ class ControlPanel extends DraggableElement {
       'zIndex':             new Element(root.getElementById('element-area-zindex')),
       'transform':          new Element(root.getElementById('element-area-transform')),
       'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
-      'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
+      'backgroundPosition': new Element(root.getElementById('element-area-background-position')),
+      'modePosition':       new Element(root.getElementById('element-area-mode-position')),
+      'modeResizeSe':       new Element(root.getElementById('element-area-mode-resize-se')),
+      'modeResizeNw':       new Element(root.getElementById('element-area-mode-resize-nw')),
+      'modeRotate':         new Element(root.getElementById('element-area-mode-rotate')),
+      'modeZIndex':         new Element(root.getElementById('element-area-mode-z-index')),
+      'modeBackground':     new Element(root.getElementById('element-area-mode-background'))
     };
+  }
+
+  setMode(mode) {
+    var el;
+    switch (mode) {
+      case 'position':   el = this.renderedElements.modePosition;   break;
+      case 'resize-se':  el = this.renderedElements.modeResizeSe;   break;
+      case 'resize-nw':  el = this.renderedElements.modeResizeNw;   break;
+      case 'rotate':     el = this.renderedElements.modeRotate;     break;
+      case 'z-index':    el = this.renderedElements.modeZIndex;     break;
+      case 'background': el = this.renderedElements.modeBackground; break;
+    }
+    if (el !== this.currentModeEl) {
+      if (this.currentModeEl) {
+        this.currentModeEl.hide();
+      }
+      el.show();
+      this.currentModeEl = el;
+    }
   }
 
   setupClickEvent(root, id, handler) {
