@@ -42,6 +42,8 @@ describe('OutputManager', function(uiRoot) {
     return new PositionableElement(el);
   }
 
+  // --- Selectors
+
   it('should get correct selector', function() {
     var element1 = appendPositionableElement();
     var element2 = appendPositionableElement();
@@ -77,6 +79,8 @@ describe('OutputManager', function(uiRoot) {
 
   });
 
+  // --- Headers
+
   it('should get correct headers for default box', function() {
     var element = appendPositionableElement();
 
@@ -110,6 +114,12 @@ describe('OutputManager', function(uiRoot) {
   it('should get correct background image', function() {
     var element = appendBackgroundImagePositionableElement();
     assert.equal(manager.getBackgroundPositionHeader(element), '20px, 40px');
+  });
+
+  // --- Styles
+
+  it('should get correct correct styles', function() {
+    // TODO:!
   });
 
 });

@@ -8,7 +8,7 @@ p {
 h1,h2,h3 {
   margin: 0;
   font-weight: 300;
-  font-family: inherit;
+  font-family: "Open Sans", sans-serif;
 }
 
 /*---------------------------] Animations [-----------------------*/
@@ -759,3 +759,45 @@ h1,h2,h3 {
 .loading-bar-9  { background-color: rgba(255,255,255,0.5); }
 .loading-bar-8  { background-color: rgba(255,255,255,0.4); }
 .loading-bar-7  { background-color: rgba(255,255,255,0.3); }
+
+/*---------------------------] Copy Animation [-----------------------*/
+
+.copy-animation {
+  position: fixed;
+  z-index: 9999999;
+  top: 50%;
+  left: 50%;
+  width: 150px;
+  height: 60px;
+  margin: -30px 0 0 -75px;
+  background-color: rgba(255,255,255,0.9);
+  box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.2), 0px 2px 5px 2px rgba(0,0,0,0.2);
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 200;
+  font-size: 26px;
+  opacity: 0;
+  display: none;
+  animation: opacity-in-out 1s linear;
+  font-family: "Open Sans", sans-serif;
+}
+
+
+.copy-animation--active {
+  opacity: 1;
+}
+
+.copy-animation-text {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 10px;
+  left: 0px;
+  opacity: 1;
+  transition: transform 500ms linear 400ms, opacity 500ms linear 400ms;
+}
+
+.copy-animation--active .copy-animation-text {
+  transform: translateY(-50px);
+  opacity: 0;
+}

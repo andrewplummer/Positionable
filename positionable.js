@@ -42,8 +42,8 @@
 // - should it unintentionally work on elements that are part of other extensions?
 // - what if they hit the extension button twice?
 // - test after save should go back to element area
-// - test what happens if extension button hit twice
 // - test finding elements after settings update
+// - test what happens if extension button hit twice
 
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
@@ -51,12 +51,6 @@
 // TODO: distribute should be greyed out if less than 3 elements
 // TODO: why are there 2 copy animations??
 // TODO: validate query selectors! and also re-get elements on query selector change
-
-(function() {
-
-if (window.resourcesLoaded) {
-  return;
-}
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 
@@ -643,6 +637,10 @@ class Element {
     return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
+  destroy() {
+    this.el.remove();
+  }
+
 }
 
 
@@ -936,6 +934,7 @@ class BrowserEventTarget extends Element {
 
   destroy() {
     this.removeAllListeners();
+    super.destroy();
   }
 
 }
@@ -2588,7 +2587,7 @@ class PositionableElement extends BrowserEventTarget {
     this.handles.e.destroy();
     this.handles.s.destroy();
     this.handles.w.destroy();
-    super.destroy();
+    this.removeAllListeners();
   }
 
   // --- Private
@@ -2651,6 +2650,10 @@ class OutputManager {
 
   getBackgroundPositionHeader(element) {
     return element.cssBackgroundImage.getPositionHeader();
+  }
+
+  getStyles(elements) {
+    return 'TODO';
   }
 
   // --- Private
@@ -3124,6 +3127,27 @@ class AlignmentManager {
 
 }
 
+/*-------------------------] CopyManager [--------------------------*/
+
+class CopyManager {
+
+  constructor(listener) {
+    window.addEventListener('copy', this.onCopy.bind(this));
+    this.listener = listener;
+  }
+
+  onCopy(evt) {
+    evt.preventDefault();
+    this.listener.onCopy(evt);
+  }
+
+  setCopyData(evt, str) {
+    evt.clipboardData.clearData();
+    evt.clipboardData.setData('text/plain', str);
+  }
+
+}
+
 /*-------------------------] AppController [--------------------------*/
 
 class AppController {
@@ -3133,12 +3157,13 @@ class AppController {
   constructor(uiRoot) {
 
     this.settings = new Settings(this, localStorage, uiRoot);
-    this.elementOutputManager = new OutputManager(this.settings);
-    this.elementAlignmentManager = new AlignmentManager();
+    this.outputManager = new OutputManager(this.settings);
+    this.alignmentManager = new AlignmentManager();
 
     this.body = new Element(document.body);
 
-    //this.copyAnimation = new CopyAnimation();
+    this.copyManager = new CopyManager(this);
+    this.copyAnimation = new CopyAnimation(uiRoot, this);
     //this.nudgeManager = new NudgeManager();
     //this.keyEventManager  = new KeyEventManager();
 
@@ -3174,9 +3199,10 @@ class AppController {
     this.keyManager.setupKey(KeyManager.DOWN_KEY);
     this.keyManager.setupKey(KeyManager.RIGHT_KEY);
 
+    // Note that copying is handled by the copy event,
+    // not key events.
     this.keyManager.setupCommandKey(KeyManager.A_KEY);
     this.keyManager.setupCommandKey(KeyManager.S_KEY);
-    this.keyManager.setupCommandKey(KeyManager.C_KEY);
     this.keyManager.setupCommandKey(KeyManager.Z_KEY);
   }
 
@@ -3219,11 +3245,11 @@ class AppController {
   }
 
   onAlignButtonClicked(edge) {
-    this.elementAlignmentManager.align(this.elementManager.getFocusedElements(), edge);
+    this.alignmentManager.align(this.elementManager.getFocusedElements(), edge);
   }
 
   onDistributeButtonClicked(edge) {
-    this.elementAlignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
+    this.alignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
   }
 
   // --- Loading Animation Events
@@ -3239,6 +3265,12 @@ class AppController {
     } else {
       this.controlPanel.showGettingStartedArea();
     }
+  }
+
+  // --- Copy Animation Events
+
+  onCopyAnimationTaskReady() {
+    console.info('ready!');
   }
 
   // --- Position Drag Events
@@ -3441,10 +3473,13 @@ class AppController {
         this.elementManager.undo();
         this.renderElementArea(this.elementManager.getFocusedElements());
         break;
-      case KeyManager.C_KEY:
-        this.renderElementArea(this.elementManager.getFocusedElements());
-        break;
     }
+  }
+
+  onCopy(evt) {
+    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
+    this.copyManager.setCopyData(evt, styles);
+    this.copyAnimation.show(!!styles);
   }
 
   /*
@@ -3530,37 +3565,37 @@ class AppController {
 
   renderFocusedSelector() {
     this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementSelector(this.elementOutputManager.getSelectorWithDefault(el));
+      this.controlPanel.renderElementSelector(this.outputManager.getSelectorWithDefault(el));
     });
   }
 
   renderFocusedPosition() {
     this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementPosition(this.elementOutputManager.getPositionHeader(el));
+      this.controlPanel.renderElementPosition(this.outputManager.getPositionHeader(el));
     });
   }
 
   renderFocusedDimensions() {
     this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementDimensions(this.elementOutputManager.getDimensionsHeader(el));
+      this.controlPanel.renderElementDimensions(this.outputManager.getDimensionsHeader(el));
     });
   }
 
   renderFocusedZIndex() {
     this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementZIndex(this.elementOutputManager.getZIndexHeader(el));
+      this.controlPanel.renderElementZIndex(this.outputManager.getZIndexHeader(el));
     });
   }
 
   renderFocusedTransform() {
     this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementTransform(this.elementOutputManager.getTransformHeader(el));
+      this.controlPanel.renderElementTransform(this.outputManager.getTransformHeader(el));
     });
   }
 
   renderFocusedBackgroundPosition() {
     this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementBackgroundPosition(this.elementOutputManager.getBackgroundPositionHeader(el));
+      this.controlPanel.renderElementBackgroundPosition(this.outputManager.getBackgroundPositionHeader(el));
     });
   }
 
@@ -5844,9 +5879,10 @@ class LinkedSelect extends BrowserEventTarget {
 
 class Animation {
 
-  constructor(el, activeClass) {
+  constructor(el, activeClass, listener) {
     this.target      = new BrowserEventTarget(el);
     this.activeClass = activeClass;
+    this.listener    = listener;
   }
 
   defer(fn) {
@@ -5900,8 +5936,7 @@ class LoadingAnimation extends Animation {
   static get ACTIVE_CLASS() { return 'loading-animation--active'; };
 
   constructor(uiRoot, listener) {
-    super(uiRoot.getElementById(LoadingAnimation.ID), LoadingAnimation.ACTIVE_CLASS);
-    this.listener = listener;
+    super(uiRoot.getElementById(LoadingAnimation.ID), LoadingAnimation.ACTIVE_CLASS, listener);
   }
 
   onAnimationEnter() {
@@ -5915,54 +5950,31 @@ class LoadingAnimation extends Animation {
 
 class CopyAnimation extends Animation {
 
-  static get COPIED_TEXT()     { return 'Copied!';   }
-  static get NOT_COPIED_TEXT() { return 'No Styles'; }
+  static get ID()           { return 'copy-animation'; };
+  static get ACTIVE_CLASS() { return 'copy-animation--active'; };
 
-  static get IN_CLASS()      { return 'copy-animation-in'; }
-  static get TEXT_IN_CLASS() { return 'copy-animation-text-in'; }
+  static get COPIED_ID()    { return 'copy-animation-copied'; };
+  static get NO_STYLES_ID() { return 'copy-animation-no-styles'; };
 
-  constructor() {
-    super();
-    this.build();
+  constructor(uiRoot, listener) {
+    super(uiRoot.getElementById(CopyAnimation.ID), CopyAnimation.ACTIVE_CLASS, listener);
+    this.copied   = new Element(uiRoot.getElementById(CopyAnimation.COPIED_ID));
+    this.noStyles = new Element(uiRoot.getElementById(CopyAnimation.NO_STYLES_ID));
   }
 
-  // --- Setup
-
-  build() {
-    this.box  = new Element(document.body, 'div', 'copy-animation');
-    this.text = new Element(this.box.el, 'div', 'copy-animation-text');
+  onAnimationEnter() {
+    this.hide();
   }
 
-  // --- Actions
-
-  setText(text) {
-    this.text.html(text);
-  }
-
-  animate(copied) {
-
-    this.setText(copied ? CopyAnimation.COPIED_TEXT : CopyAnimation.NOT_COPIED_TEXT);
-    this.reset();
-    this.box.show();
-
-    this.defer(function() {
-
-      this.box.addClass(CopyAnimation.IN_CLASS);
-      this.text.addClass(CopyAnimation.TEXT_IN_CLASS);
-
-      // TODO: cleaner??
-      this.finished = function() {
-        this.box.el.removeEventListener('webkitAnimationEnd', this.finished);
-        this.box.hide();
-        this.reset();
-      }.bind(this);
-      this.box.addEventListener('webkitAnimationEnd', this.finished);
-    });
-  }
-
-  reset() {
-    this.box.removeClass(CopyAnimation.IN_CLASS);
-    this.text.removeClass(CopyAnimation.TEXT_IN_CLASS);
+  show(hasStyles) {
+    if (hasStyles) {
+      this.copied.show();
+      this.noStyles.hide();
+    } else {
+      this.copied.hide();
+      this.noStyles.show();
+    }
+    super.show();
   }
 
 }
@@ -7749,9 +7761,3 @@ class CSSBackgroundImage {
   }
 
 }
-
-window.ShadowDomInjector = ShadowDomInjector;
-window.AppController = AppController;
-window.resourcesLoaded = true;
-
-})();

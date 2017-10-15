@@ -476,11 +476,21 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(listener.lastEventRotation.abs, 45);
   });
 
-  it('should destroy the element', function() {
+  it('should not remove the element on destroy', function() {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.destroy();
-    assert.equal(el.parentNode, null);
+    assert.isTrue(!!el.parentNode);
+    assert.equal(Object.keys(p.listeners).length, 0);
+    assert.equal(getUiElement(el, '.position-handle'), null);
+    assert.equal(getUiElement(el, '.resize-handle-n'), null);
+    assert.equal(getUiElement(el, '.resize-handle-s'), null);
+    assert.equal(getUiElement(el, '.resize-handle-e'), null);
+    assert.equal(getUiElement(el, '.resize-handle-w'), null);
+    assert.equal(getUiElement(el, '.resize-handle-nw'), null);
+    assert.equal(getUiElement(el, '.resize-handle-ne'), null);
+    assert.equal(getUiElement(el, '.resize-handle-se'), null);
+    assert.equal(getUiElement(el, '.resize-handle-sw'), null);
   });
 
 });
