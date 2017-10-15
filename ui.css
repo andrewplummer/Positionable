@@ -178,7 +178,7 @@ h1,h2,h3 {
 .element-area-background-position:after {
   content: '';
   display: inline-block;
-  vertical-align: middle;
+  vertical-align: -2px;
   width: 14px;
   height: 14px;
   background: url('chrome-extension://__MSG_@@extension_id__/images/icons/background.svg') no-repeat;
