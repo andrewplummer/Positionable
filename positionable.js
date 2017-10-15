@@ -41,6 +41,7 @@
 // - should it work on static elements and force them to absolute positioning?
 // - should it unintentionally work on elements that are part of other extensions?
 // - what if they hit the extension button twice?
+// - test after save should go back to element area
 
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
@@ -147,6 +148,10 @@ class NudgeManager {
     this.setPositionMode();
     this.setMultiplier(false);
     this.checkNextNudge = this.checkNextNudge.bind(this);
+  }
+
+  getCurrentMode() {
+    return this.mode;
   }
 
   addDirection(dir) {
@@ -1999,7 +2004,7 @@ class PositionableElement extends BrowserEventTarget {
       this.states.pop();
 
       this.renderBackgroundPosition();
-      this.listener.onBackgroundImageSnap(this);
+      this.listener.onBackgroundImageSnap();
     }
   }
 
@@ -2007,19 +2012,28 @@ class PositionableElement extends BrowserEventTarget {
 
   focus() {
     this.ui.addClass(PositionableElement.UI_FOCUSED_CLASS);
-    this.setElementZIndex(PositionableElement.TOP_Z_INDEX);
+    this.setTemporaryZIndex(PositionableElement.TOP_Z_INDEX);
   }
 
   unfocus() {
     this.ui.removeClass(PositionableElement.UI_FOCUSED_CLASS);
-    this.setElementZIndex('');
+    this.setTemporaryZIndex('');
+    this.renderZIndex();
   }
 
-  setElementZIndex(zIndex) {
+  setTemporaryZIndex(zIndex) {
     var el = this.el;
     do {
       el.style.zIndex = zIndex;
     } while (el = el.offsetParent);
+  }
+
+  // --- Move Z-Index
+
+  addZIndex(val) {
+    var lastZIndex = this.getLastState().cssZIndex;
+    this.cssZIndex.val = lastZIndex + val;
+    this.renderZIndex();
   }
 
   // --- Resizing
@@ -3171,7 +3185,7 @@ class AppController {
       this.controlPanel.showAlignArea();
     } else if (elements.length === 1) {
       this.controlPanel.showElementArea();
-      this.renderElementArea(elements);
+      this.renderElementArea();
     } else {
       this.controlPanel.showDefaultArea();
     }
@@ -3230,11 +3244,13 @@ class AppController {
   onPositionDragIntentStart(evt, handle, element) {
     console.info('POSITION DRAG INTENT START');
     this.cursorManager.setHoverCursor('move');
+    this.controlPanel.setMode('position');
   }
 
   onPositionDragIntentStop(evt, handle, element) {
     console.info('POSITION DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
+    this.controlPanel.setMode(this.nudgeManager.getCurrentMode());
   }
 
   onPositionDragStart(evt, handle, element) {
@@ -3256,11 +3272,13 @@ class AppController {
   onResizeDragIntentStart(evt, handle, element) {
     console.info('RESIZE DRAG INTENT START');
     this.cursorManager.setResizeHoverCursor(handle.name, element.getRotation());
+    this.controlPanel.setMode('resize');
   }
 
   onResizeDragIntentStop(evt, handle, element) {
     console.info('RESIZE DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
+    this.controlPanel.setMode(this.nudgeManager.getCurrentMode());
   }
 
   onResizeDragStart(evt, handle, element) {
@@ -3288,11 +3306,13 @@ class AppController {
   onRotationDragIntentStart(evt, handle, element) {
     console.info('ROTATION DRAG INTENT START');
     this.cursorManager.setRotateHoverCursor(element.getRotation());
+    this.controlPanel.setMode('rotate');
   }
 
   onRotationDragIntentStop(evt, handle, element) {
     console.info('ROTATION DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
+    this.controlPanel.setMode(this.nudgeManager.getCurrentMode());
   }
 
   onRotationDragStart(evt, handle, element) {
@@ -3314,30 +3334,34 @@ class AppController {
 
   // --- Background Image Events
 
-  onBackgroundImageSnap(element) {
-    this.renderElementPosition(element);
-    this.renderElementDimensions(element);
-    this.renderElementTransform(element);
-    this.renderElementBackgroundPosition(element);
+  onBackgroundImageSnap() {
+    this.renderFocusedPosition();
+    this.renderFocusedDimensions();
+    this.renderFocusedTransform();
+    this.renderFocusedBackgroundPosition();
   }
 
   // --- Dimensions Updated Events
 
-  onPositionUpdated(element) {
-    this.renderElementPosition(element);
+  onPositionUpdated() {
+    this.renderFocusedPosition();
   }
 
-  onDimensionsUpdated(element) {
-    this.renderElementDimensions(element);
-    this.renderElementTransform(element);
+  onDimensionsUpdated() {
+    this.renderFocusedDimensions();
+    this.renderFocusedTransform();
   }
 
-  onBackgroundPositionUpdated(element) {
-    this.renderElementBackgroundPosition(element);
+  onBackgroundPositionUpdated() {
+    this.renderFocusedBackgroundPosition();
   }
 
-  onRotationUpdated(element) {
-    this.renderElementTransform(element);
+  onRotationUpdated() {
+    this.renderFocusedTransform();
+  }
+
+  onZIndexUpdated() {
+    this.renderFocusedZIndex();
   }
 
   // --- Key Events
@@ -3437,7 +3461,18 @@ class AppController {
         break;
       case NudgeManager.RESIZE_SE_MODE:
       case NudgeManager.RESIZE_NW_MODE:
-        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.dir, this.cursorManager);
+        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.dir);
+        break;
+      case NudgeManager.BACKGROUND_MODE:
+        this.elementManager.applyBackgroundNudge(evt.x, evt.y);
+        break;
+
+      // Single values will just take the y vector here.
+      case NudgeManager.ROTATE_MODE:
+        this.elementManager.applyRotationNudge(evt.y);
+        break;
+      case NudgeManager.Z_INDEX_MODE:
+        this.elementManager.applyZIndexNudge(evt.y);
         break;
     }
   }
@@ -3480,41 +3515,55 @@ class AppController {
   // --- Control Panel Element Rendering
 
   renderElementArea(elements) {
-    var element;
-    if (elements.length !== 1) {
-      return;
+    this.renderFocusedSelector();
+    this.renderFocusedPosition();
+    this.renderFocusedDimensions();
+    this.renderFocusedZIndex();
+    this.renderFocusedTransform();
+    this.renderFocusedBackgroundPosition();
+  }
+
+  renderFocusedSelector() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementSelector(this.elementOutputManager.getSelectorWithDefault(el));
+    });
+  }
+
+  renderFocusedPosition() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementPosition(this.elementOutputManager.getPositionHeader(el));
+    });
+  }
+
+  renderFocusedDimensions() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementDimensions(this.elementOutputManager.getDimensionsHeader(el));
+    });
+  }
+
+  renderFocusedZIndex() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementZIndex(this.elementOutputManager.getZIndexHeader(el));
+    });
+  }
+
+  renderFocusedTransform() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementTransform(this.elementOutputManager.getTransformHeader(el));
+    });
+  }
+
+  renderFocusedBackgroundPosition() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementBackgroundPosition(this.elementOutputManager.getBackgroundPositionHeader(el));
+    });
+  }
+
+  withSingleFocusedElement(fn) {
+    var focusedElements = this.elementManager.getFocusedElements();
+    if (focusedElements.length === 1) {
+      fn(focusedElements[0]);
     }
-    element = elements[0];
-    this.renderElementSelector(element);
-    this.renderElementPosition(element);
-    this.renderElementDimensions(element);
-    this.renderElementZIndex(element);
-    this.renderElementTransform(element);
-    this.renderElementBackgroundPosition(element);
-  }
-
-  renderElementSelector(element) {
-    this.controlPanel.renderElementSelector(this.elementOutputManager.getSelectorWithDefault(element));
-  }
-
-  renderElementPosition(element) {
-    this.controlPanel.renderElementPosition(this.elementOutputManager.getPositionHeader(element));
-  }
-
-  renderElementDimensions(element) {
-    this.controlPanel.renderElementDimensions(this.elementOutputManager.getDimensionsHeader(element));
-  }
-
-  renderElementZIndex(element) {
-    this.controlPanel.renderElementZIndex(this.elementOutputManager.getZIndexHeader(element));
-  }
-
-  renderElementTransform(element) {
-    this.controlPanel.renderElementTransform(this.elementOutputManager.getTransformHeader(element));
-  }
-
-  renderElementBackgroundPosition(element) {
-    this.controlPanel.renderElementBackgroundPosition(this.elementOutputManager.getBackgroundPositionHeader(element));
   }
 
   // --- Control Panel Align Rendering
@@ -3763,9 +3812,9 @@ class PositionableElementManager {
     this.applyPositionDrag(evt, evt.ctrlKey);
     this.listener.onPositionDragMove(evt, handle, element);
     if (evt.ctrlKey) {
-      this.listener.onBackgroundPositionUpdated(element);
+      this.listener.onBackgroundPositionUpdated();
     } else {
-      this.listener.onPositionUpdated(element);
+      this.listener.onPositionUpdated();
     }
   }
 
@@ -3818,10 +3867,10 @@ class PositionableElementManager {
   onResizeDragMove(evt, handle, element) {
     if (evt.ctrlKey) {
       this.applyPositionDrag(evt, true);
-      this.listener.onBackgroundPositionUpdated(element);
+      this.listener.onBackgroundPositionUpdated();
     } else {
       this.applyResizeDrag(evt, handle, element);
-      this.listener.onDimensionsUpdated(element);
+      this.listener.onDimensionsUpdated();
     }
     this.listener.onResizeDragMove(evt, handle, element);
   }
@@ -3849,7 +3898,7 @@ class PositionableElementManager {
     this.onElementDragMove();
     this.focusedElements.forEach(el => el.rotate(evt.rotation.offset, evt.shiftKey));
     this.listener.onRotationDragMove(evt, handle, element);
-    this.listener.onRotationUpdated(element);
+    this.listener.onRotationUpdated();
   }
 
   onRotationDragStop(evt, handle, element) {
@@ -3858,8 +3907,8 @@ class PositionableElementManager {
 
   // --- Background Image Events
 
-  onBackgroundImageSnap(element) {
-    this.listener.onBackgroundImageSnap(element);
+  onBackgroundImageSnap() {
+    this.listener.onBackgroundImageSnap();
   }
 
   /*
@@ -4148,14 +4197,32 @@ class PositionableElementManager {
 
   applyPositionNudge(x, y) {
     this.focusedElements.forEach(el => el.move(x, y));
+    this.listener.onPositionUpdated();
   }
 
-  applyResizeNudge(x, y, dir, cursorManager) {
+  applyResizeNudge(x, y, dir) {
     var vector = new Point(x, y);
-
     this.focusedElements.forEach(el => {
       el.resize(vector, dir)
     });
+    this.listener.onDimensionsUpdated();
+  }
+
+  applyBackgroundNudge(x, y) {
+    this.focusedElements.forEach(el => {
+      el.moveBackground(x, y)
+    });
+    this.listener.onBackgroundPositionUpdated();
+  }
+
+  applyRotationNudge(val) {
+    this.focusedElements.forEach(el => el.rotate(val));
+    this.listener.onRotationUpdated();
+  }
+
+  applyZIndexNudge(val) {
+    this.focusedElements.forEach(el => el.addZIndex(val));
+    this.listener.onZIndexUpdated();
   }
 
   // --- Position Dragging
@@ -4406,19 +4473,20 @@ class ControlPanel extends DraggableElement {
   setupRenderedElements(root) {
     this.renderedElements = {
       'multiple':           new Element(root.getElementById('align-area-header')),
+      'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
+      'modePosition':       new Element(root.getElementById('mode-position')),
+      'modeResizeSe':       new Element(root.getElementById('mode-resize-se')),
+      'modeResizeNw':       new Element(root.getElementById('mode-resize-nw')),
+      'modeResize':         new Element(root.getElementById('mode-resize')),
+      'modeRotate':         new Element(root.getElementById('mode-rotate')),
+      'modeZIndex':         new Element(root.getElementById('mode-z-index')),
+      'modeBackground':     new Element(root.getElementById('mode-background')),
       'selector':           new Element(root.getElementById('element-area-selector')),
       'position':           new Element(root.getElementById('element-area-position')),
       'dimensions':         new Element(root.getElementById('element-area-dimensions')),
       'zIndex':             new Element(root.getElementById('element-area-zindex')),
       'transform':          new Element(root.getElementById('element-area-transform')),
-      'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
-      'backgroundPosition': new Element(root.getElementById('element-area-background-position')),
-      'modePosition':       new Element(root.getElementById('element-area-mode-position')),
-      'modeResizeSe':       new Element(root.getElementById('element-area-mode-resize-se')),
-      'modeResizeNw':       new Element(root.getElementById('element-area-mode-resize-nw')),
-      'modeRotate':         new Element(root.getElementById('element-area-mode-rotate')),
-      'modeZIndex':         new Element(root.getElementById('element-area-mode-z-index')),
-      'modeBackground':     new Element(root.getElementById('element-area-mode-background'))
+      'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
     };
   }
 
@@ -4428,6 +4496,7 @@ class ControlPanel extends DraggableElement {
       case 'position':   el = this.renderedElements.modePosition;   break;
       case 'resize-se':  el = this.renderedElements.modeResizeSe;   break;
       case 'resize-nw':  el = this.renderedElements.modeResizeNw;   break;
+      case 'resize':     el = this.renderedElements.modeResize;     break;
       case 'rotate':     el = this.renderedElements.modeRotate;     break;
       case 'z-index':    el = this.renderedElements.modeZIndex;     break;
       case 'background': el = this.renderedElements.modeBackground; break;
@@ -7241,6 +7310,10 @@ class CSSValue {
   getHeader() {
     var str = this.toString();
     return str === 'auto' ? '' : str;
+  }
+
+  valueOf() {
+    return this.isAuto() || this.isNull() ? 0 : this.val;
   }
 
   toString() {

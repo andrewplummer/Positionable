@@ -138,17 +138,57 @@ h1,h2,h3 {
   left: 30px;
   opacity: 0;
   transition: opacity 300ms ease-in-out;
+  pointer-events: none;
 }
 
 .control-panel-area--active {
   z-index: 2;
   opacity: 1;
+  pointer-events: auto;
+}
+
+/*---------------------------] Mode Indicator [-----------------------*/
+
+.mode-indicator {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  margin-top: -30px;
+  opacity: 0;
+  transition: opacity 300ms ease-in-out;
+  pointer-events: none;
+}
+
+.control-panel--align-active .mode-indicator,
+.control-panel--element-active .mode-indicator {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mode {
+  display: none;
+  width: 80px;
+  height: 60px;
+  font-size: 14px;
+}
+
+.mode--background {
+  margin-right: 5px;
+}
+
+.mode-icon {
+  display: block;
+  margin: 0 auto 5px auto;
+}
+
+.mode-text {
+  text-align: center;
 }
 
 /*---------------------------] Element Area [-----------------------*/
 
 .control-panel--element-active {
-  width: 480px;
+  width: 540px;
   height: 110px;
 }
 
@@ -187,33 +227,6 @@ h1,h2,h3 {
   opacity: .6;
 }
 
-.element-area-mode-container {
-  position: absolute;
-  top: 50%;
-  right: -15px;
-  margin-top: -30px;
-}
-
-.element-area-mode {
-  display: none;
-  width: 80px;
-  height: 60px;
-  font-size: 14px;
-}
-
-.element-area-mode--background {
-  margin-right: 5px;
-}
-
-.element-area-mode-icon {
-  display: block;
-  margin: 0 auto 5px auto;
-}
-
-.element-area-mode-text {
-  text-align: center;
-}
-
 .control-panel--element-background-active {
   height: 130px;
 }
@@ -225,7 +238,7 @@ h1,h2,h3 {
 /*---------------------------] Alignment Area [-----------------------*/
 
 .control-panel--align-active {
-  width: 280px;
+  width: 350px;
   height: 110px;
 }
 

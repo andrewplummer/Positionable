@@ -79,6 +79,9 @@ describe('PositionableElementManager', function(uiRoot) {
     onRotationUpdated() {
     }
 
+    onZIndexUpdated() {
+    }
+
   }
 
   setup(function() {
@@ -450,27 +453,30 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should move a fixed box with scroll', function() {
-
     setupFixed();
+
     whileFakeScrolled(500, () => {
       dragElement(getUiElement(el, '.position-handle'), 0, 0, 100, 100);
     });
+
     assert.equal(el.style.left, '200px');
     assert.equal(el.style.top,  '200px');
 
   });
 
   it('should move a fixed box while scrolling', function() {
-
     setupFixed();
+
     fireMouseDown(getUiElement(el, '.position-handle'), 50, 50);
     fireMouseMove(getUiElement(el, '.position-handle'), 100, 100);
     assert.equal(el.style.left, '150px');
     assert.equal(el.style.top,  '150px');
+
     whileFakeScrolled(500, () => {
       manager.elements[0].positionHandle.onScroll();
     });
     fireDocumentMouseUp(100, 100);
+
     assert.equal(el.style.left, '150px');
     assert.equal(el.style.top,  '150px');
 
@@ -979,6 +985,68 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '100px');
     assert.equal(el.style.height, '100px');
+  });
+
+  // --- Nudging
+
+  it('should be able to nudge position', function() {
+    setupAbsolute();
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyPositionNudge(100, 100);
+    assert.equal(el.style.left, '200px');
+    assert.equal(el.style.top,  '200px');
+  });
+
+  it('should be able to nudge size se', function() {
+    setupAbsolute();
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyResizeNudge(-50, -50, 'se');
+    assert.equal(el.style.width,  '50px');
+    assert.equal(el.style.height, '50px');
+  });
+
+  it('should be able to nudge size nw', function() {
+    setupAbsolute();
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyResizeNudge(-50, -50, 'nw');
+    assert.equal(el.style.width,  '150px');
+    assert.equal(el.style.height, '150px');
+  });
+
+  it('should be able to nudge rotation', function() {
+    setupAbsolute();
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyRotationNudge(50, 'nw');
+    assert.equal(el.style.transform, 'rotate(50deg)');
+  });
+
+  it('should be able to nudge z-index', function() {
+    setupAbsolute();
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyZIndexNudge(50);
+    manager.unfocusAll();
+
+    assert.equal(el.style.zIndex, '50');
+  });
+
+  it('should be able to nudge the background image', function() {
+    setupBackgroundBox();
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyBackgroundNudge(30, 30);
+
+    assert.equal(el.style.backgroundPosition, '50px 70px');
   });
 
 });

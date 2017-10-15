@@ -4,6 +4,37 @@
     <img src="chrome-extension://__MSG_@@extension_id__/images/icons/settings.svg" width="18" height="18">
   </button>
 
+  <div class="mode-indicator">
+    <div id="mode-position" class="mode mode--position">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/position.svg">
+      <p class="mode-text">Move</p>
+    </div>
+    <div id="mode-resize-se" class="mode mode--resize-se">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/resize-se.svg">
+      <p class="mode-text">Resize</p>
+    </div>
+    <div id="mode-resize-nw" class="mode mode--resize-nw">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/resize-nw.svg">
+      <p class="mode-text">Resize</p>
+    </div>
+    <div id="mode-resize" class="mode mode--resize">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/resize.svg">
+      <p class="mode-text">Resize</p>
+    </div>
+    <div id="mode-background" class="mode mode--background">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/background.svg">
+      <p class="mode-text">Background</p>
+    </div>
+    <div id="mode-rotate" class="mode mode--rotate">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/rotate.svg">
+      <p class="mode-text">Rotate</p>
+    </div>
+    <div id="mode-z-index" class="mode mode--z-index">
+      <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/z-index.svg">
+      <p class="mode-text">Z-Index</p>
+    </div>
+  </div>
+
   <div class="control-panel-area" id="default-area">
     <img class="default-area-icon" src="chrome-extension://__MSG_@@extension_id__/images/icons/pointer.svg">
     <p class="default-area-text">Select Element</p>
@@ -18,32 +49,6 @@
       <span class="element-area-property" id="element-area-transform" title="Transform (Rotation - Translation)"></span>
     </p>
     <p id="element-area-background-position" class="element-area-background-position" title="Background Position"></p>
-    <div class="element-area-mode-container">
-      <div id="element-area-mode-position" class="element-area-mode element-area-mode--position">
-        <img class="element-area-mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/position.svg">
-        <p class="element-area-mode-text">Move</p>
-      </div>
-      <div id="element-area-mode-resize-se" class="element-area-mode element-area-mode--resize-se">
-        <img class="element-area-mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/resize-se.svg">
-        <p class="element-area-mode-text">Resize</p>
-      </div>
-      <div id="element-area-mode-resize-nw" class="element-area-mode element-area-mode--resize-nw">
-        <img class="element-area-mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/resize-nw.svg">
-        <p class="element-area-mode-text">Resize</p>
-      </div>
-      <div id="element-area-mode-background" class="element-area-mode element-area-mode--background">
-        <img class="element-area-mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/background.svg">
-        <p class="element-area-mode-text">Background</p>
-      </div>
-      <div id="element-area-mode-rotate" class="element-area-mode element-area-mode--rotate">
-        <img class="element-area-mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/rotate.svg">
-        <p class="element-area-mode-text">Rotate</p>
-      </div>
-      <div id="element-area-mode-z-index" class="element-area-mode element-area-mode--z-index">
-        <img class="element-area-mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/z-index.svg">
-        <p class="element-area-mode-text">Z-Index</p>
-      </div>
-    </div>
   </div>
 
   <div class="control-panel-area" id="align-area">

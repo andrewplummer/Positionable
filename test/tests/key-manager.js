@@ -94,9 +94,6 @@ describe('KeyManager', function(uiRoot) {
 
     fireDocumentKeyDown(KeyManager.A_KEY, { altKey: true, });
     fireDocumentKeyDown(KeyManager.A_KEY, { ctrlKey: true, });
-    fireDocumentKeyDown(KeyManager.A_KEY, { shiftKey: true, });
-    fireDocumentKeyDown(KeyManager.A_KEY, { shiftKey: true, metaKey: true });
-
     assert.equal(listener.keyDownEvents['a'], undefined);
     assert.equal(listener.commandKeyDownEvents['a'], undefined);
 
