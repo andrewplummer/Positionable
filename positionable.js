@@ -42,6 +42,8 @@
 // - should it unintentionally work on elements that are part of other extensions?
 // - what if they hit the extension button twice?
 // - test after save should go back to element area
+// - test what happens if extension button hit twice
+// - test finding elements after settings update
 
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
@@ -50,6 +52,11 @@
 // TODO: why are there 2 copy animations??
 // TODO: validate query selectors! and also re-get elements on query selector change
 
+(function() {
+
+if (window.resourcesLoaded) {
+  return;
+}
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 
@@ -636,10 +643,6 @@ class Element {
     return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
-  destroy() {
-    this.el.remove();
-  }
-
 }
 
 
@@ -933,7 +936,6 @@ class BrowserEventTarget extends Element {
 
   destroy() {
     this.removeAllListeners();
-    super.destroy();
   }
 
 }
@@ -3439,6 +3441,9 @@ class AppController {
         this.elementManager.undo();
         this.renderElementArea(this.elementManager.getFocusedElements());
         break;
+      case KeyManager.C_KEY:
+        this.renderElementArea(this.elementManager.getFocusedElements());
+        break;
     }
   }
 
@@ -3587,6 +3592,13 @@ class AppController {
     }
   }
   */
+  destroy() {
+    var els = document.querySelectorAll('.' + UI_HOST_CLASS_NAME);
+    for (let i = 0, el; el = els[i]; i++) {
+      el.remove();
+    }
+    this.elementManager.destroyAll();
+  }
 
 }
 
@@ -4299,6 +4311,7 @@ class PositionableElementManager {
 
   // --- Output
 
+  /*
   getFocusedElementStyles() {
     var elements = this.focusedElements, exclude = this.getExclusionMap(elements);
     var styles = elements.map(function(el) {
@@ -4334,6 +4347,8 @@ class PositionableElementManager {
     }, this);
     return map;
   }
+
+  */
 
   destroyAll() {
     this.elements.forEach(el => el.destroy());
@@ -7735,3 +7750,8 @@ class CSSBackgroundImage {
 
 }
 
+window.ShadowDomInjector = ShadowDomInjector;
+window.AppController = AppController;
+window.resourcesLoaded = true;
+
+})();
