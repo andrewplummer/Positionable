@@ -11,6 +11,10 @@ h1,h2,h3 {
   font-family: "Open Sans", sans-serif;
 }
 
+label {
+  cursor: pointer;
+}
+
 /*---------------------------] Animations [-----------------------*/
 
 @keyframes spin {

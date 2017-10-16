@@ -64,26 +64,6 @@ function getClassName(el) {
   return typeof el.className.baseVal === 'string' ? el.className.baseVal : el.className;
 }
 
-function round(n, precision) {
-  if (precision) {
-    var mult = Math.pow(10, precision);
-    return Math.round(n * mult) / mult;
-  }
-  return Math.round(n);
-}
-
-function getObjectSize(obj) {
-  var size = 0, key;
-  for (key in obj) {
-    if (obj.hasOwnProperty(key)) size++;
-  }
-  return size;
-}
-
-function isObject(obj) {
-  return typeof obj === 'object';
-}
-
 function camelize(str) {
   return str.replace(/-(\w)/g, function(match, letter) {
     return letter.toUpperCase();
@@ -91,25 +71,14 @@ function camelize(str) {
 }
 
 function hashIntersect(obj1, obj2) {
-  var result = {}, prop, val1, val2, tmp;
-  if (isObject(obj1) && isObject(obj2)) {
-    for (prop in obj1) {
-      if (!obj1.hasOwnProperty(prop)) continue;
-      val1 = obj1[prop];
-      val2 = obj2[prop];
-      if (isObject(val1)) {
-         tmp = hashIntersect(val1, val2);
-         if (tmp) {
-           result[prop] = tmp;
-         }
-      } else if (val1 === val2) {
-        result[prop] = val1;
-      }
+  var result = {}, key;
+  for (key in obj1) {
+    if (!obj1.hasOwnProperty(key)) continue;
+    if (obj1[key] === obj2[key]) {
+      result[key] = obj1[key];
     }
   }
-  if (getObjectSize(result) > 0) {
-    return result;
-  }
+  return result;
 }
 
 function throwError(str, halt) {
@@ -2171,7 +2140,7 @@ class PositionableElement extends BrowserEventTarget {
   rotate(offset, constrained) {
     var r;
     if (constrained) {
-      offset = round(offset / PositionableElement.ROTATION_SNAPPING) * PositionableElement.ROTATION_SNAPPING;
+      offset = Math.round(offset / PositionableElement.ROTATION_SNAPPING) * PositionableElement.ROTATION_SNAPPING;
     }
     r = this.getLastRotation() + offset;
     this.cssTransform.setRotation(r);
@@ -2785,7 +2754,7 @@ class OutputManager {
 
     // Map the blocks back to an array of lines containing
     // only declarations that are not common to all.
-    return blocks.map(b => {
+    blocks = blocks.map(b => {
 
       // Filter out any lines not common to the group.
       var lines = b.declarations.filter(line => !commonMap[line]);
@@ -2796,6 +2765,9 @@ class OutputManager {
 
       return lines;
     });
+
+    // Return only blocks that have declarations.
+    return blocks.filter(b => b.length > 2);
   }
 
   getBlockDeclarations(block) {
@@ -5841,13 +5813,13 @@ class Form extends BrowserEventTarget {
 
 class Settings {
 
-  static get TAB_STYLE()           { return 'tab-style';         }
-  static get SAVE_FILENAME()       { return 'save-filename';     }
-  static get INCLUDE_SELECTOR()    { return 'include-selector';  }
-  static get EXCLUDE_SELECTOR()    { return 'exclude-selector';  }
-  static get OUTPUT_SELECTOR()     { return 'output-selector';   }
-  static get OUTPUT_CHANGED_ONLY() { return 'changed-only';      }
-  static get OUTPUT_UNIQUE_ONLY()  { return 'unique-only';       }
+  static get TAB_STYLE()           { return 'tab-style';           }
+  static get SAVE_FILENAME()       { return 'save-filename';       }
+  static get INCLUDE_SELECTOR()    { return 'include-selector';    }
+  static get EXCLUDE_SELECTOR()    { return 'exclude-selector';    }
+  static get OUTPUT_SELECTOR()     { return 'output-selector';     }
+  static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only'; }
+  static get OUTPUT_UNIQUE_ONLY()  { return 'output-unique-only';  }
 
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
   static get OUTPUT_SELECTOR_ALL()     { return 'all';     }
@@ -5914,11 +5886,11 @@ class Settings {
     return this.storage.getItem(name) || Settings.DEFAULTS[name];
   }
 
-  set(name, value) {
-    if (value == null) {
+  set(name, val) {
+    if (val == null) {
       this.storage.removeItem(name);
     } else {
-      this.storage.setItem(name, value);
+      this.storage.setItem(name, val);
     }
   }
 
@@ -6305,7 +6277,7 @@ class Point {
   }
 
   round() {
-    return new Point(round(this.x), round(this.y));
+    return new Point(Math.round(this.x), Math.round(this.y));
   }
 
   getRatio() {
@@ -6352,12 +6324,12 @@ class Rectangle {
 
   getWidth(r) {
     var w = this.right - this.left;
-    return r ? round(w) : w;
+    return r ? Math.round(w) : w;
   }
 
   getHeight(r) {
     var h = this.bottom - this.top;
-    return r ? round(h) : h;
+    return r ? Math.round(h) : h;
   }
 
   setPosition(point) {

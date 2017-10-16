@@ -459,4 +459,44 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
+  it('should work on elements with no common styles', function() {
+    var el1 = appendPositionableElement();
+    var el2 = appendPositionableElement();
+
+    el2.el.id = 'absolute-box-2';
+    el2.pushState();
+    el2.move(100, 100);
+
+    el2.pushState();
+    el2.resize(50, 50, 'se');
+
+    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
+    assert.equal(manager.getStyles([el1, el2]), dec`
+
+    #absolute-box {
+      top: 100px;
+      left: 100px;
+      width: 100px;
+      height: 100px;
+    }
+
+    #absolute-box-2 {
+      top: 200px;
+      left: 200px;
+      width: 150px;
+      height: 150px;
+    }
+
+    `);
+  });
+
+  it('should work on elements with all common styles', function() {
+    var el1 = appendPositionableElement();
+    var el2 = appendPositionableElement();
+
+    el2.el.id = 'absolute-box-2';
+    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
+    assert.equal(manager.getStyles([el1, el2]), '');
+  });
+
 });
