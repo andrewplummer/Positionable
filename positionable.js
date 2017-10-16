@@ -2642,6 +2642,13 @@ class OutputManager {
     return this.getSelector(element) || OutputManager.NULL_SELECTOR;
   }
 
+  saveStyles(styles) {
+    var link = document.createElement('a');
+    link.href = 'data:text/css;base64,' + btoa(styles);
+    link.download = this.settings.get(Settings.SAVE_FILENAME);
+    link.click();
+  }
+
   // --- Property Headers
 
   getPositionHeader(element) {
@@ -3244,13 +3251,13 @@ class AlignmentManager {
 class CopyManager {
 
   constructor(listener) {
-    window.addEventListener('copy', this.onCopy.bind(this));
+    window.addEventListener('copy', this.onCopyEvent.bind(this));
     this.listener = listener;
   }
 
-  onCopy(evt) {
+  onCopyEvent(evt) {
     evt.preventDefault();
-    this.listener.onCopy(evt);
+    this.listener.onCopyEvent(evt);
   }
 
   setCopyData(evt, str) {
@@ -3311,8 +3318,6 @@ class AppController {
     this.keyManager.setupKey(KeyManager.DOWN_KEY);
     this.keyManager.setupKey(KeyManager.RIGHT_KEY);
 
-    // Note that copying is handled by the copy event,
-    // not key events.
     this.keyManager.setupCommandKey(KeyManager.A_KEY);
     this.keyManager.setupCommandKey(KeyManager.S_KEY);
     this.keyManager.setupCommandKey(KeyManager.Z_KEY);
@@ -3329,16 +3334,6 @@ class AppController {
     } else {
       this.controlPanel.showDefaultArea();
     }
-  }
-
-  onSaveStyles() {
-    var styles = this.getStylesForFocusedElements();
-    // output save styles dialogue
-  }
-
-  onCopyStyles() {
-    var styles = this.getStylesForFocusedElements();
-    // output copy styles dialogue
   }
 
   getStylesForFocusedElements() {
@@ -3377,12 +3372,6 @@ class AppController {
     } else {
       this.controlPanel.showGettingStartedArea();
     }
-  }
-
-  // --- Copy Animation Events
-
-  onCopyAnimationTaskReady() {
-    console.info('ready!');
   }
 
   // --- Position Drag Events
@@ -3577,7 +3566,11 @@ class AppController {
   }
 
   onCommandKeyDown(evt) {
+    // Note that copying is handled by the copy event not key events.
     switch (evt.key) {
+      case KeyManager.S_KEY:
+        this.saveStyles();
+        break;
       case KeyManager.A_KEY:
         this.elementManager.focusAll();
         break;
@@ -3588,10 +3581,19 @@ class AppController {
     }
   }
 
-  onCopy(evt) {
+  onCopyEvent(evt) {
     var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
     this.copyManager.setCopyData(evt, styles);
     this.copyAnimation.show(!!styles);
+  }
+
+  saveStyles() {
+    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
+    if (styles) {
+      this.outputManager.saveStyles(styles);
+    } else {
+      this.copyAnimation.show(false);
+    }
   }
 
   /*

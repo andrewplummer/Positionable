@@ -499,4 +499,31 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(manager.getStyles([el1, el2]), '');
   });
 
+  it('should work on elements with all common styles', function() {
+    var link;
+
+    createElementMock.apply();
+    manager.saveStyles('foo');
+    link = createElementMock.getLastCreated();
+    createElementMock.release();
+
+    assert.isTrue(link.clickMethodFired);
+    assert.equal(link.href, 'data:text/css;base64,' + btoa('foo'));
+    assert.equal(link.download, 'styles.css');
+
+  });
+
+  it('should allow a filename based on settings', function() {
+    var link;
+
+    settings.set(Settings.SAVE_FILENAME, 'bar.css');
+
+    createElementMock.apply();
+    manager.saveStyles('foo');
+    link = createElementMock.getLastCreated();
+    createElementMock.release();
+
+    assert.equal(link.download, 'bar.css');
+
+  });
 });
