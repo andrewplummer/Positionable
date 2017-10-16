@@ -5990,21 +5990,33 @@ class LinkedSelect extends BrowserEventTarget {
 
 class Animation {
 
-  constructor(el, activeClass, listener) {
+  static get NO_TRANSITION_CLASS() { return 'animation--no-transition'; }
+
+  constructor(el, activeClass, listener, expectedTransitionEvents) {
     this.target      = new BrowserEventTarget(el);
     this.activeClass = activeClass;
     this.listener    = listener;
+    this.expectedTransitionEvents = expectedTransitionEvents || 1;
   }
 
   defer(fn) {
     // Allow 1 frame to allow styling to be applied before
     // adding transition classes. For some reason RAF won't work here.
-    setTimeout(fn.bind(this), 16);
+    this.timer = setTimeout(fn, 16);
   }
 
   show() {
+
+    // Reset all transitions, states, and timeouts.
+    clearTimeout(this.timer);
+    this.target.removeAllListeners();
+    this.target.removeClass(this.activeClass);
+    this.target.addClass(Animation.NO_TRANSITION_CLASS);
+
     this.target.show();
-    this.defer(function() {
+
+    this.defer(() => {
+      this.target.removeClass(Animation.NO_TRANSITION_CLASS);
       this.target.addClass(this.activeClass);
     });
     this.awaitTransitionEnd(this.onAnimationEnter);
@@ -6013,13 +6025,10 @@ class Animation {
   hide() {
     // If hide is called in the same tick as show, then transitionend will
     // continue firing, so need to defer it here.
-    this.defer(function() {
+    this.defer(() => {
       this.target.removeClass(this.activeClass);
       this.awaitTransitionEnd(this.onAnimationExit);
     });
-  }
-
-  onAnimationEnter() {
   }
 
   onAnimationExit() {
@@ -6027,13 +6036,15 @@ class Animation {
   }
 
   awaitTransitionEnd(fn) {
+    var transitionEvents = 0;
     this.target.addEventListener('transitionend', (evt) => {
-      // This does a very naive listening for the first transitionend event
-      // and then immediately removes the listener, which means it will end
-      // on any property or inner element that has a transition on it. This
-      // means that all transitions are assumed to be syncrhonized.
-      this.target.removeAllListeners();
-      fn.call(this);
+      transitionEvents += 1;
+      if (transitionEvents >= this.expectedTransitionEvents) {
+        // This very naively does a count on the transitionend events and
+        // compares it to the number expected, which is passed in the constructor.
+        this.target.removeAllListeners();
+        fn.call(this);
+      }
     });
   }
 
@@ -6068,7 +6079,7 @@ class CopyAnimation extends Animation {
   static get NO_STYLES_ID() { return 'copy-animation-no-styles'; };
 
   constructor(uiRoot, listener) {
-    super(uiRoot.getElementById(CopyAnimation.ID), CopyAnimation.ACTIVE_CLASS, listener);
+    super(uiRoot.getElementById(CopyAnimation.ID), CopyAnimation.ACTIVE_CLASS, listener, 2);
     this.copied   = new Element(uiRoot.getElementById(CopyAnimation.COPIED_ID));
     this.noStyles = new Element(uiRoot.getElementById(CopyAnimation.NO_STYLES_ID));
   }

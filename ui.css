@@ -22,13 +22,6 @@ label {
   to   { transform: rotate(360deg); }
 }
 
-@keyframes opacity-in-out {
-  0%   { opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-
 /*---------------------------] Components [-----------------------*/
 
 .select-linked-area {
@@ -679,6 +672,13 @@ label {
 
 
 
+/*---------------------------] Animation [-----------------------*/
+
+.animation--no-transition,
+.animation--no-transition * {
+  transition: none !important;
+}
+
 /*---------------------------] Loading Animation [-----------------------*/
 
 .loading-animation {
@@ -688,6 +688,7 @@ label {
   left: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
 .loading-shade {
@@ -781,9 +782,9 @@ label {
   font-weight: 200;
   font-size: 26px;
   opacity: 0;
-  display: none;
-  animation: opacity-in-out 1s linear;
+  transition: opacity 500ms linear;
   font-family: "Open Sans", sans-serif;
+  pointer-events: none;
 }
 
 
