@@ -237,15 +237,29 @@ describe('DragTarget', function(uiRoot) {
     assert.equal(document.documentElement.style.userSelect, '');
   });
 
-  it('should be able to reset the drag', function() {
+  it('should reset the drag when ctrl key depressed', function() {
     el = appendAbsoluteBox();
     target = new Target(el);
+    target.setupCtrlKeyReset();
 
     fireMouseDown(el, 50, 50);
     fireDocumentMouseMove(50, 100);
-    target.resetDrag();
-    fireDocumentMouseMove(50, 150);
-    fireDocumentMouseUp(50, 100);
+    fireDocumentCtrlMouseMove(50, 150);
+    fireDocumentCtrlMouseUp(50, 100);
+
+    assert.equal(target.dragStarts, 2);
+    assert.equal(target.dragStops, 2);
+  });
+
+  it('should reset the drag when meta key depressed', function() {
+    el = appendAbsoluteBox();
+    target = new Target(el);
+    target.setupMetaKeyReset();
+
+    fireMouseDown(el, 50, 50);
+    fireDocumentMouseMove(50, 100);
+    fireDocumentMetaMouseMove(50, 150);
+    fireDocumentMetaMouseUp(50, 100);
 
     assert.equal(target.dragStarts, 2);
     assert.equal(target.dragStops, 2);

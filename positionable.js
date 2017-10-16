@@ -11,7 +11,6 @@
 // - initial state
 // - undo for everything
 // - unsupported transforms
-// - both degrees and radians!
 // - double check precisions!
 // - rotate before translate??
 // - rotation with a different origin?
@@ -29,10 +28,7 @@
 // - position drag then hit ctrl to background drag (jumps?)
 // - make sure static elements are changed to absolute
 // - test command key on windows
-// - test element comes to foreground when focused
 // - test undefined top/left/width/height values
-// - test element gains focus on all handle drags
-// - test dragging does not follow links
 // - test nested scrolling elements
 // - test same domain / cross domain image
 // - test z-index on overlapping elements when dragging
@@ -44,6 +40,10 @@
 // - test after save should go back to element area
 // - test finding elements after settings update
 // - test what happens if extension button hit twice
+
+// - TODO: matrix
+// - TODO: unselect with shift
+// - both degrees and radians!
 
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
@@ -953,6 +953,14 @@ class DragTarget extends BrowserEventTarget {
     this.hovering = false;
   }
 
+  setupCtrlKeyReset() {
+    this.ctrlKeyReset = true;
+  }
+
+  setupMetaKeyReset() {
+    this.metaKeyReset = true;
+  }
+
   allowDoubleClick() {
     this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('contextmenu', this.onContextMenu);
@@ -1028,7 +1036,7 @@ class DragTarget extends BrowserEventTarget {
       clientY:  evt.clientY
     };
 
-    this.resetTarget = null;
+    //this.resetTarget = null;
 
     document.documentElement.addEventListener('mousemove', this.onMouseMove);
     document.documentElement.addEventListener('mouseup', this.onMouseUp);
@@ -1037,6 +1045,12 @@ class DragTarget extends BrowserEventTarget {
 
   onMouseMove(evt) {
 
+    if (this.canResetDrag(evt)) {
+      this.resetDrag(evt);
+      return;
+    }
+
+    /*
     // TODO: better way to handle this?
     if (this.resetTarget) {
       // Setting the reset target flags this element for a
@@ -1051,6 +1065,7 @@ class DragTarget extends BrowserEventTarget {
       this.onMouseUp(evt);
       this.onMouseDown(evt);
     }
+    */
 
     this.lastMouseEvent = evt;
 
@@ -1089,10 +1104,14 @@ class DragTarget extends BrowserEventTarget {
       clientY:  this.lastMouseEvent.clientY,
       pageX:    this.lastMouseEvent.clientX + window.scrollX,
       pageY:    this.lastMouseEvent.clientY + window.scrollY,
-      shiftKey: this.lastMouseEvent.shiftKey
+      shiftKey: this.lastMouseEvent.shiftKey,
+      metaKey:  this.lastMouseEvent.metaKey,
+      ctrlKey:  this.lastMouseEvent.ctrlKey,
+      altKey:   this.lastMouseEvent.altKey
     });
   }
 
+  /*
   onKeyDown(evt) {
     this.resetDrag();
   }
@@ -1100,6 +1119,7 @@ class DragTarget extends BrowserEventTarget {
   onKeyUp(evt) {
     this.resetDrag();
   }
+  */
 
   // --- Data
 
@@ -1162,12 +1182,40 @@ class DragTarget extends BrowserEventTarget {
 
   // --- Private
 
-  resetDrag() {
+  canResetDrag(evt) {
+    return (this.ctrlKeyReset && evt.ctrlKey !== this.lastMouseEvent.ctrlKey) ||
+           (this.metaKeyReset && evt.metaKey !== this.lastMouseEvent.metaKey);
+
+  }
+
+  resetDrag(evt) {
     if (this.dragging) {
-      var lastMouseEvent = this.lastMouseEvent;
-      this.onMouseUp(lastMouseEvent);
-      this.onMouseDown(lastMouseEvent);
+      // Certain drag targets may require a change in keys to reset the
+      // drag. We can accomplish this by firing mouseup, mousedown, and
+      // mousemove events in succession to simulate the drag being stopped
+      // and restarted again. The mousedown event needs to be a combination
+      // of the position of the previous event and the keys of the new
+      // event to ensure the offsets remain accurate.
+      var last = this.lastMouseEvent;
+      this.onMouseUp(evt);
+      this.onMouseDown(this.getUpdatedMouseEvent('mousedown', evt, last));
+      this.onMouseMove(evt);
     }
+  }
+
+  getUpdatedMouseEvent(type, keyEvt, posEvt) {
+    return new MouseEvent(type, {
+      altKey:   keyEvt.altKey,
+      metaKey:  keyEvt.metaKey,
+      ctrlKey:  keyEvt.ctrlKey,
+      shiftKey: keyEvt.shiftKey,
+
+      button:  posEvt.button,
+      screenX: posEvt.screenX,
+      screenY: posEvt.screenY,
+      clientX: posEvt.clientX,
+      clientY: posEvt.clientY,
+    })
   }
 
   disableUserSelect() {
@@ -1203,10 +1251,12 @@ class DragTarget extends BrowserEventTarget {
     }, DragTarget.CTRL_DOUBLE_CLICK_TIMEOUT);
   }
 
+  /*
   // TODO: can this be removed?
   dragReset(evt) {
     this.resetTarget = this.el;
   }
+  */
 
 }
 
@@ -1375,6 +1425,8 @@ class PositionHandle extends DragTarget {
     super(root.getElementById('position-handle'));
     this.allowDoubleClick();
     this.setupDragIntents();
+    this.setupMetaKeyReset();
+    this.setupCtrlKeyReset();
 
     this.listener = listener;
     /*
@@ -1435,6 +1487,8 @@ class ResizeHandle extends DragTarget {
     super(root.getElementById('resize-handle-' + name));
     this.allowDoubleClick();
     this.setupDragIntents();
+    this.setupMetaKeyReset();
+    this.setupCtrlKeyReset();
 
     this.name = name;
     this.listener = listener;
@@ -1587,6 +1641,7 @@ class RotationHandle extends DragTarget {
   constructor(root, listener) {
     super(root.getElementById('rotation-handle'));
     this.setupDragIntents();
+    this.setupMetaKeyReset();
 
     this.listener = listener;
   }
@@ -2170,7 +2225,11 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   moveBackground(x, y, constrain) {
-    var p = this.getConstrainedMovePosition(x, y, constrain, true);
+    var p;
+    if (!this.cssBackgroundImage.hasImage()) {
+      return;
+    }
+    p = this.getConstrainedMovePosition(x, y, constrain, true);
     this.cssBackgroundImage = this.getLastState().cssBackgroundImage.clone();
     this.cssBackgroundImage.move(p.x, p.y);
     this.renderBackgroundPosition();
@@ -2494,17 +2553,19 @@ class PositionableElement extends BrowserEventTarget {
     return handle.getPosition()[this.getAxisForSide(side)];
  }
 
-  resetDrag() {
-    this.handles.n.resetDrag();
-    this.handles.e.resetDrag();
-    this.handles.s.resetDrag();
-    this.handles.w.resetDrag();
-    this.handles.ne.resetDrag();
-    this.handles.se.resetDrag();
-    this.handles.sw.resetDrag();
-    this.handles.nw.resetDrag();
-    this.positionHandle.resetDrag();
+  /*
+  resetDrag(evt) {
+    this.handles.n.resetDrag(evt);
+    this.handles.e.resetDrag(evt);
+    this.handles.s.resetDrag(evt);
+    this.handles.w.resetDrag(evt);
+    this.handles.ne.resetDrag(evt);
+    this.handles.se.resetDrag(evt);
+    this.handles.sw.resetDrag(evt);
+    this.handles.nw.resetDrag(evt);
+    this.positionHandle.resetDrag(evt);
   }
+  */
 
   /*
   getCenterAlignValue(type) {
@@ -3032,13 +3093,13 @@ class KeyManager extends BrowserEventTarget {
 
   onKeyDown(evt) {
     var mod = this.handledKeys[evt.key];
-    if (mod === undefined || this.isDisabledKeyCombination(evt)) {
+    if (mod === undefined) {
       return;
     }
-    if (mod & KeyManager.MODIFIER_NONE && !evt.metaKey) {
+    if (mod & KeyManager.MODIFIER_NONE && this.isSimpleKey(evt)) {
       evt.preventDefault();
       this.listener.onKeyDown(evt);
-    } else if (mod & KeyManager.MODIFIER_COMMAND && evt.metaKey) {
+    } else if (mod & KeyManager.MODIFIER_COMMAND && this.isCommandKey(evt)) {
       evt.preventDefault();
       this.listener.onCommandKeyDown(evt);
     }
@@ -3050,10 +3111,15 @@ class KeyManager extends BrowserEventTarget {
     }
   }
 
-  isDisabledKeyCombination(evt) {
-    // Only handling simple keys and command keys for now.
-    return (evt.ctrlKey && evt.key !== KeyManager.CTRL_KEY) ||
-           (evt.altKey && evt.key !== KeyManager.ALT_KEY);
+  isSimpleKey(evt) {
+    return (!evt.shiftKey || evt.key === KeyManager.SHIFT_KEY) &&
+           (!evt.metaKey  || evt.key === KeyManager.META_KEY) &&
+           (!evt.ctrlKey  || evt.key === KeyManager.CTRL_KEY) &&
+           (!evt.altKey   || evt.key === KeyManager.ALT_KEY);
+  }
+
+  isCommandKey(evt) {
+    return evt.metaKey && !evt.shiftKey && !evt.ctrlKey && !evt.altKey;
   }
 
 }
@@ -3303,6 +3369,7 @@ class AppController {
     this.keyManager = new KeyManager(this);
 
     this.keyManager.setupKey(KeyManager.SHIFT_KEY);
+    this.keyManager.setupKey(KeyManager.META_KEY);
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
     this.keyManager.setupKey(KeyManager.ALT_KEY);
 
@@ -3503,21 +3570,22 @@ class AppController {
 
   onKeyDown(evt) {
 
+    // Note mode resetting is handled by DragTarget
+
     switch (evt.key) {
 
       // Meta Keys
       case KeyManager.SHIFT_KEY:
         this.nudgeManager.setMultiplier(true);
-      break;
+        break;
       case KeyManager.CTRL_KEY:
         this.cursorManager.setPriorityHoverCursor('move');
-        this.elementManager.resetFocusedDrag();
-      break;
+        break;
       case KeyManager.ALT_KEY:
         if (this.canPeek()) {
           this.elementManager.setPeekMode(true);
         }
-      break;
+        break;
 
       // Arrow Keys
       case KeyManager.UP_KEY:    this.nudgeManager.addDirection('up');    break;
@@ -3541,16 +3609,15 @@ class AppController {
       // Meta Keys
       case KeyManager.SHIFT_KEY:
         this.nudgeManager.setMultiplier(false);
-      break;
+        break;
       case KeyManager.CTRL_KEY:
         this.cursorManager.clearPriorityHoverCursor('move');
-        this.elementManager.resetFocusedDrag();
-      break;
+        break;
       case KeyManager.ALT_KEY:
         if (this.canPeek()) {
           this.elementManager.setPeekMode(false);
         }
-      break;
+        break;
 
       // Arrow Keys
       case KeyManager.UP_KEY:    this.nudgeManager.removeDirection('up');    break;
@@ -3943,8 +4010,15 @@ class PositionableElementManager {
     }
   }
 
-  onElementDragMove() {
+  onElementDragStart(evt, element) {
+    this.setDraggingElements(evt, element);
+  }
+
+  onElementDragMove(evt, element) {
     this.removeOnClick = false;
+  }
+
+  onElementDragStop(evt, element) {
   }
 
   onElementClick(evt, element) {
@@ -3965,12 +4039,13 @@ class PositionableElementManager {
 
   onPositionDragStart(evt, handle, element) {
     this.pushFocusedStates();
+    this.onElementDragStart(evt, element);
     this.listener.onPositionDragStart(evt, handle, element);
   }
 
   onPositionDragMove(evt, handle, element) {
-    this.onElementDragMove();
-    this.applyPositionDrag(evt, evt.ctrlKey);
+    this.onElementDragMove(evt, element);
+    this.applyPositionDrag(evt, evt.ctrlKey, element);
     this.listener.onPositionDragMove(evt, handle, element);
     if (evt.ctrlKey) {
       this.listener.onBackgroundPositionUpdated();
@@ -3980,6 +4055,7 @@ class PositionableElementManager {
   }
 
   onPositionDragStop(evt, handle, element) {
+    this.onElementDragStop(evt, element);
     this.listener.onPositionDragStop(evt, handle, element);
   }
 
@@ -4022,12 +4098,14 @@ class PositionableElementManager {
   onResizeDragStart(evt, handle, element) {
     this.lockPeekMode();
     this.pushFocusedStates();
+    this.onElementDragStart(evt, element);
     this.listener.onResizeDragStart(evt, handle, element);
   }
 
   onResizeDragMove(evt, handle, element) {
+    this.onElementDragMove(evt, element);
     if (evt.ctrlKey) {
-      this.applyPositionDrag(evt, true);
+      this.applyPositionDrag(evt, true, element);
       this.listener.onBackgroundPositionUpdated();
     } else {
       this.applyResizeDrag(evt, handle, element);
@@ -4037,6 +4115,7 @@ class PositionableElementManager {
   }
 
   onResizeDragStop(evt, handle, element) {
+    this.onElementDragStop(evt, element);
     this.listener.onResizeDragStop(evt, handle, element);
   }
 
@@ -4052,17 +4131,18 @@ class PositionableElementManager {
 
   onRotationDragStart(evt, handle, element) {
     this.pushFocusedStates();
+    this.onElementDragStart(evt, element);
     this.listener.onRotationDragStart(evt, handle, element);
   }
 
   onRotationDragMove(evt, handle, element) {
-    this.onElementDragMove();
-    this.focusedElements.forEach(el => el.rotate(evt.rotation.offset, evt.shiftKey));
+    this.onElementDragMove(evt, element);
+    this.applyRotationDrag(evt, element);
     this.listener.onRotationDragMove(evt, handle, element);
-    this.listener.onRotationUpdated();
   }
 
   onRotationDragStop(evt, handle, element) {
+    this.onElementDragStop(evt, element);
     this.listener.onRotationDragStop(evt, handle, element);
   }
 
@@ -4387,8 +4467,8 @@ class PositionableElementManager {
 
   // --- Position Dragging
 
-  applyPositionDrag(evt, isBackground) {
-    this.focusedElements.forEach(el => {
+  applyPositionDrag(evt, isBackground, element) {
+    this.draggingElements.forEach(el => {
       var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
       var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
       if (evt.ctrlKey) {
@@ -4414,10 +4494,14 @@ class PositionableElementManager {
       vector = vector.rotate(-rotation);
     }
 
-    this.onElementDragMove();
-    this.focusedElements.forEach(el => {
+    this.draggingElements.forEach(el => {
       el.resize(vector.x, vector.y, handle.name, evt.drag.constrained);
     });
+  }
+
+  applyRotationDrag(evt, element) {
+    this.draggingElements.forEach(el => el.rotate(evt.rotation.offset, evt.shiftKey));
+    this.listener.onRotationUpdated();
   }
 
   // --- Calculations
@@ -4438,6 +4522,16 @@ class PositionableElementManager {
     return this.focusedElements[0];
   }
 
+  setDraggingElements(evt, element) {
+    this.metaKeyActive = evt.metaKey;
+    if (this.metaKeyActive) {
+      this.draggingElements = [element];
+    } else {
+      this.draggingElements = this.focusedElements;
+    }
+  }
+
+  /*
   temporarilyFocusDraggingElement() {
     //if (!this.draggingElement) return;
     this.previouslyFocusedElements = this.focusedElements;
@@ -4456,6 +4550,7 @@ class PositionableElementManager {
     var el = this.draggingElement;
     return el.target || el;
   }
+  */
 
   // --- Output
 
@@ -4500,10 +4595,6 @@ class PositionableElementManager {
 
   destroyAll() {
     this.elements.forEach(el => el.destroy());
-  }
-
-  resetFocusedDrag() {
-    this.focusedElements.forEach(el => el.resetDrag());
   }
 
 }
@@ -7196,7 +7287,6 @@ class CSSRuleMatcher {
 class CSSCompositeTransform {
 
   static get PARSE_REG() { return /(\w+)\((.+?)\)/g; };
-  static get PRECISION() { return 2; }
 
   constructor(functions) {
     this.functions = functions || [];
@@ -7378,10 +7468,7 @@ class CSSCompositeTransformFunction {
   }
 
   clone() {
-    var values = this.values.map(function(v) {
-      return v.clone();
-    });
-    return new CSSCompositeTransformFunction(this.prop, values);
+    return new CSSCompositeTransformFunction(this.prop, this.values.map(v => v.clone()));
   }
 
 }

@@ -52,7 +52,7 @@ describe('KeyManager', function(uiRoot) {
     fireDocumentKeyUp(KeyManager.A_KEY);
 
     // Ensure command key doesn't trigger.
-    fireDocumentCommandKeyDown(KeyManager.A_KEY);
+    fireDocumentMetaKeyDown(KeyManager.A_KEY);
 
     assert.equal(listener.keyDownEvents['a'], 2);
     assert.equal(listener.keyDownEvents['s'], 1);
@@ -67,8 +67,8 @@ describe('KeyManager', function(uiRoot) {
     manager.setupCommandKey(KeyManager.A_KEY);
 
     fireDocumentKeyDown(KeyManager.A_KEY);
-    fireDocumentCommandKeyDown(KeyManager.A_KEY);
-    fireDocumentCommandKeyDown(KeyManager.B_KEY);
+    fireDocumentMetaKeyDown(KeyManager.A_KEY);
+    fireDocumentMetaKeyDown(KeyManager.B_KEY);
 
     assert.equal(listener.commandKeyDownEvents['a'], 1);
     assert.equal(listener.commandKeyDownEvents['b'], undefined);
@@ -80,8 +80,8 @@ describe('KeyManager', function(uiRoot) {
     manager.setupCommandKey(KeyManager.A_KEY);
 
     fireDocumentKeyDown(KeyManager.A_KEY);
-    fireDocumentCommandKeyDown(KeyManager.A_KEY);
-    fireDocumentCommandKeyDown(KeyManager.A_KEY);
+    fireDocumentMetaKeyDown(KeyManager.A_KEY);
+    fireDocumentMetaKeyDown(KeyManager.A_KEY);
 
     assert.equal(listener.keyDownEvents['a'], 1);
     assert.equal(listener.commandKeyDownEvents['a'], 2);
@@ -104,5 +104,15 @@ describe('KeyManager', function(uiRoot) {
     fireDocumentKeyDown(KeyManager.A_KEY);
     assert.equal(listener.lastKeyDownEvent.defaultPrevented, true);
   });
+
+  it('should not allow meta keys when not setup', function() {
+    manager.setupKey(KeyManager.A_KEY);
+
+    fireDocumentMetaKeyDown(KeyManager.A_KEY);
+    assert.equal(listener.keyDownEvents['a'], undefined);
+    assert.equal(listener.commandKeyDownEvents['a'], undefined);
+
+  });
+
 
 });

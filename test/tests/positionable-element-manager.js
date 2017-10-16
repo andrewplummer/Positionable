@@ -415,6 +415,134 @@ describe('PositionableElementManager', function(uiRoot) {
     assertElementFocused(els[1], true);
   });
 
+  it('should temporarily drag a single element with the meta key depressed', function() {
+    var positionHandle1;
+
+    setupMultiple();
+    manager.focusAll();
+
+    positionHandle1 = getUiElement(els[0], '.position-handle');
+
+    // Meta key depressed before drag start
+    fireMetaMouseDown(positionHandle1, 150, 150);
+    fireDocumentMetaMouseMove(175, 175);
+    fireDocumentMetaMouseMove(200, 200);
+    fireDocumentMetaMouseUp(200, 200);
+
+    assert.equal(els[0].style.top,  '150px');
+    assert.equal(els[0].style.left, '150px');
+    assert.equal(els[1].style.top,  '');
+    assert.equal(els[1].style.left, '');
+
+    // Meta key depressed during drag move
+    fireMouseDown(positionHandle1, 200, 200);
+    fireDocumentMouseMove(225, 225);
+    fireDocumentMetaMouseMove(250, 250);
+    fireDocumentMetaMouseUp(250, 250);
+
+    assert.equal(els[0].style.top,  '200px');
+    assert.equal(els[0].style.left, '200px');
+    assert.equal(els[1].style.top,  '125px');
+    assert.equal(els[1].style.left, '125px');
+
+    // Meta key released during drag move
+    fireMetaMouseDown(positionHandle1, 250, 250);
+    fireDocumentMetaMouseMove(275, 275);
+    fireDocumentMouseMove(300, 300);
+    fireDocumentMouseUp(300, 300);
+
+    assert.equal(els[0].style.top,  '250px');
+    assert.equal(els[0].style.left, '250px');
+    assert.equal(els[1].style.top,  '150px');
+    assert.equal(els[1].style.left, '150px');
+
+  });
+
+  it('should temporarily resize a single element with the meta key depressed', function() {
+    var resizeHandle1;
+
+    setupMultiple();
+    manager.focusAll();
+
+    resizeHandle1 = getUiElement(els[0], '.resize-handle-se');
+
+    // Meta key depressed before resize start
+    fireMetaMouseDown(resizeHandle1, 200, 200);
+    fireDocumentMetaMouseMove(225, 225);
+    fireDocumentMetaMouseMove(250, 250);
+    fireDocumentMetaMouseUp(250, 250);
+
+    assert.equal(els[0].style.width,  '150px');
+    assert.equal(els[0].style.height, '150px');
+    assert.equal(els[1].style.width,  '');
+    assert.equal(els[1].style.height, '');
+
+    // Meta key depressed during resize move
+    fireMouseDown(resizeHandle1, 250, 250);
+    fireDocumentMouseMove(275, 275);
+    fireDocumentMetaMouseMove(300, 300);
+    fireDocumentMetaMouseUp(300, 300);
+
+    assert.equal(els[0].style.width,  '200px');
+    assert.equal(els[0].style.height, '200px');
+    assert.equal(els[1].style.width,  '125px');
+    assert.equal(els[1].style.height, '125px');
+
+    // Meta key released during drag move
+    fireMetaMouseDown(resizeHandle1, 300, 300);
+    fireDocumentMetaMouseMove(325, 325);
+    fireDocumentMouseMove(350, 350);
+    fireDocumentMouseUp(350, 350);
+
+    assert.equal(els[0].style.width,  '250px');
+    assert.equal(els[0].style.height, '250px');
+    assert.equal(els[1].style.width,  '150px');
+    assert.equal(els[1].style.height, '150px');
+
+  });
+
+  it('should temporarily rotate a single element with the meta key depressed', function() {
+    var rotationHandle1;
+
+    setupMultiple();
+    manager.focusAll();
+
+    rotationHandle1 = getUiElement(els[0], '.rotation-handle');
+
+    // Meta key depressed before rotate start
+    fireMetaMouseDown(rotationHandle1, 200, 200);
+    fireDocumentMetaMouseMove(200, 200);
+    fireDocumentMetaMouseMove(150, 221);
+    fireDocumentMetaMouseMove(100, 200);
+    fireDocumentMetaMouseUp(100, 200);
+
+    assert.equal(els[0].style.transform,  'rotate(90deg)');
+    assert.equal(els[1].style.transform,  '');
+
+    // Meta key depressed during rotate move
+    fireMouseDown(rotationHandle1, 100, 200);
+    fireDocumentMouseMove(100, 200);
+    fireDocumentMouseMove(79, 150);
+    fireDocumentMetaMouseMove(79, 150);
+    fireDocumentMetaMouseMove(100, 100);
+    fireDocumentMetaMouseUp(100, 100);
+
+    assert.equal(els[0].style.transform,  'rotate(180deg)');
+    assert.equal(els[1].style.transform,  'rotate(45deg)');
+
+    // Meta key released during rotate move
+    fireMetaMouseDown(rotationHandle1, 100, 100);
+    fireDocumentMetaMouseMove(100, 100);
+    fireDocumentMetaMouseMove(150, 79);
+    fireDocumentMouseMove(150, 79);
+    fireDocumentMouseMove(200, 100);
+    fireDocumentMouseUp(200, 100);
+
+    assert.equal(els[0].style.transform,  'rotate(270deg)');
+    assert.equal(els[1].style.transform,  'rotate(90deg)');
+
+  });
+
   // --- Positioning
 
   it('should move', function() {
@@ -505,28 +633,66 @@ describe('PositionableElementManager', function(uiRoot) {
 
   // --- Background Positioning
 
-  it('should move background', function() {
+  it('should not move background image when none exists', function() {
     setupAbsolute();
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '');
+  });
+
+  it('should move background', function() {
+    setupBackgroundBox();
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.left, '');
     assert.equal(el.style.top,  '');
-    assert.equal(el.style.backgroundPosition,  '50px 50px');
+    assert.equal(el.style.backgroundPosition,  '70px 90px');
+  });
+
+  it('should shift to background move after normal move', function() {
+    setupBackgroundBox();
+
+    fireMouseDown(getUiElement(el, '.position-handle'), 150, 150);
+    fireDocumentMouseMove(200, 150);
+    fireDocumentMouseMove(250, 150);
+    fireDocumentCtrlMouseMove(300, 150);
+    fireDocumentCtrlMouseMove(330, 150);
+    fireDocumentCtrlMouseUp(330, 150);
+
+    assert.equal(el.style.top,   '100px');
+    assert.equal(el.style.left,  '200px');
+    assert.equal(el.style.backgroundPosition,  '100px 40px');
+
+  });
+
+  it('should shift to background move after resize move', function() {
+    setupBackgroundBox();
+
+    fireMouseDown(getUiElement(el, '.resize-handle-se'), 200, 200);
+    fireDocumentMouseMove(250, 250);
+    fireDocumentMouseMove(300, 300);
+    fireDocumentCtrlMouseMove(350, 350);
+    fireDocumentCtrlMouseMove(400, 400);
+    fireDocumentCtrlMouseUp(400, 400);
+
+    assert.equal(el.style.width,   '200px');
+    assert.equal(el.style.height,  '200px');
+    assert.equal(el.style.backgroundPosition,  '120px 140px');
+
   });
 
   it('should constrain background move', function() {
-    setupAbsolute();
+    setupBackgroundBox();
     shiftCtrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 160);
     assert.equal(el.style.left, '');
     assert.equal(el.style.top,  '');
-    assert.equal(el.style.backgroundPosition,  '50px 0px');
+    assert.equal(el.style.backgroundPosition,  '70px 40px');
   });
 
   it('should move background on resize handle drag while ctrl key down', function() {
-    setupAbsolute();
+    setupBackgroundBox();
     ctrlDragElement(getUiElement(el, '.resize-handle-nw'), 100, 100, 150, 150);
     assert.equal(el.style.left, '');
     assert.equal(el.style.top,  '');
-    assert.equal(el.style.backgroundPosition,  '50px 50px');
+    assert.equal(el.style.backgroundPosition,  '70px 90px');
   });
 
   it('should move background using percent values', function() {

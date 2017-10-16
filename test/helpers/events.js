@@ -59,6 +59,10 @@ function fireShiftMouseDown(el, x, y) {
   fireMouseDown(el, x, y, { shiftKey: true });
 }
 
+function fireMetaMouseDown(el, x, y) {
+  fireMouseDown(el, x, y, { metaKey: true });
+}
+
 function fireShiftMouseDownUp(el, x, y) {
   fireMouseDown(el, x, y, { shiftKey: true });
   fireMouseUp(el, x, y, { shiftKey: true });
@@ -113,6 +117,11 @@ function ctrlDragElement(el) {
   fireDragElement(el, coords, { ctrlKey: true });
 }
 
+function metaDragElement(el) {
+  var coords = Array.prototype.slice.call(arguments, 1);
+  fireDragElement(el, coords, { metaKey: true });
+}
+
 function shiftCtrlDragElement(el) {
   var coords = Array.prototype.slice.call(arguments, 1);
   fireDragElement(el, coords, { shiftKey: true, ctrlKey: true });
@@ -126,12 +135,28 @@ function fireDocumentMouseUp(x, y, opt) {
   fireMouseUp(document.documentElement, x, y, opt);
 }
 
-function fireShiftDocumentMouseMove(x, y) {
+function fireDocumentShiftMouseMove(x, y) {
   fireDocumentMouseMove(x, y, { shiftKey: true });
 }
 
-function fireShiftDocumentMouseUp(x, y) {
+function fireDocumentShiftMouseUp(x, y) {
   fireDocumentMouseUp(x, y, { shiftKey: true });
+}
+
+function fireDocumentMetaMouseMove(x, y) {
+  fireDocumentMouseMove(x, y, { metaKey: true });
+}
+
+function fireDocumentMetaMouseUp(x, y) {
+  fireDocumentMouseUp(x, y, { metaKey: true });
+}
+
+function fireDocumentCtrlMouseMove(x, y) {
+  fireDocumentMouseMove(x, y, { ctrlKey: true });
+}
+
+function fireDocumentCtrlMouseUp(x, y) {
+  fireDocumentMouseUp(x, y, { ctrlKey: true });
 }
 
 /*-------------------------] Key Events [--------------------------*/
@@ -159,7 +184,7 @@ function fireDocumentKeyDown(key, opt) {
   fireKeyDown(document.documentElement, key, opt);
 }
 
-function fireDocumentCommandKeyDown(key) {
+function fireDocumentMetaKeyDown(key) {
   fireKeyDown(document.documentElement, key, { metaKey: true });
 }
 
@@ -167,7 +192,7 @@ function fireDocumentKeyUp(key, opt) {
   fireKeyUp(document.documentElement, key, opt);
 }
 
-function fireDocumentCommandKeyUp(key) {
+function fireDocumentMetaKeyUp(key) {
   fireKeyUp(document.documentElement, key, { metaKey: true });
 }
 

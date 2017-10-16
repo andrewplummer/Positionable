@@ -157,19 +157,19 @@ describe('PositionableElement', function(uiRoot) {
   // --- Background Moving
 
   it('should be able to move the background image', function() {
-    el = appendAbsoluteBox();
+    el = appendBackgroundImageBox();
     p = new PositionableElement(el, listener);
     p.pushState();
     p.moveBackground(200, 200);
-    assert.equal(el.style.backgroundPosition,  '200px 200px');
+    assert.equal(el.style.backgroundPosition,  '220px 240px');
   });
 
   it('should be able to move the background image on a rotated box', function() {
-    el = appendRotatedBox();
+    el = appendAbsoluteBox('background-image-box rotated-box');
     p = new PositionableElement(el, listener);
     p.pushState();
     p.moveBackground(100, 100);
-    assert.equal(el.style.backgroundPosition,  '141px 0px');
+    assert.equal(el.style.backgroundPosition,  '161px 40px');
   });
 
   // --- Resizing
@@ -307,15 +307,15 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to undo background move', function() {
-    el = appendAbsoluteBox();
+    el = appendBackgroundImageBox();
     p = new PositionableElement(el, listener);
 
     p.pushState();
     p.moveBackground(200, 200);
-    assert.equal(el.style.backgroundPosition,  '200px 200px');
+    assert.equal(el.style.backgroundPosition,  '220px 240px');
 
     p.undo();
-    assert.equal(el.style.backgroundPosition,  '');
+    assert.equal(el.style.backgroundPosition,  '20px 40px');
 
   });
 
