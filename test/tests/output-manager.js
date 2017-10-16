@@ -175,8 +175,8 @@ describe('OutputManager', function(uiRoot) {
 
   it('should get headers for incomplete box', function() {
     var element = appendIncompletePositionableElement();
-    assert.equal(manager.getPositionHeader(element), 'auto, 0px');
-    assert.equal(manager.getDimensionsHeader(element), '100px, auto');
+    assert.equal(manager.getPositionHeader(element), '0px, 0px');
+    assert.equal(manager.getDimensionsHeader(element), '100px, 0px');
     assert.equal(manager.getZIndexHeader(element), '');
     assert.equal(manager.getTransformHeader(element), '');
   });
@@ -322,7 +322,9 @@ describe('OutputManager', function(uiRoot) {
 
       #incomplete-box {
         top: 0px;
+        left: 0px;
         width: 100px;
+        height: 0px;
       }
 
     `);

@@ -6558,7 +6558,7 @@ class CSSPositioningProperty {
     } else if (cssValue = this.getCSSValue(matcher, prop2)) {
       return new CSSPositioningProperty(cssValue, prop2);
     } else {
-      return new CSSPositioningProperty(new CSSPixelValue('auto'), prop1);
+      return new CSSPositioningProperty(matcher.getComputedCSSValue(prop1), prop1);
     }
   }
 
@@ -6720,8 +6720,8 @@ class CSSBox {
   static fromMatcher(matcher) {
     var cssH = CSSPositioningProperty.horizontalFromMatcher(matcher);
     var cssV = CSSPositioningProperty.verticalFromMatcher(matcher);
-    var cssWidth  = matcher.getMatchedCSSValue('width')  || new CSSPixelValue('auto');
-    var cssHeight = matcher.getMatchedCSSValue('height') || new CSSPixelValue('auto');
+    var cssWidth  = matcher.getCSSValue('width');
+    var cssHeight = matcher.getCSSValue('height');
     return new CSSBox(cssH, cssV, cssWidth, cssHeight);
   }
 
@@ -7236,6 +7236,10 @@ class CSSRuleMatcher {
 
   getMatchedCSSValue(prop) {
     return CSSValue.parse(this.getMatchedProperty(prop), prop, this.el);
+  }
+
+  getComputedCSSValue(prop) {
+    return CSSValue.parse(this.getComputedProperty(prop), prop, this.el);
   }
 
   getZIndex() {

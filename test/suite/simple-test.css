@@ -1,8 +1,4 @@
 
-body {
-  margin: 25px;
-}
-
 body,h2,h3,h4 {
   font-family: "Open Sans", sans-serif;
   font-weight: 300;
@@ -29,25 +25,18 @@ ul {
   float: right;
   text-align: right;
   padding-left: 50px;
+  margin: 25px 25px 0 0;
 }
 
 .test-suite {
   overflow: hidden;
   margin-bottom: 20px;
+  padding: 25px;
 }
 
 .test-suite-header {
   margin-bottom: .5em;
   border-bottom: 1px solid #ccc;
-}
-
-.test-fixtures {
-  /*
-   * Note we are using getBoundingClientRect, which requires the
-   * elements to be rendered, even if they are not displayed, so
-   * using visibility: hidden here.
-   */
-  visibility: hidden;
 }
 
 .test-runtime {

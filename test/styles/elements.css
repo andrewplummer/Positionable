@@ -120,3 +120,18 @@
   width: 200px;
   height: 140px;
 }
+
+body {
+  /* Note these values are important to test positioning */
+  margin: 0;
+  padding: 0;
+}
+
+.test-fixtures {
+  /*
+   * Note we are using getBoundingClientRect, which requires the
+   * elements to be rendered, even if they are not displayed, so
+   * using visibility: hidden here.
+   */
+  visibility: hidden;
+}
