@@ -52,9 +52,6 @@
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 
-// TODO: remove??
-const EXTENSION_CLASS_PREFIX = 'positionable-extension-';
-
 /*-------------------------] Utilities [--------------------------*/
 
 function getClassName(el) {
@@ -2717,7 +2714,8 @@ class OutputManager {
   }
 
   getZIndexHeader(element) {
-    return element.cssZIndex.getHeader();
+    var header = element.cssZIndex.getHeader();
+    return header === 'auto' ? '' : header;
   }
 
   getTransformHeader(element) {
@@ -3108,8 +3106,7 @@ class KeyManager extends BrowserEventTarget {
   }
 
   isSimpleKey(evt) {
-    return (!evt.shiftKey || evt.key === KeyManager.SHIFT_KEY) &&
-           (!evt.metaKey  || evt.key === KeyManager.META_KEY) &&
+    return (!evt.metaKey  || evt.key === KeyManager.META_KEY) &&
            (!evt.ctrlKey  || evt.key === KeyManager.CTRL_KEY) &&
            (!evt.altKey   || evt.key === KeyManager.ALT_KEY);
   }
@@ -4201,10 +4198,9 @@ class PositionableElementManager {
     try {
       // The :not pseudo-selector cannot have multiple arguments,
       // so split the query by commas and append the host class here.
-      let hostClassName = '.' + UI_HOST_CLASS_NAME;
       let excludeSelectors = excludeSelector ? excludeSelector.split(',') : [];
 
-      excludeSelectors.push(hostClassName);
+      excludeSelectors.push('.' + UI_HOST_CLASS_NAME);
       excludeSelectors.push('script');
       excludeSelectors.push('style');
       excludeSelectors.push('link');
@@ -4213,6 +4209,7 @@ class PositionableElementManager {
       let query = `${includeSelector || '*'}${excludeSelector}`;
 
       els = document.body.querySelectorAll(query);
+
     } catch(e) {
       throwError(e.message, false);
     }
@@ -6561,7 +6558,7 @@ class CSSPositioningProperty {
     } else if (cssValue = this.getCSSValue(matcher, prop2)) {
       return new CSSPositioningProperty(cssValue, prop2);
     } else {
-      throw new Error('Element requires either a ' + prop1 + ' or ' + prop2 + ' property.');
+      return new CSSPositioningProperty(new CSSPixelValue('auto'), prop1);
     }
   }
 
@@ -6723,8 +6720,8 @@ class CSSBox {
   static fromMatcher(matcher) {
     var cssH = CSSPositioningProperty.horizontalFromMatcher(matcher);
     var cssV = CSSPositioningProperty.verticalFromMatcher(matcher);
-    var cssWidth  = matcher.getMatchedCSSValue('width');
-    var cssHeight = matcher.getMatchedCSSValue('height');
+    var cssWidth  = matcher.getMatchedCSSValue('width')  || new CSSPixelValue('auto');
+    var cssHeight = matcher.getMatchedCSSValue('height') || new CSSPixelValue('auto');
     return new CSSBox(cssH, cssV, cssWidth, cssHeight);
   }
 
@@ -7525,7 +7522,7 @@ class CSSValue {
 
     // TODO: test these on different properties!
     if (str === 'auto') {
-      return new CSSValue();
+      return new CSSValue('auto');
     }
 
     var match = str.match(/([.-\d]+)(px|%|em|deg|g?rad|turn|v(?:w|h|min|max))?$/);
@@ -7569,7 +7566,7 @@ class CSSValue {
   */
 
   isNull() {
-    return this.val == null;
+    return this.val == null || this.val === 'auto';
   }
 
   clone() {
@@ -7577,11 +7574,10 @@ class CSSValue {
   }
 
   appendCSSDeclaration(prop, declarations) {
-    var str = this.toString();
-    if (str) {
+    if (!this.isNull()) {
       // Using interpolation here to ensure that valueOf
       // doesn't trump toString via the + operator.
-      declarations.push(`${prop}: ${str};`);
+      declarations.push(`${prop}: ${this};`);
     }
   }
 
@@ -7597,7 +7593,7 @@ class CSSValue {
     var str;
 
     if (this.isNull()) {
-      return '';
+      return this.val;
     }
 
     // z-index values do not have a unit
@@ -7621,7 +7617,7 @@ class CSSPixelValue extends CSSValue {
   }
 
   get px() {
-    return this.val || 0;
+    return this.isNull() ? 0 : this.val;
   }
 
   set px(val) {

@@ -64,6 +64,10 @@ function appendNestedBox() {
   return appendFixture('nested-box', ['box', 'absolute-box'], container);
 }
 
+function appendIncompleteBox(className, parent) {
+  return appendFixture('incomplete-box', ['incomplete-box', className], parent);
+}
+
 function releaseAppendedFixtures() {
   document.getElementById('element-fixtures').innerHTML = '';
 }

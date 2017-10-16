@@ -66,6 +66,12 @@
   transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
 }
 
+.incomplete-box {
+  position: absolute;
+  top: 0;
+  width: 100px;
+}
+
 .background-image-box {
   /*
    * Data URI representing an image:

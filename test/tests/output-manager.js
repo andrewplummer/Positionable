@@ -46,6 +46,11 @@ describe('OutputManager', function(uiRoot) {
     return new PositionableElement(el);
   }
 
+  function appendIncompletePositionableElement() {
+    var el = appendIncompleteBox();
+    return new PositionableElement(el);
+  }
+
   function assertSimpleBoxSelector(styles, selector, expected) {
     assert.equal(styles, expected || dec`
     ${selector} {
@@ -166,6 +171,14 @@ describe('OutputManager', function(uiRoot) {
   it('should get correct background image', function() {
     var element = appendBackgroundImagePositionableElement();
     assert.equal(manager.getBackgroundPositionHeader(element), '20px, 40px');
+  });
+
+  it('should get headers for incomplete box', function() {
+    var element = appendIncompletePositionableElement();
+    assert.equal(manager.getPositionHeader(element), 'auto, 0px');
+    assert.equal(manager.getDimensionsHeader(element), '100px, auto');
+    assert.equal(manager.getZIndexHeader(element), '');
+    assert.equal(manager.getTransformHeader(element), '');
   });
 
   // --- Style Declarations
@@ -298,6 +311,18 @@ describe('OutputManager', function(uiRoot) {
         z-index: 400;
         background-position: 20px 40px;
         transform: rotate(45deg) translate(20px, 30px);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for an incomplete box', function() {
+    var element = appendIncompletePositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      #incomplete-box {
+        top: 0px;
+        width: 100px;
       }
 
     `);

@@ -54,12 +54,12 @@ describe('KeyManager', function(uiRoot) {
     // Ensure command key doesn't trigger.
     fireDocumentMetaKeyDown(KeyManager.A_KEY);
 
-    assert.equal(listener.keyDownEvents['a'], 2);
-    assert.equal(listener.keyDownEvents['s'], 1);
-    assert.equal(listener.keyUpEvents['a'], 2);
-    assert.equal(listener.keyUpEvents['s'], 1);
-    assert.equal(listener.keyDownEvents['b'], undefined);
-    assert.equal(listener.keyUpEvents['b'], undefined);
+    assert.equal(listener.keyDownEvents[KeyManager.A_KEY], 2);
+    assert.equal(listener.keyDownEvents[KeyManager.S_KEY], 1);
+    assert.equal(listener.keyUpEvents[KeyManager.A_KEY], 2);
+    assert.equal(listener.keyUpEvents[KeyManager.S_KEY], 1);
+    assert.equal(listener.keyDownEvents[KeyManager.B_KEY], undefined);
+    assert.equal(listener.keyUpEvents[KeyManager.B_KEY], undefined);
 
   });
 
@@ -70,8 +70,8 @@ describe('KeyManager', function(uiRoot) {
     fireDocumentMetaKeyDown(KeyManager.A_KEY);
     fireDocumentMetaKeyDown(KeyManager.B_KEY);
 
-    assert.equal(listener.commandKeyDownEvents['a'], 1);
-    assert.equal(listener.commandKeyDownEvents['b'], undefined);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.A_KEY], 1);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.B_KEY], undefined);
 
   });
 
@@ -83,8 +83,8 @@ describe('KeyManager', function(uiRoot) {
     fireDocumentMetaKeyDown(KeyManager.A_KEY);
     fireDocumentMetaKeyDown(KeyManager.A_KEY);
 
-    assert.equal(listener.keyDownEvents['a'], 1);
-    assert.equal(listener.commandKeyDownEvents['a'], 2);
+    assert.equal(listener.keyDownEvents[KeyManager.A_KEY], 1);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.A_KEY], 2);
 
   });
 
@@ -94,8 +94,8 @@ describe('KeyManager', function(uiRoot) {
 
     fireDocumentKeyDown(KeyManager.A_KEY, { altKey: true, });
     fireDocumentKeyDown(KeyManager.A_KEY, { ctrlKey: true, });
-    assert.equal(listener.keyDownEvents['a'], undefined);
-    assert.equal(listener.commandKeyDownEvents['a'], undefined);
+    assert.equal(listener.keyDownEvents[KeyManager.A_KEY], undefined);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.A_KEY], undefined);
 
   });
 
@@ -107,11 +107,15 @@ describe('KeyManager', function(uiRoot) {
 
   it('should not allow meta keys when not setup', function() {
     manager.setupKey(KeyManager.A_KEY);
-
     fireDocumentMetaKeyDown(KeyManager.A_KEY);
-    assert.equal(listener.keyDownEvents['a'], undefined);
-    assert.equal(listener.commandKeyDownEvents['a'], undefined);
+    assert.equal(listener.keyDownEvents[KeyManager.A_KEY], undefined);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.A_KEY], undefined);
+  });
 
+  it('should not allow arrow keys with shift', function() {
+    manager.setupKey(KeyManager.LEFT_KEY);
+    fireDocumentShiftKeyDown(KeyManager.LEFT_KEY);
+    assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], 1);
   });
 
 

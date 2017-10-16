@@ -184,6 +184,10 @@ function fireDocumentKeyDown(key, opt) {
   fireKeyDown(document.documentElement, key, opt);
 }
 
+function fireDocumentShiftKeyDown(key) {
+  fireKeyDown(document.documentElement, key, { shiftKey: true });
+}
+
 function fireDocumentMetaKeyDown(key) {
   fireKeyDown(document.documentElement, key, { metaKey: true });
 }

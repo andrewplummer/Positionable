@@ -1245,4 +1245,21 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.backgroundPosition, '50px 70px');
   });
 
+  // --- Other
+
+  it('should find elements with incomplete positioning properties', function() {
+    el = appendIncompleteBox();
+    manager.findElements();
+
+    dragElement(getUiElement(el, '.position-handle'), 0, 0, 100, 100);
+    dragElement(getUiElement(el, '.resize-handle-se'), 100, 0, 50, 70);
+
+    assert.equal(manager.elements.length, 1);
+    assert.equal(el.style.top, '100px');
+    assert.equal(el.style.left, '100px');
+    assert.equal(el.style.width, '50px');
+    assert.equal(el.style.height, '70px');
+
+  });
+
 });
