@@ -100,13 +100,13 @@ describe('OutputManager', function(uiRoot) {
     var element1 = appendPositionableElement();
     var element2 = appendPositionableElement();
 
-    // Auto (first class)
-    assert.equal(manager.getSelector(element2), '.box');
-
     // Auto (id)
-    element2.el.setAttribute('id', 'foo');
-    assert.equal(manager.getSelector(element2), '#foo');
+    assert.equal(manager.getSelector(element2), '#absolute-box');
+
+    // Auto (first class)
     element2.el.removeAttribute('id');
+    assert.equal(manager.getSelector(element2), '.box');
+    element2.el.setAttribute('id', 'absolute-box');
 
     // First class
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_FIRST);
@@ -174,7 +174,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #absolute-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -188,7 +188,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendRotatedPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #rotated-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -203,7 +203,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendTranslatedPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #translated-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -218,7 +218,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendTransformedPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #transformed-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -233,7 +233,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendSubpixelTransformedPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #subpixel-transformed-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -248,7 +248,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendBackgroundImagePositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #background-image-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -263,7 +263,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendComplexPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #complex-box {
         bottom: 100px;
         right: 100px;
         width: 100px;
@@ -283,14 +283,14 @@ describe('OutputManager', function(uiRoot) {
 
     assert.equal(manager.getStyles([el1, el2]), dec`
 
-      .box {
+      #absolute-box {
         top: 100px;
         left: 100px;
         width: 100px;
         height: 100px;
       }
 
-      .box {
+      #complex-box {
         bottom: 100px;
         right: 100px;
         width: 100px;
@@ -307,9 +307,8 @@ describe('OutputManager', function(uiRoot) {
 
   it('should get styles with an id selector', function() {
     var element = appendPositionableElement();
-    element.el.id = 'foo';
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_ID);
-    assertSimpleBoxSelector(manager.getStyles([element]), '#foo');
+    assertSimpleBoxSelector(manager.getStyles([element]), '#absolute-box');
   });
 
   it('should get styles with all selectors', function() {
@@ -364,7 +363,7 @@ describe('OutputManager', function(uiRoot) {
     settings.set(Settings.TAB_STYLE, Settings.TABS_FOUR_SPACES);
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #absolute-box {
           top: 100px;
           left: 100px;
           width: 100px;
@@ -379,7 +378,7 @@ describe('OutputManager', function(uiRoot) {
     settings.set(Settings.TAB_STYLE, Settings.TABS_TAB);
     assert.equal(manager.getStyles([element]), dec`
 
-      .box {
+      #absolute-box {
       	top: 100px;
       	left: 100px;
       	width: 100px;
@@ -410,7 +409,7 @@ describe('OutputManager', function(uiRoot) {
 
     assert.equal(manager.getStyles([element]), dec`
 
-    .box {
+    #absolute-box {
       top: 149px;
       left: 123px;
       width: 130px;
@@ -427,7 +426,7 @@ describe('OutputManager', function(uiRoot) {
     settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
     assert.equal(manager.getStyles([element]), dec`
 
-    .box {
+    #absolute-box {
       top: 100px;
       left: 100px;
       width: 100px;
@@ -442,14 +441,17 @@ describe('OutputManager', function(uiRoot) {
     var el1 = appendPositionableElement('background-image-box');
     var el2 = appendPositionableElement('z-box transformed-box');
 
+    el1.el.id = 'one';
+    el2.el.id = 'two';
+
     settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
     assert.equal(manager.getStyles([el1, el2]), dec`
 
-      .box {
+      #one {
         background-position: 20px 40px;
       }
 
-      .box {
+      #two {
         z-index: 400;
         transform: rotate(45deg) translate(20px, 30px);
       }
