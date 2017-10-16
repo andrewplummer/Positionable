@@ -24,4 +24,20 @@ describe('CSSBackgroundImage', function(uiRoot) {
     assert.equal(el.style.backgroundPosition, '100px 100px');
   });
 
+  // --- CSS Declarations
+
+  it('should append its CSS declaration', function() {
+    var decs = [];
+    backgroundImage = CSSBackgroundImage.fromStyles('', '40px 30px');
+    backgroundImage.appendCSSDeclaration(decs);
+    assert.equal(decs[0], 'background-position: 40px 30px;');
+  });
+
+  it('should not append its CSS declaration if initial position', function() {
+    var decs = [];
+    backgroundImage = CSSBackgroundImage.fromStyles('', 'initial');
+    backgroundImage.appendCSSDeclaration(decs);
+    assert.equal(decs.length, 0);
+  });
+
 });

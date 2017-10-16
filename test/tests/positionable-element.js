@@ -97,8 +97,8 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(p.cssBox.cssV.px, 100);
     assert.equal(p.cssBox.cssWidth.px, 100);
     assert.equal(p.cssBox.cssHeight.px, 100);
-    assert.equal(p.cssZIndex.val, 'auto');
     assert.equal(p.getRotation(), 0);
+    assert.isTrue(p.cssZIndex.isNull());
   });
 
   it('more specific styles should take precedence', function() {
@@ -463,6 +463,51 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(el.style.width,  '100px');
     assert.equal(el.style.height, '100px');
 
+  });
+
+  // --- CSS Declarations
+
+  it('should get its CSS declarations', function() {
+    var decs;
+    el = appendAbsoluteBox();
+    p = new PositionableElement(el, listener);
+
+    decs = p.getCSSDeclarations();
+    assert.equal(decs[0], 'top: 100px;');
+    assert.equal(decs[1], 'left: 100px;');
+    assert.equal(decs[2], 'width: 100px;');
+    assert.equal(decs[3], 'height: 100px;');
+    assert.equal(decs.length, 4);
+  });
+
+  it('should get its CSS declarations for complex box', function() {
+    var decs;
+    el = appendComplexBox();
+    p = new PositionableElement(el, listener);
+
+    decs = p.getCSSDeclarations();
+    assert.equal(decs[0], 'bottom: 100px;');
+    assert.equal(decs[1], 'right: 100px;');
+    assert.equal(decs[2], 'width: 100px;');
+    assert.equal(decs[3], 'height: 100px;');
+    assert.equal(decs[4], 'z-index: 400;');
+    assert.equal(decs[5], 'background-position: 20px 40px;');
+    assert.equal(decs[6], 'transform: rotate(45deg) translate(20px, 30px);');
+    assert.equal(decs.length, 7);
+  });
+
+  it('should get only changed CSS declarations', function() {
+    var decs;
+    el = appendComplexBox();
+    p = new PositionableElement(el, listener);
+
+    p.pushState();
+    p.move(-50, -50);
+
+    decs = p.getChangedCSSDeclarations();
+    assert.equal(decs[0], 'bottom: 150px;');
+    assert.equal(decs[1], 'right: 150px;');
+    assert.equal(decs.length, 2);
   });
 
   // --- Other

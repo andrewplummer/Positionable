@@ -1,6 +1,5 @@
 
 describe('OutputManager', function(uiRoot) {
-
   var settings, manager;
 
   setup(function() {
@@ -12,8 +11,8 @@ describe('OutputManager', function(uiRoot) {
     releaseAppendedFixtures();
   });
 
-  function appendPositionableElement() {
-    var el = appendAbsoluteBox();
+  function appendPositionableElement(classNames) {
+    var el = appendAbsoluteBox(classNames);
     return new PositionableElement(el);
   }
 
@@ -40,6 +39,59 @@ describe('OutputManager', function(uiRoot) {
   function appendBackgroundImagePositionableElement() {
     var el = appendBackgroundImageBox();
     return new PositionableElement(el);
+  }
+
+  function appendComplexPositionableElement() {
+    var el = appendComplexBox();
+    return new PositionableElement(el);
+  }
+
+  function assertSimpleBoxSelector(styles, selector, expected) {
+    assert.equal(styles, expected || dec`
+    ${selector} {
+      top: 100px;
+      left: 100px;
+      width: 100px;
+      height: 100px;
+    }
+    `);
+  }
+
+  // Template tag to remove whitespace for asserting
+  // declaration blocks.
+  function dec(strings, ...args) {
+    var str, lines, line, min;
+
+    // Simply concat the strings together adding the interpolated
+    // arguments as we go.
+    str = strings.map((s, i) => s + (args[i] || '')).join('');
+
+    lines = str.split('\n');
+
+    // Remove any lines with only whitespace from
+    // both ends without removing such lines from the middle.
+
+    while ((line = lines.shift()) !== undefined) {
+      if (/\S/.test(line)) {
+        lines.unshift(line);
+        break;
+      }
+    }
+
+    while ((line = lines.pop()) !== undefined) {
+      if (/\S/.test(line)) {
+        lines.push(line);
+        break;
+      }
+    }
+
+    min = Infinity;
+
+    for (let i = 0, line; line = lines[i]; i++) {
+      min = Math.min(line.match(/^(\s*)/)[1].length, min);
+    }
+
+    return lines.map(l => l.slice(min)).join('\n');
   }
 
   // --- Selectors
@@ -116,10 +168,293 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(manager.getBackgroundPositionHeader(element), '20px, 40px');
   });
 
-  // --- Styles
+  // --- Style Declarations
 
-  it('should get correct correct styles', function() {
-    // TODO:!
+  it('should get correct styles', function() {
+    var element = appendPositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+    `);
+  });
+
+  it('should get correct styles for rotated element', function() {
+    var element = appendRotatedPositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        transform: rotate(45deg);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for translated element', function() {
+    var element = appendTranslatedPositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        transform: translate(20px, 30px);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for transformed element', function() {
+    var element = appendTransformedPositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        transform: rotate(45deg) translate(20px, 30px);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for subpixel element', function() {
+    var element = appendSubpixelTransformedPositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        transform: rotate(45.33deg) translate(20.23px, 30.21px);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for background image element', function() {
+    var element = appendBackgroundImagePositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        background-position: 20px 40px;
+      }
+
+    `);
+  });
+
+  it('should get correct styles for complex element', function() {
+    var element = appendComplexPositionableElement();
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+        bottom: 100px;
+        right: 100px;
+        width: 100px;
+        height: 100px;
+        z-index: 400;
+        background-position: 20px 40px;
+        transform: rotate(45deg) translate(20px, 30px);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for multiple elements', function() {
+
+    var el1 = appendPositionableElement();
+    var el2 = appendComplexPositionableElement();
+
+    assert.equal(manager.getStyles([el1, el2]), dec`
+
+      .box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+      .box {
+        bottom: 100px;
+        right: 100px;
+        width: 100px;
+        height: 100px;
+        z-index: 400;
+        background-position: 20px 40px;
+        transform: rotate(45deg) translate(20px, 30px);
+      }
+
+    `);
+  });
+
+  // --- Style Selectors
+
+  it('should get styles with an id selector', function() {
+    var element = appendPositionableElement();
+    element.el.id = 'foo';
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_ID);
+    assertSimpleBoxSelector(manager.getStyles([element]), '#foo');
+  });
+
+  it('should get styles with all selectors', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_ALL);
+    assertSimpleBoxSelector(manager.getStyles([element]), '.box.absolute-box');
+  });
+
+  it('should get styles with tag selector', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG);
+    assertSimpleBoxSelector(manager.getStyles([element]), 'div');
+  });
+
+  it('should get styles with tag nth selector', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG_NTH);
+    assertSimpleBoxSelector(manager.getStyles([element]), 'div:nth-child(1)');
+  });
+
+  it('should get styles with first selector', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_FIRST);
+    assertSimpleBoxSelector(manager.getStyles([element]), '.box');
+  });
+
+  it('should get styles with longest selector', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_LONGEST);
+    assertSimpleBoxSelector(manager.getStyles([element]), '.absolute-box');
+  });
+
+  it('should get styles with no selector', function() {
+    var element = appendPositionableElement(), styles, expected;
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_NONE);
+
+    styles = manager.getStyles([element]);
+    expected = [
+      '  top: 100px;',
+      '  left: 100px;',
+      '  width: 100px;',
+      '  height: 100px;'
+    ].join('\n');
+
+    assert.equal(styles, expected);
+  });
+
+  // --- Tabs
+
+  it('should use 4 spaces for tab', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.TAB_STYLE, Settings.TABS_FOUR_SPACES);
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+          top: 100px;
+          left: 100px;
+          width: 100px;
+          height: 100px;
+      }
+
+    `);
+  });
+
+  it('should use tab character for tab', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.TAB_STYLE, Settings.TABS_TAB);
+    assert.equal(manager.getStyles([element]), dec`
+
+      .box {
+      	top: 100px;
+      	left: 100px;
+      	width: 100px;
+      	height: 100px;
+      }
+
+    `);
+  });
+
+  // --- Changed Only Setting
+
+  it('should output no styles when nothing has changed', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
+    assert.equal(manager.getStyles([element]), '');
+  });
+
+  it('should only output changed styles', function() {
+    var element = appendPositionableElement('z-box translated-box background-image-box');
+
+    element.pushState();
+    element.move(23, 49);
+
+    element.pushState();
+    element.resize(new Point(30, 80), 'se');
+
+    settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
+
+    assert.equal(manager.getStyles([element]), dec`
+
+    .box {
+      top: 149px;
+      left: 123px;
+      width: 130px;
+      height: 180px;
+    }
+
+    `);
+  });
+
+  // --- Unique Setting
+
+  it('should output all styles when only one element is passed', function() {
+    var element = appendPositionableElement();
+    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
+    assert.equal(manager.getStyles([element]), dec`
+
+    .box {
+      top: 100px;
+      left: 100px;
+      width: 100px;
+      height: 100px;
+    }
+
+    `);
+  });
+
+  it('should output only styles unique to each element', function() {
+
+    var el1 = appendPositionableElement('background-image-box');
+    var el2 = appendPositionableElement('z-box transformed-box');
+
+    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
+    assert.equal(manager.getStyles([el1, el2]), dec`
+
+      .box {
+        background-position: 20px 40px;
+      }
+
+      .box {
+        z-index: 400;
+        transform: rotate(45deg) translate(20px, 30px);
+      }
+
+    `);
   });
 
 });

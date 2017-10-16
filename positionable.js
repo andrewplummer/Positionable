@@ -45,6 +45,8 @@
 // - test finding elements after settings update
 // - test what happens if extension button hit twice
 
+// - TODO: why does resize() need to take a vector? why not x,y?
+
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
 // TODO: do we really need to round anything that toFixed can't handle?
@@ -2590,7 +2592,50 @@ class PositionableElement extends BrowserEventTarget {
     this.removeAllListeners();
   }
 
+  getCSSDeclarations() {
+    return this.getCSSDeclarationsForAttributes(
+      this.cssBox,
+      this.cssZIndex,
+      this.cssBackgroundImage,
+      this.cssTransform
+    );
+  }
+
+  getChangedCSSDeclarations() {
+    var firstState, firstDeclarations, currentDeclarations;
+
+    // If there are no states, then nothing has chagned
+    // so return an empty array.
+    if (this.states.length === 0) {
+      return [];
+    }
+
+    firstState = this.states[0];
+
+    firstDeclarations = this.getCSSDeclarationsForAttributes(
+      firstState.cssBox,
+      firstState.cssZIndex,
+      firstState.cssBackgroundImage,
+      firstState.cssTransform
+    );
+
+    currentDeclarations = this.getCSSDeclarations();
+
+    return currentDeclarations.filter((d, i) => {
+      return d !== firstDeclarations[i];
+    });
+  }
+
   // --- Private
+
+  getCSSDeclarationsForAttributes(cssBox, cssZIndex, cssBackgroundImage, cssTransform) {
+    var declarations = [];
+    cssBox.appendCSSDeclarations(declarations);
+    cssZIndex.appendCSSDeclaration('z-index', declarations);
+    cssBackgroundImage.appendCSSDeclaration(declarations);
+    cssTransform.appendCSSDeclaration(declarations);
+    return declarations;
+  }
 
   isFixedPosition() {
     return window.getComputedStyle(this.el).position === 'fixed';
@@ -2653,10 +2698,111 @@ class OutputManager {
   }
 
   getStyles(elements) {
-    return 'TODO';
+    var blocks, unique;
+
+    blocks = elements.map(el => this.getElementDeclarationBlock(el));
+    unique = this.settings.get(Settings.OUTPUT_UNIQUE_ONLY);
+
+    if (unique) {
+      blocks = this.getUniqueDeclarationBlocks(blocks);
+    }
+
+    return blocks.map(lines => lines.join('\n')).join('\n\n');
   }
 
   // --- Private
+
+  getElementDeclarationBlock(element) {
+    var tab, selector, declarations, lines = [];
+
+    tab = this.getTab();
+    selector = this.getSelector(element);
+
+    if (this.settings.get(Settings.OUTPUT_CHANGED_ONLY)) {
+      declarations = element.getChangedCSSDeclarations();
+    } else {
+      declarations = element.getCSSDeclarations();
+    }
+
+    if (declarations.length === 0) {
+      return [];
+    }
+
+    declarations = declarations.map(p => tab + p);
+
+    if (selector) {
+      lines.push(selector + ' {');
+    }
+
+    lines = lines.concat(declarations);
+
+    if (selector) {
+      lines.push('}');
+    }
+
+    return lines;
+  }
+
+  getUniqueDeclarationBlocks(blocks) {
+    var commonMap;
+
+    // If there is 1 or less elements, then all styles are
+    // considered to be unique, so just return the blocks.
+    if (blocks.length <= 1) {
+      return blocks;
+    }
+
+    // Initialize a hash table of lines common to all blocks.
+    commonMap = {};
+
+    // Map the blocks to an array of objects containing the
+    // details of each block including hash tables of used
+    // lines, while populating the hash with all lines used.
+    blocks = blocks.map(lines => {
+      var map, firstLine, lastLine;
+
+      map = {};
+
+      firstLine = lines.shift();
+      lastLine  = lines.pop();
+
+      lines.forEach(line => {
+        map[line] = true;
+        commonMap[line] = true;
+      });
+
+      return {
+        map: map,
+        lastLine: lastLine,
+        firstLine: firstLine,
+        declarations: lines
+      }
+    });
+
+    // Reduce the hash table to only lines used in all blocks
+    // using hashIntersect.
+    blocks.forEach(b => {
+      commonMap = hashIntersect(commonMap, b.map);
+    });
+
+    // Map the blocks back to an array of lines containing
+    // only declarations that are not common to all.
+    return blocks.map(b => {
+
+      // Filter out any lines not common to the group.
+      var lines = b.declarations.filter(line => !commonMap[line]);
+
+      // Push the first and last lines back onto the array.
+      lines.unshift(b.firstLine);
+      lines.push(b.lastLine);
+
+      return lines;
+    });
+  }
+
+  getBlockDeclarations(block) {
+    return block.slice
+  }
 
   getFirstClass(list) {
     var first = list[0];
@@ -2689,6 +2835,7 @@ class OutputManager {
     return '.' + Array.from(list).join('.');
   }
 
+  /*
   getAllProperties(element) {
     var cssValues = [element.cssBox, element.cssZIndex, element.cssTransform];
     return cssValues.filter(cssValue => {
@@ -2696,15 +2843,8 @@ class OutputManager {
     }).map(cssValue => {
       return cssValue.getHeader();
     });
-    /*
-    this.cssBox = CSSBox.fromMatcher(matcher);
-    this.cssZIndex = matcher.getZIndex();
-    this.cssTransform = matcher.getTransform(el);
-    this.backgroundImage = matcher.getBackgroundImage(el);
-    */
   }
 
-  /*
   getStyles(exclude) {
     var lines = [];
 
@@ -2835,14 +2975,15 @@ class OutputManager {
   }
   */
 
-  getTabCharacter(name) {
-    switch(name) {
+  getTab() {
+    switch(this.settings.get(Settings.TAB_STYLE)) {
       case Settings.TABS_TWO_SPACES:  return '  ';
       case Settings.TABS_FOUR_SPACES: return '    ';
       case Settings.TABS_TAB:         return '\u0009';
     }
   }
 
+  /*
   getRoundedRotation() {
     var r = this.transform.getRotation();
     if (r % 1 !== 0.5) {
@@ -2851,6 +2992,7 @@ class OutputManager {
     if (r === 360) r = 0;
     return r;
   }
+  */
 
 }
 
@@ -6340,7 +6482,7 @@ class CSSPositioningProperty {
 
   static getCSSValue(matcher, prop) {
     var cssValue = matcher.getMatchedCSSValue(prop);
-    return cssValue && cssValue.val === 'auto' ? null : cssValue;
+    return cssValue && !cssValue.isNull() ? cssValue : null;
   }
 
   constructor(cssValue, prop) {
@@ -6378,6 +6520,12 @@ class CSSPositioningProperty {
 
   isInverted(prop) {
     return this.prop === 'right' || this.prop === 'bottom';
+  }
+
+  // --- CSS Declarations
+
+  appendCSSDeclaration(declarations) {
+    return this.cssValue.appendCSSDeclaration(this.prop, declarations);
   }
 
 }
@@ -6677,6 +6825,15 @@ class CSSBox {
 
   getDimensionsHeader() {
     return [this.cssWidth, this.cssHeight].join(', ');
+  }
+
+  // --- CSS Declarations
+
+  appendCSSDeclarations(declarations) {
+    this.cssV.appendCSSDeclaration(declarations);
+    this.cssH.appendCSSDeclaration(declarations);
+    this.cssWidth.appendCSSDeclaration('width', declarations);
+    this.cssHeight.appendCSSDeclaration('height', declarations);
   }
 
   /*
@@ -7139,6 +7296,13 @@ class CSSCompositeTransform {
     }).join(', ');
   }
 
+  appendCSSDeclaration(declarations) {
+    var str = this.toString();
+    if (str) {
+      declarations.push(`transform: ${str};`);
+    }
+  }
+
   toString() {
     return this.functions.join(' ');
   }
@@ -7221,7 +7385,7 @@ class CSSCompositeTransformFunction {
   // transform: skewY(1.07rad);
 
   toString() {
-    return this.prop + '(' + this.values.join(',') + ')';
+    return this.prop + '(' + this.values.join(', ') + ')';
   }
 
   canMutate() {
@@ -7280,7 +7444,7 @@ class CSSValue {
 
     // TODO: test these on different properties!
     if (str === 'auto') {
-      return new CSSValue('auto');
+      return new CSSValue();
     }
 
     var match = str.match(/([.-\d]+)(px|%|em|deg|rad|turn|v(?:w|h|min|max))?$/);
@@ -7326,29 +7490,29 @@ class CSSValue {
     return this.val == null;
   }
 
-  isAuto() {
-    return this.val === 'auto';
-  }
-
   clone() {
     return new CSSValue(this.val, this.unit, this.precision);
   }
 
-  getHeader() {
+  appendCSSDeclaration(prop, declarations) {
     var str = this.toString();
-    return str === 'auto' ? '' : str;
+    if (str) {
+      // Using interpolation here to ensure that valueOf
+      // doesn't trump toString via the + operator.
+      declarations.push(`${prop}: ${str};`);
+    }
+  }
+
+  getHeader() {
+    return this.toString();
   }
 
   valueOf() {
-    return this.isAuto() || this.isNull() ? 0 : this.val;
+    return this.isNull() ? 0 : this.val;
   }
 
   toString() {
     var str;
-
-    if (this.isAuto()) {
-      return 'auto';
-    }
 
     if (this.isNull()) {
       return '';
@@ -7363,6 +7527,7 @@ class CSSValue {
     // to prevent unnecessary trailing zeroes, such as 45.00.
     return parseFloat(this.val.toFixed(this.precision)).toString() + this.unit;
   }
+
 }
 
 /*-------------------------] CSSPixelValue [--------------------------*/
@@ -7752,6 +7917,13 @@ class CSSBackgroundImage {
   setPosition(x, y) {
     this.cssLeft.px = x;
     this.cssTop.px  = y;
+  }
+
+  appendCSSDeclaration(declarations) {
+    var str = this.getPositionString();
+    if (str) {
+      declarations.push(`background-position: ${str};`);
+    }
   }
 
   clone() {

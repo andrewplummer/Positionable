@@ -219,4 +219,15 @@ describe('CSSBox', function(uiRoot) {
     assert.equal(box.getDimensionsHeader(), '150px, 150px');
   });
 
+  // --- CSS Declarations
+
+  it('should append its CSS declarations', function() {
+    var box = CSSBox.fromPixelValues(100, 100, 150, 150), decs = [];
+    box.appendCSSDeclarations(decs);
+    assert.equal(decs[0], 'top: 100px;');
+    assert.equal(decs[1], 'left: 100px;');
+    assert.equal(decs[2], 'width: 150px;');
+    assert.equal(decs[3], 'height: 150px;');
+  });
+
 });

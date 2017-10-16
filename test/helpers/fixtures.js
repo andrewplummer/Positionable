@@ -3,7 +3,9 @@
 function appendFixture(classNames, parent) {
   parent = parent || document.getElementById('element-fixtures');
   var el = document.createElement('div');
-  classNames.filter(n => n).forEach(n => el.classList.add(n));
+  classNames.filter(n => n).forEach(n => {
+    n.split(' ').forEach(c => el.classList.add(c));
+  });
   parent.appendChild(el);
   return el;
 }
@@ -50,6 +52,10 @@ function appendBackgroundImageBox(className, parent) {
 
 function appendRotatedBackgroundImageBox(className, parent) {
   return appendFixture(['box', 'absolute-box', 'rotated-box', 'background-image-box', className], parent);
+}
+
+function appendComplexBox(className, parent) {
+  return appendFixture(['box', 'z-box', 'inverted-box', 'transformed-box', 'background-image-box', className], parent);
 }
 
 function appendNestedBox() {

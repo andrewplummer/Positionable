@@ -5,6 +5,10 @@
   height: 100px;
 }
 
+.z-box {
+  z-index: 400;
+}
+
 .box--override {
   transform: rotate(30deg);
   z-index: 10;

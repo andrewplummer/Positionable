@@ -75,4 +75,23 @@ describe('CSSPositioningProperty', function(uiRoot) {
     assert.equal(hProp.toString(), '100px');
     assert.equal(vProp.toString(), '100px');
   });
+
+  // --- CSS Declarations
+
+  it('should append its CSS declaration', function() {
+    var decs = [];
+    setupNormal();
+    hProp.appendCSSDeclaration(decs);
+    vProp.appendCSSDeclaration(decs);
+    assert.equal(decs[0], 'left: 100px;');
+    assert.equal(decs[1], 'top: 100px;');
+  });
+
+  it('should not append its CSS declaration if null', function() {
+    var decs = [], prop;
+    prop = new CSSPositioningProperty(new CSSValue(), 'left');
+    prop.appendCSSDeclaration(decs);
+    assert.equal(decs.length, 0);
+  });
+
 });
