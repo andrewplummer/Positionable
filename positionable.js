@@ -42,7 +42,6 @@
 // - test what happens if extension button hit twice
 
 // - TODO: matrix
-// - TODO: unselect with shift
 // - both degrees and radians!
 
 // TODO: allow bottom/right position properties??
