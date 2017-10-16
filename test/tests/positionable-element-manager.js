@@ -333,14 +333,14 @@ describe('PositionableElementManager', function(uiRoot) {
 
   });
 
-  it('should toggle focus on shift click', function() {
+  it('should not toggle focus on shift click with single element', function() {
     setupAbsolute();
 
     clickElement(el);
     assertElementFocused(el, true);
 
     shiftClickElement(el);
-    assertElementFocused(el, false);
+    assertElementFocused(el, true);
   });
 
   it('should toggle focus on shift click when multiple are focused', function() {

@@ -1000,9 +1000,7 @@ class DragTarget extends BrowserEventTarget {
   }
 
   onNativeClick(evt) {
-    // Draggable links should not be followed
-    // when clicked.
-    evt.stopPropagation();
+    // Draggable links should not be followed when clicked.
     evt.preventDefault();
   }
 
@@ -4022,7 +4020,7 @@ class PositionableElementManager {
   }
 
   onElementClick(evt, element) {
-    if (this.removeOnClick) {
+    if (this.removeOnClick && this.focusedElements.length > 1) {
       this.removeFocused(element);
     }
   }
