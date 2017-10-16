@@ -97,8 +97,8 @@ describe('PositionableElementManager', function(uiRoot) {
     listener = null;
   });
 
-  function setupAbsolute() {
-    el = appendAbsoluteBox();
+  function setupAbsolute(className) {
+    el = appendAbsoluteBox(className);
     manager.findElements();
   }
 
@@ -968,6 +968,36 @@ describe('PositionableElementManager', function(uiRoot) {
     setupAbsolute();
     dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 200);
     assert.equal(el.style.transform, 'rotate(45deg)');
+  });
+
+  it('should rotate with radians', function() {
+    setupAbsolute('rotated-radian-box');
+    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
+    assert.equal(el.style.transform, 'rotate(3.14rad)');
+  });
+
+  it('should not allow radians to go negative', function() {
+    setupAbsolute('rotated-radian-box');
+    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
+    assert.equal(el.style.transform, 'rotate(5.5rad)');
+  });
+
+  it('should rotate with gradians', function() {
+    setupAbsolute('rotated-gradian-box');
+    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
+    assert.equal(el.style.transform, 'rotate(200grad)');
+  });
+
+  it('should not allow gradians to go negative', function() {
+    setupAbsolute('rotated-gradian-box');
+    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
+    assert.equal(el.style.transform, 'rotate(350grad)');
+  });
+
+  it('should rotate with turns', function() {
+    setupAbsolute('rotated-turn-box');
+    dragElement(getUiElement(el, '.rotation-handle'), 100, 100, 200, 100);
+    assert.equal(el.style.transform, 'rotate(0.75turn)');
   });
 
   it('should rotate based on the handle origin, not the original element rotation', function() {

@@ -42,7 +42,6 @@
 // - test what happens if extension button hit twice
 
 // - TODO: matrix
-// - both degrees and radians!
 
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
@@ -6306,16 +6305,32 @@ class SpriteRecognizer {
 
 class Point {
 
-  static get DEGREES_IN_RADIANS() { return 180 / Math.PI; }
+  static get DEG_TO_RAD()  { return this.DEGREES_PER_TURN / this.RADIANS_PER_TURN;  }
+  static get DEG_TO_GRAD() { return this.DEGREES_PER_TURN / this.GRADIANS_PER_TURN; }
+
+  static get RADIANS_PER_TURN()   { return Math.PI * 2; };
+  static get DEGREES_PER_TURN()   { return 360 };
+  static get GRADIANS_PER_TURN()  { return 400 };
 
   static degToRad(deg) {
-    return deg / Point.DEGREES_IN_RADIANS;
+    return this.convertRotation(deg / Point.DEG_TO_RAD, Point.RADIANS_PER_TURN);
   }
 
   static radToDeg(rad) {
-    var deg = rad * Point.DEGREES_IN_RADIANS;
-    while(deg < 0) deg += 360;
-    return deg;
+    return this.convertRotation(rad * Point.DEG_TO_RAD, Point.DEGREES_PER_TURN);
+  }
+
+  static degToGrad(deg) {
+    return this.convertRotation(deg / Point.DEG_TO_GRAD, Point.GRADIANS_PER_TURN);
+  }
+
+  static gradToDeg(grad) {
+    return this.convertRotation(grad * Point.DEG_TO_GRAD, Point.DEGREES_PER_TURN);
+  }
+
+  static convertRotation(val, turn) {
+    while (val < 0) val += turn;
+    return val;
   }
 
   constructor(x, y) {
@@ -7513,7 +7528,7 @@ class CSSValue {
       return new CSSValue();
     }
 
-    var match = str.match(/([.-\d]+)(px|%|em|deg|rad|turn|v(?:w|h|min|max))?$/);
+    var match = str.match(/([.-\d]+)(px|%|em|deg|g?rad|turn|v(?:w|h|min|max))?$/);
     var val   = parseFloat(match[1]);
     var unit  = match[2] || '';
 
@@ -7531,6 +7546,7 @@ class CSSValue {
 
       case 'deg':  return new CSSDegreeValue(val);
       case 'rad':  return new CSSRadianValue(val);
+      case 'grad': return new CSSGradianValue(val);
       case 'turn': return new CSSTurnValue(val);
       case 'px':   return new CSSPixelValue(val, subpixel);
 
@@ -7685,6 +7701,28 @@ class CSSRadianValue extends CSSValue {
 
   clone() {
     return new CSSRadianValue(this.val);
+  }
+
+}
+
+/*-------------------------] CSSGradianValue [--------------------------*/
+
+class CSSGradianValue extends CSSValue {
+
+  constructor(val) {
+    super(val, 'grad');
+  }
+
+  get deg() {
+    return Point.gradToDeg(this.val);
+  }
+
+  set deg(val) {
+    this.val = Point.degToGrad(val);
+  }
+
+  clone() {
+    return new CSSGradianValue(this.val);
   }
 
 }

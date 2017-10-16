@@ -42,6 +42,18 @@
   transform: rotate(45deg);
 }
 
+.rotated-radian-box {
+  transform: rotate(1.57rad);
+}
+
+.rotated-gradian-box {
+  transform: rotate(100grad);
+}
+
+.rotated-turn-box {
+  transform: rotate(.5turn);
+}
+
 .translated-box {
   transform: translate(20px, 30px);
 }
