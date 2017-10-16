@@ -178,7 +178,7 @@ describe('PositionableElement', function(uiRoot) {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.pushState();
-    p.resize(new Point(30, 80), 'se');
+    p.resize(30, 80, 'se');
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '130px');
@@ -189,7 +189,7 @@ describe('PositionableElement', function(uiRoot) {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.pushState();
-    p.resize(new Point(30, 80), 'nw');
+    p.resize(30, 80, 'nw');
     assert.equal(el.style.left,   '130px');
     assert.equal(el.style.top,    '180px');
     assert.equal(el.style.width,  '70px');
@@ -200,7 +200,7 @@ describe('PositionableElement', function(uiRoot) {
     el = appendAbsoluteBox();
     p = new PositionableElement(el, listener);
     p.pushState();
-    p.resize(new Point(200, 100), 'se', true);
+    p.resize(200, 100, 'se', true);
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '200px');
@@ -247,7 +247,7 @@ describe('PositionableElement', function(uiRoot) {
 
     // State 3
     p.pushState();
-    p.resize(new Point(30, 80), 'se');
+    p.resize(30, 80, 'se');
 
     // State 4
     p.pushState();
@@ -328,7 +328,7 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(el.style.transform,  'rotate(45deg)');
 
     p.pushState();
-    p.resize(new Point(20, 20), 'nw');
+    p.resize(20, 20, 'nw');
     assert.equal(el.style.transform,  'translate(-10px, 4.14px) rotate(45deg)');
     assert.equal(el.style.top,  '120px');
     assert.equal(el.style.left, '120px');
@@ -417,7 +417,7 @@ describe('PositionableElement', function(uiRoot) {
     p.setPeekMode(true);
     p.lockPeekMode();
     p.pushState();
-    p.resize(new Point(30, 80), 'se');
+    p.resize(30, 80, 'se');
     p.setPeekMode(false);
 
     assert.equal(el.style.left,   '100px');
@@ -449,7 +449,7 @@ describe('PositionableElement', function(uiRoot) {
     p.setPeekMode(true);
     p.lockPeekMode();
     p.pushState();
-    p.resize(new Point(30, 80), 'se');
+    p.resize(30, 80, 'se');
 
     p.undo();
     assert.equal(el.style.top,    '100px');

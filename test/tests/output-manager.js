@@ -403,7 +403,7 @@ describe('OutputManager', function(uiRoot) {
     element.move(23, 49);
 
     element.pushState();
-    element.resize(new Point(30, 80), 'se');
+    element.resize(30, 80, 'se');
 
     settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
 

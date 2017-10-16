@@ -45,8 +45,6 @@
 // - test finding elements after settings update
 // - test what happens if extension button hit twice
 
-// - TODO: why does resize() need to take a vector? why not x,y?
-
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
 // TODO: do we really need to round anything that toFixed can't handle?
@@ -1994,10 +1992,10 @@ class PositionableElement extends BrowserEventTarget {
       // off the end once we're done.
 
       this.pushState();
-      this.resize(nwOffset, 'nw', false);
+      this.resize(nwOffset.x, nwOffset.y, 'nw', false);
 
       this.pushState();
-      this.resize(seOffset, 'se', false);
+      this.resize(seOffset.x, seOffset.y, 'se', false);
 
       // Note that we need to set the background position after resizing
       // here for percentage based background positions, as they use the
@@ -2058,7 +2056,7 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  resize(vector, dir, constrain) {
+  resize(x, y, dir, constrain) {
     var lastState, lastBox, nextBox, ratio, rotation;
 
     lastState = this.getLastState();
@@ -2069,7 +2067,7 @@ class PositionableElement extends BrowserEventTarget {
     rotation = this.cssTransform.getRotation();
     //var handle = this.getHandle(handleName);
 
-    nextBox.moveEdges(vector.x, vector.y, dir);
+    nextBox.moveEdges(x, y, dir);
 
     if (constrain) {
       nextBox.constrain(ratio, dir);
@@ -4390,9 +4388,8 @@ class PositionableElementManager {
   }
 
   applyResizeNudge(x, y, dir) {
-    var vector = new Point(x, y);
     this.focusedElements.forEach(el => {
-      el.resize(vector, dir)
+      el.resize(x, y, dir)
     });
     this.listener.onDimensionsUpdated();
   }
@@ -4445,7 +4442,7 @@ class PositionableElementManager {
 
     this.onElementDragMove();
     this.focusedElements.forEach(el => {
-      el.resize(vector, handle.name, evt.drag.constrained);
+      el.resize(vector.x, vector.y, handle.name, evt.drag.constrained);
     });
   }
 
