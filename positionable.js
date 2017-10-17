@@ -744,7 +744,7 @@ class ShadowDomInjector {
       container.style.height = '100%';
     }
     container.className = UI_HOST_CLASS_NAME;
-    var root = container.createShadowRoot();
+    var root = container.attachShadow({ mode: 'closed' });
 
     // Relative extension paths don't seem to be supported in HTML template
     // files, so manually swap out these tokens for the extension path.
