@@ -7711,9 +7711,7 @@ class CSSValue {
       return this.val.toString();
     }
 
-    // Converting once to a fixed string, then parsing back to a float
-    // to prevent unnecessary trailing zeroes, such as 45.00.
-    return parseFloat(this.val.toFixed(this.precision)).toString() + this.unit;
+    return roundWithPrecision(this.val, this.precision).toString() + this.unit;
   }
 
 }

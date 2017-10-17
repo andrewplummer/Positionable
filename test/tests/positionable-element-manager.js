@@ -893,7 +893,7 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should allow a constrained resize on an inverted box to reflect from its opposite edge', function() {
     setupInvertedBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 0, 0, 2920, 2080);
-    assertInvertedBoxDimensions('-500px', '-63px', '1000px', '563px');
+    assertInvertedBoxDimensions('-500px', '-62px', '1000px', '563px');
   });
 
   it('should allow a constrained resize on an inverted box to reflect from its positioned edge', function() {
