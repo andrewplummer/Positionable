@@ -81,20 +81,29 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(getUiElement(document.documentElement, '#element-area-transform').textContent, '45deg');
   });
 
-  it('should not render elements with empty fields', function() {
+  it('should not render zIndex when empty empty fields', function() {
+    var zIndexEl = getUiElement(document.documentElement, '#element-area-zindex')
     panel.showElementArea();
+
     panel.renderElementZIndex('');
-    panel.renderElementTransform('');
-    assert.equal(getUiElement(document.documentElement, '#element-area-zindex').style.display, 'none');
-    assert.equal(getUiElement(document.documentElement, '#element-area-transform').style.display, 'none');
+    assert.equal(zIndexEl.style.display, 'none');
 
     // Assure the elements are shown again when re-rendering
     panel.renderElementZIndex('10');
+    assert.equal(zIndexEl.style.display, '');
+    assert.equal(zIndexEl.textContent, '10z');
+  });
+
+  it('should deactivate transform when empty', function() {
+    var transformEl = getUiElement(document.documentElement, '#element-area-transform')
+
+    panel.showElementArea();
+    panel.renderElementTransform('');
+    assert.isFalse(panel.el.classList.contains(ControlPanel.TRANSFORM_ACTIVE_CLASS));
+
     panel.renderElementTransform('50deg');
-    assert.equal(getUiElement(document.documentElement, '#element-area-zindex').style.display, '');
-    assert.equal(getUiElement(document.documentElement, '#element-area-transform').style.display, '');
-    assert.equal(getUiElement(document.documentElement, '#element-area-zindex').textContent, '10z');
-    assert.equal(getUiElement(document.documentElement, '#element-area-transform').textContent, '50deg');
+    assert.equal(transformEl.textContent, '50deg');
+    assert.isTrue(panel.el.classList.contains(ControlPanel.TRANSFORM_ACTIVE_CLASS));
   });
 
   it('should render background position and hide when not active', function() {
@@ -102,7 +111,7 @@ describe('ControlPanel', function(uiRoot) {
     panel.showElementArea();
     panel.renderElementBackgroundPosition('20px 40px');
     assert.equal(getUiElement(document.documentElement, '#element-area-background-position').textContent, '20px 40px');
-    assert.isTrue(getUiElement(document.documentElement, '#control-panel').classList.contains(className));
+    assert.isTrue(panel.el.classList.contains(className));
   });
 
   // --- Rendering Modes

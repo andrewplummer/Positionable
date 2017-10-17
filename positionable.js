@@ -42,6 +42,7 @@
 // - test what happens if extension button hit twice
 
 // - TODO: matrix
+// - TODO: test apple.com
 
 // TODO: allow bottom/right position properties??
 // TODO: not sure if I'm liking the accessors... they're too mysterious
@@ -74,6 +75,31 @@ function hashIntersect(obj1, obj2) {
     }
   }
   return result;
+}
+
+function roundWithPrecision(n, precision) {
+  var mult = Math.pow(10, precision);
+  return Math.round(n * mult) / mult;
+}
+
+function roundToSignificant(n, precision) {
+  var abs, mult;
+
+  abs = Math.abs(n);
+  mult = Math.pow(10, -precision);
+
+  // If the number is smaller than the maximum allowed
+  // precision, then just return 0
+  if (abs < mult) {
+    return 0;
+  }
+
+  // Rounding to a certain number of significant figures,
+  // as compared to a certain decimal precision can be tricky.
+  // Get the number of significant figures to the left of the
+  // decimal here and subtract it from the total significant
+  // amount to allow Math.round to work with a multiplier < 0.
+  return roundWithPrecision(n, precision - Math.ceil(Math.log10(abs)));
 }
 
 function throwError(str, halt) {
@@ -4677,7 +4703,9 @@ class DragSelection extends DragTarget {
 class ControlPanel extends DraggableElement {
 
   static get ACTIVE_CLASS() { return 'control-panel--active'; }
-  static get BACKGROUND_POSITION_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
+
+  static get TRANSFORM_ACTIVE_CLASS()  { return 'control-panel--element-transform-active'; }
+  static get BACKGROUND_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
 
   constructor(root, listener) {
     super(root.getElementById('control-panel'));
@@ -4810,6 +4838,10 @@ class ControlPanel extends DraggableElement {
       this.removeClass(this.getAreaActiveClassName(this.activeArea));
       this.activeArea.hide();
     }
+    if (area !== this.elementArea) {
+      this.removeClass(ControlPanel.TRANSFORM_ACTIVE_CLASS);
+      this.removeClass(ControlPanel.BACKGROUND_ACTIVE_CLASS);
+    }
     this.addClass(this.getAreaActiveClassName(area));
     area.show();
     this.activeArea = area;
@@ -4865,31 +4897,45 @@ class ControlPanel extends DraggableElement {
   }
 
   renderElementZIndex(zIndex) {
-    this.renderElementDetails(this.renderedElements.zIndex, zIndex, 'z');
+    if (zIndex) {
+      zIndex += 'z';
+    }
+    this.renderElementDetails(this.renderedElements.zIndex, zIndex);
   }
 
   renderElementTransform(transform) {
-    this.renderElementDetails(this.renderedElements.transform, transform);
+    this.renderElementDetails(
+      this.renderedElements.transform,
+      transform,
+      ControlPanel.TRANSFORM_ACTIVE_CLASS
+    );
   }
 
   renderElementBackgroundPosition(backgroundPosition) {
-    this.renderElementDetails(this.renderedElements.backgroundPosition, backgroundPosition);
-    if (backgroundPosition) {
-      this.addClass(ControlPanel.BACKGROUND_POSITION_ACTIVE_CLASS);
-    } else {
-      this.removeClass(ControlPanel.BACKGROUND_POSITION_ACTIVE_CLASS);
-    }
+    this.renderElementDetails(
+      this.renderedElements.backgroundPosition,
+      backgroundPosition,
+      ControlPanel.BACKGROUND_ACTIVE_CLASS
+    );
   }
 
-  renderElementDetails(el, text, append) {
+  renderElementDetails(el, text, className) {
     if (this.activeArea !== this.elementArea) {
       return;
     }
     if (text) {
-      el.text(text + (append || ''));
-      el.unhide();
+      el.text(text);
+      if (className) {
+        this.addClass(className);
+      } else {
+        el.unhide();
+      }
     } else {
-      el.hide();
+      if (className) {
+        this.removeClass(className);
+      } else {
+        el.hide();
+      }
     }
   }
 
@@ -7301,16 +7347,16 @@ class CSSCompositeTransform {
 
   static get PARSE_REG() { return /(\w+)\((.+?)\)/g; };
 
-  constructor(functions) {
-    this.functions = functions || [];
-  }
-
   static parse(str, el) {
     var reg = CSSCompositeTransform.PARSE_REG, functions = [], match;
     while (match = reg.exec(str)) {
       functions.push(CSSCompositeTransformFunction.create(match[1], match[2], el));
     }
     return new CSSCompositeTransform(functions);
+  }
+
+  constructor(functions) {
+    this.functions = functions || [];
   }
 
   getRotation() {
@@ -7327,12 +7373,6 @@ class CSSCompositeTransform {
       this.functions.push(func);
     }
   }
-
-  /*
-  addRotation(amt) {
-    this.setRotation(this.getRotation() + amt);
-  }
-  */
 
   getTranslation () {
     var func = this.getTranslationFunction();
@@ -7355,30 +7395,8 @@ class CSSCompositeTransform {
     }
   }
 
-  getRotationFunction() {
-    return this.functions.find(function(f) {
-      return f.prop === CSSCompositeTransformFunction.ROTATE;
-    });
-  }
-
-  getTranslationFunction() {
-    return this.functions.find(function(f) {
-      return f.prop === CSSCompositeTransformFunction.TRANSLATE;
-    });
-  }
-
-  isNull() {
-    return this.functions.length === 0;
-  }
-
   getHeader() {
-    var rFunc = this.getRotationFunction();
-    var tFunc = this.getTranslationFunction();
-    return [rFunc, tFunc].filter(func => {
-      return func;
-    }).map(func => {
-      return func.values.join(', ');
-    }).join(', ');
+    return this.functions.map(f => f.getHeader()).join(' | ');
   }
 
   appendCSSDeclaration(declarations) {
@@ -7392,13 +7410,6 @@ class CSSCompositeTransform {
     return this.functions.join(' ');
   }
 
-  /*
-  getRotationString() {
-    var func = this.getRotationFunction();
-    return func ? func.values[0].toString() : '';
-  }
-  */
-
   clone() {
     var functions = this.functions.map(function(f) {
       if (f.canMutate()) {
@@ -7409,28 +7420,35 @@ class CSSCompositeTransform {
     return new CSSCompositeTransform(functions);
   }
 
+  // --- Private
+
+  getRotationFunction() {
+    return this.functions.find(function(f) {
+      return f.prop === CSSCompositeTransformFunction.ROTATE;
+    });
+  }
+
+  getTranslationFunction() {
+    return this.functions.find(function(f) {
+      return f.prop === CSSCompositeTransformFunction.TRANSLATE;
+    });
+  }
+
 }
 /*-------------------------] CSSCompositeTransformFunction [--------------------------*/
 
-  /*
-  var match = transform && transform.match(/rotateZ\(([\d.]+)\s*(deg|rad|turn)\)?/i);
-  if (match) {
-    var val  = parseFloat(match[1]);
-    var unit = parseFloat(match[2]);
-    if (unit === 'rad') {
-      val = Point.radToDeg(val);
-    } else if (unit === 'turn') {
-      val *= 360;
-    }
-    return val;
-  }
-  return 0;
-  */
-
 class CSSCompositeTransformFunction {
 
-  static get ROTATE()             { return 'rotate' };
-  static get TRANSLATE()          { return 'translate' };
+  static get ROTATE()    { return 'rotate' };
+  static get TRANSLATE() { return 'translate' };
+  static get SCALE()     { return 'scale' };
+  static get SKEW()      { return 'skew' };
+
+  static get ROTATE_SHORT()    { return 'r' };
+  static get TRANSLATE_SHORT() { return 't' };
+  static get SCALE_SHORT()     { return 'scale' };
+  static get SKEW_SHORT()      { return 'skew' };
+
   static get ALLOWED_NAMES_REG()  { return /^rotate|(translate|scale|skew)[XY]?$/ };
 
   static create(prop, values, el) {
@@ -7469,6 +7487,23 @@ class CSSCompositeTransformFunction {
   // transform: skewX(30deg);
   // transform: skewY(1.07rad);
 
+  getHeader() {
+    return this.getShort() + ': ' + this.values.join(', ');
+  }
+
+  getShort() {
+    switch (this.prop) {
+      case CSSCompositeTransformFunction.ROTATE:
+        return CSSCompositeTransformFunction.ROTATE_SHORT;
+      case CSSCompositeTransformFunction.TRANSLATE:
+        return CSSCompositeTransformFunction.TRANSLATE_SHORT;
+      case CSSCompositeTransformFunction.SCALE:
+        return CSSCompositeTransformFunction.SCALE_SHORT;
+      case CSSCompositeTransformFunction.SKEW:
+        return CSSCompositeTransformFunction.SKEW_SHORT;
+    }
+  }
+
   toString() {
     return this.prop + '(' + this.values.join(', ') + ')';
   }
@@ -7491,19 +7526,90 @@ class CSSCompositeTransformFunction {
 
 class CSSMatrixTransform {
 
-  static parse() {
-    // TODO: this
-    var match = matrix.match(/[-.\d]+/g);
-    if (match) {
-      a = parseFloat(match[0]);
-      b = parseFloat(match[1]);
-      return new Point(a, b).getAngle();
-    }
-    return 0;
+  static get PARSE_REG() { return /matrix\((.+)\)/; }
+
+  static get PRECISION()       { return 6; }
+  static get PRECISION_SHORT() { return 2; }
+
+  static parse(str) {
+    str = str.match(CSSMatrixTransform.PARSE_REG)[1];
+    var values = str.split(', ').map(s => parseFloat(s));
+    return new CSSMatrixTransform(...values);
+  }
+
+  constructor(a, b, c, d, tx, ty) {
+    this.a  = a;
+    this.b  = b;
+    this.c  = c;
+    this.d  = d;
+    this.tx = tx;
+    this.ty = ty;
+  }
+
+  getRotation() {
+    return Point.radToDeg(Math.atan2(this.b, this.a));
+  }
+
+  setRotation(deg) {
+    this.addRotation(deg - this.getRotation());
+  }
+
+  getTranslation() {
+    return new Point(this.tx, this.ty);
+  }
+
+  setTranslation(p) {
+    this.tx = p.x;
+    this.ty = p.y;
+  }
+
+  getHeader() {
+    return this.toString(true);
+  }
+
+  appendCSSDeclaration(declarations) {
+    declarations.push(`transform: ${this};`);
+  }
+
+  toString(short) {
+    var a  = this.getFixed(this.a,  short);
+    var b  = this.getFixed(this.b,  short);
+    var c  = this.getFixed(this.c,  short);
+    var d  = this.getFixed(this.d,  short);
+    var tx = this.getFixed(this.tx, short);
+    var ty = this.getFixed(this.ty, short);
+    return `matrix(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})`;
   }
 
   clone() {
-    // TODO: this
+    return new CSSMatrixTransform(this.a, this.b, this.c, this.d, this.tx, this.ty);
+  }
+
+  // --- Private
+
+  getFixed(n, short) {
+    return roundToSignificant(n, short ? CSSMatrixTransform.PRECISION_SHORT : CSSMatrixTransform.PRECISION);
+  }
+
+  addRotation(deg) {
+    var rad = Point.degToRad(deg), sin, cos;
+
+    sin = Math.sin(rad);
+    cos = Math.cos(rad);
+
+    this.multiply(cos, sin, -sin, cos);
+  }
+
+  multiply(a2, b2, c2, d2) {
+    var a1 = this.a;
+    var b1 = this.b;
+    var c1 = this.c;
+    var d1 = this.d;
+
+    this.a = (a1 * a2) + (c1 * b2);
+    this.b = (b1 * a2) + (d1 * b2);
+    this.c = (a1 * c2) + (c1 * d2);
+    this.d = (b1 * c2) + (d1 * d2);
   }
 
 }

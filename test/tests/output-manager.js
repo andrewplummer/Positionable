@@ -150,22 +150,22 @@ describe('OutputManager', function(uiRoot) {
 
   it('should get correct header for a rotated box', function() {
     var element = appendRotatedPositionableElement();
-    assert.equal(manager.getTransformHeader(element), '45deg');
+    assert.equal(manager.getTransformHeader(element), 'r: 45deg');
   });
 
   it('should get correct header for a translated box', function() {
     var element = appendTranslatedPositionableElement();
-    assert.equal(manager.getTransformHeader(element), '20px, 30px');
+    assert.equal(manager.getTransformHeader(element), 't: 20px, 30px');
   });
 
   it('should get correct header for a rotated and translated box', function() {
     var element = appendTransformedPositionableElement();
-    assert.equal(manager.getTransformHeader(element), '45deg, 20px, 30px');
+    assert.equal(manager.getTransformHeader(element), 'r: 45deg | t: 20px, 30px');
   });
 
   it('should get correct header for a rotated and translated box using decimals', function() {
     var element = appendSubpixelTransformedPositionableElement();
-    assert.equal(manager.getTransformHeader(element), '45.33deg, 20.23px, 30.21px');
+    assert.equal(manager.getTransformHeader(element), 'r: 45.33deg | t: 20.23px, 30.21px');
   });
 
   it('should get correct background image', function() {
