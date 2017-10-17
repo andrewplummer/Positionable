@@ -156,6 +156,11 @@ label {
   pointer-events: none;
 }
 
+.align-area,
+.element-area {
+  margin-right: 60px;
+}
+
 .control-panel--align-active .mode-indicator,
 .control-panel--element-active .mode-indicator {
   opacity: 1;
@@ -204,6 +209,7 @@ label {
   font-size: 14px;
   margin-bottom: 2px;
   white-space: nowrap;
+  overflow-x: auto;
 }
 
 .element-area-field:before {
@@ -220,9 +226,9 @@ label {
 }
 
 .element-area-extra {
-  transition: opacity 150ms linear 75ms, height 300ms cubic-bezier(0.680, 0.000, 0.355, 1.000);
+  transition: opacity 150ms linear 75ms, max-height 300ms cubic-bezier(0.680, 0.000, 0.355, 1.000);
   opacity: 0;
-  height: 0;
+  max-height: 0;
 }
 
 #element-area-properties:before {
@@ -239,11 +245,11 @@ label {
 
 .control-panel--element-transform-active,
 .control-panel--element-background-active {
-  height: 130px;
+  height: 131px;
 }
 
 .control-panel--element-transform-active.control-panel--element-background-active {
-  height: 150px;
+  height: 152px;
 }
 
 .control-panel--element-transform-active .element-area-field:before,
@@ -255,7 +261,7 @@ label {
 .control-panel--element-transform-active #element-area-transform,
 .control-panel--element-background-active #element-area-background-position {
   opacity: 1;
-  height: 20px;
+  max-height: 3em;
 }
 
 /*---------------------------] Alignment Area [-----------------------*/
