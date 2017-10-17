@@ -29,7 +29,6 @@
 // - make sure static elements are changed to absolute
 // - test command key on windows
 // - test undefined top/left/width/height values
-// - test nested scrolling elements
 // - test same domain / cross domain image
 // - test z-index on overlapping elements when dragging
 // - test on elements with transitions
@@ -735,7 +734,6 @@ class ShadowDomInjector {
     });
   }
 
-
   injectShadowDom(templateHtml) {
     var container = document.createElement('div');
     container.style.position = 'absolute';
@@ -751,7 +749,8 @@ class ShadowDomInjector {
     // Relative extension paths don't seem to be supported in HTML template
     // files, so manually swap out these tokens for the extension path.
     root.innerHTML = templateHtml.replace(ShadowDomInjector.EXTENSION_RELATIVE_PATH_REG, ShadowDomInjector.BASE_PATH);
-    this.parent.appendChild(container);
+
+    this.parent.insertBefore(container, this.parent.firstChild);
 
     return root;
   }
@@ -974,6 +973,8 @@ class DragTarget extends BrowserEventTarget {
     this.hovering = false;
   }
 
+  // --- Setup
+
   setupCtrlKeyReset() {
     this.ctrlKeyReset = true;
   }
@@ -994,8 +995,6 @@ class DragTarget extends BrowserEventTarget {
       el.addEventListener('click', this.stopEventPropagation);
     });
   }
-
-  // --- Setup
 
   setupDragIntents() {
     this.bindEvent('mouseover', this.onMouseOver);
@@ -3716,12 +3715,12 @@ class AppController {
         this.elementManager.applyBackgroundNudge(evt.x, evt.y);
         break;
 
-      // Single values will just take the y vector here.
+      // Flip the y value for single values
       case NudgeManager.ROTATE_MODE:
-        this.elementManager.applyRotationNudge(evt.y);
+        this.elementManager.applyRotationNudge(-evt.y);
         break;
       case NudgeManager.Z_INDEX_MODE:
-        this.elementManager.applyZIndexNudge(evt.y);
+        this.elementManager.applyZIndexNudge(-evt.y);
         break;
     }
   }
