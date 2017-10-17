@@ -7406,12 +7406,12 @@ class CSSCompositeTransform {
   }
 
   getTranslation () {
-    var func = this.getTranslationFunction();
+    var func = this.getPreceedingTranslationFunction();
     return func ? new Point(func.values[0].px, func.values[1].px) : new Point(0, 0);
   }
 
   setTranslation (p) {
-    var func = this.getTranslationFunction();
+    var func = this.getPreceedingTranslationFunction();
     if (func) {
       func.values[0].px = p.x;
       func.values[1].px = p.y;
@@ -7421,7 +7421,7 @@ class CSSCompositeTransform {
       var xVal = new CSSPixelValue(p.x, true);
       var yVal = new CSSPixelValue(p.y, true);
       func = new CSSCompositeTransformFunction(CSSCompositeTransformFunction.TRANSLATE, [xVal, yVal])
-      // Ensure that translate comes first, otherwise anchors will not work.
+      // Ensure that translate comes before rotation, otherwise anchors will not work.
       this.functions.unshift(func);
     }
   }
@@ -7459,10 +7459,14 @@ class CSSCompositeTransform {
     });
   }
 
-  getTranslationFunction() {
-    return this.functions.find(function(f) {
-      return f.prop === CSSCompositeTransformFunction.TRANSLATE;
-    });
+  getPreceedingTranslationFunction() {
+    for (let i = 0, func; func = this.functions[i]; i++) {
+      if (func.prop === CSSCompositeTransformFunction.TRANSLATE) {
+        return func;
+      } else if (func.prop === CSSCompositeTransformFunction.ROTATE) {
+        return;
+      }
+    }
   }
 
 }
