@@ -300,6 +300,24 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(manager.elements.length, 1);
   });
 
+  it('should not error on boxes with translate percentages', function() {
+    appendAbsoluteBox('translate-percent-box');
+    manager.findElements();
+    assert.equal(manager.elements.length, 1);
+  });
+
+  it('should not error on boxes with matrix3d', function() {
+    var el = appendAbsoluteBox('matrix-3d-box');
+    manager.findElements();
+
+    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 200);
+    dragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 250, 250);
+
+    assert.equal(el.style.transform, '');
+    assert.equal(el.style.width, '150px');
+    assert.equal(el.style.height, '150px');
+  });
+
   // --- Focusing
 
   it('should focus element on position handle mousedown', function() {
@@ -971,31 +989,31 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should rotate with radians', function() {
-    setupAbsolute('rotated-radian-box');
+    setupAbsolute('rotate-radian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
     assert.equal(el.style.transform, 'rotate(3.14rad)');
   });
 
   it('should not allow radians to go negative', function() {
-    setupAbsolute('rotated-radian-box');
+    setupAbsolute('rotate-radian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
     assert.equal(el.style.transform, 'rotate(5.5rad)');
   });
 
   it('should rotate with gradians', function() {
-    setupAbsolute('rotated-gradian-box');
+    setupAbsolute('rotate-gradian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
     assert.equal(el.style.transform, 'rotate(200grad)');
   });
 
   it('should not allow gradians to go negative', function() {
-    setupAbsolute('rotated-gradian-box');
+    setupAbsolute('rotate-gradian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
     assert.equal(el.style.transform, 'rotate(350grad)');
   });
 
   it('should rotate with turns', function() {
-    setupAbsolute('rotated-turn-box');
+    setupAbsolute('rotate-turn-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 100, 200, 100);
     assert.equal(el.style.transform, 'rotate(0.75turn)');
   });

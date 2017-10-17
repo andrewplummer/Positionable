@@ -57,6 +57,10 @@ describe('CSSMatrixTransform', function(uiRoot) {
     return strings[composite];
   }
 
+  it('should report that it can be rotated', function() {
+    assert.isTrue(getNullMatrix().canBeRotated());
+  });
+
   it('should be able to parse a matrix string', function() {
     assert.equal(CSSMatrixTransform.parse(m('rotate(45deg)')).toString(), m('rotate(45deg)'));
   });

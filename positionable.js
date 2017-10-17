@@ -1835,14 +1835,21 @@ class PositionableElement extends BrowserEventTarget {
       sw: new ResizeHandle(root, 'sw', this),
       nw: new ResizeHandle(root, 'nw', this),
     };
-    this.positionHandle = new PositionHandle(root, this);
 
-    // TODO: different origins?
+    this.positionHandle = new PositionHandle(root, this);
     this.rotationHandle = new RotationHandle(root, this);
+
+    if (!this.cssTransform.canBeRotated()) {
+      this.rotationHandle.hide();
+    }
+  }
+
+  hasRotation() {
+    return this.cssTransform.canBeRotated();
   }
 
   getRotation() {
-    return this.cssTransform.getRotation();
+    return this.cssTransform.canBeRotated() ? this.cssTransform.getRotation() : null;
   }
 
   setRotation(r) {
@@ -2107,7 +2114,7 @@ class PositionableElement extends BrowserEventTarget {
     nextBox   = lastBox.clone();
     ratio     = lastBox.getRatio();
     //var lastRatio = lastBox.getRatio();
-    rotation = this.cssTransform.getRotation();
+    rotation = this.getRotation();
     //var handle = this.getHandle(handleName);
 
     nextBox.moveEdges(x, y, dir);
@@ -2213,13 +2220,15 @@ class PositionableElement extends BrowserEventTarget {
 
   rotate(offset, constrained) {
     var r;
+    if (!this.cssTransform.canBeRotated()) {
+      return;
+    }
     if (constrained) {
       offset = Math.round(offset / PositionableElement.ROTATION_SNAPPING) * PositionableElement.ROTATION_SNAPPING;
     }
     r = this.getLastRotation() + offset;
     this.cssTransform.setRotation(r);
     this.renderTransform();
-    this.rotationHandle.rotation = r;
   }
 
   /*
@@ -3761,6 +3770,7 @@ class AppController {
     this.renderFocusedZIndex();
     this.renderFocusedTransform();
     this.renderFocusedBackgroundPosition();
+    this.renderNoRotation();
   }
 
   renderFocusedSelector() {
@@ -3796,6 +3806,12 @@ class AppController {
   renderFocusedBackgroundPosition() {
     this.withSingleFocusedElement(el => {
       this.controlPanel.renderElementBackgroundPosition(this.outputManager.getBackgroundPositionHeader(el));
+    });
+  }
+
+  renderNoRotation() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementCanRotate(el.hasRotation());
     });
   }
 
@@ -4761,6 +4777,7 @@ class ControlPanel extends DraggableElement {
       'dimensions':         new Element(root.getElementById('element-area-dimensions')),
       'zIndex':             new Element(root.getElementById('element-area-zindex')),
       'transform':          new Element(root.getElementById('element-area-transform')),
+      'noRotation':         new Element(root.getElementById('element-area-no-rotation')),
       'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
     };
   }
@@ -4909,6 +4926,14 @@ class ControlPanel extends DraggableElement {
       transform,
       ControlPanel.TRANSFORM_ACTIVE_CLASS
     );
+  }
+
+  renderElementCanRotate(flag) {
+    if (flag) {
+      this.renderedElements.noRotation.hide();
+    } else {
+      this.renderedElements.noRotation.unhide();
+    }
   }
 
   renderElementBackgroundPosition(backgroundPosition) {
@@ -7296,6 +7321,8 @@ class CSSRuleMatcher {
     var str = this.getProperty('transform');
     if (!str || str === 'none') {
       return new CSSCompositeTransform();
+    } else if (str.match(/matrix3d/)) {
+      return new CSSMatrix3DTransform(str);
     } else if (str.match(/matrix/)) {
       return CSSMatrixTransform.parse(str);
     } else {
@@ -7357,6 +7384,10 @@ class CSSCompositeTransform {
 
   constructor(functions) {
     this.functions = functions || [];
+  }
+
+  canBeRotated() {
+    return true;
   }
 
   getRotation() {
@@ -7449,24 +7480,8 @@ class CSSCompositeTransformFunction {
   static get SCALE_SHORT()     { return 'scale' };
   static get SKEW_SHORT()      { return 'skew' };
 
-  static get ALLOWED_NAMES_REG()  { return /^rotate|(translate|scale|skew)[XY]?$/ };
-
   static create(prop, values, el) {
-
-    if (!CSSCompositeTransformFunction.ALLOWED_NAMES_REG.test(prop)) {
-      throwError('Transform ' + prop + ' is not allowed. Only 2d transforms are supported.');
-    }
-
-    values = values.split(',').map(function(str) {
-      var val = CSSValue.parse(str, prop, el, true);
-      if (val.unit === '%') {
-        // Won't support percentages here as they would have to take scale
-        // operations into account as well, which is too complex to handle.
-        throwError('Percent values are not allowed in translate operarations.');
-      }
-      return val;
-    });
-
+    values = values.split(',').map(str => CSSValue.parse(str, prop, el, true));
     return new CSSCompositeTransformFunction(prop, values);
   }
 
@@ -7546,6 +7561,10 @@ class CSSMatrixTransform {
     this.ty = ty;
   }
 
+  canBeRotated() {
+    return true;
+  }
+
   getRotation() {
     return Point.radToDeg(Math.atan2(this.b, this.a));
   }
@@ -7610,6 +7629,32 @@ class CSSMatrixTransform {
     this.b = (b1 * a2) + (d1 * b2);
     this.c = (a1 * c2) + (c1 * d2);
     this.d = (b1 * c2) + (d1 * d2);
+  }
+
+}
+
+/*-------------------------] CSSMatrixTransform [--------------------------*/
+
+class CSSMatrix3DTransform {
+
+  constructor(str) {
+    this.str = str;
+  }
+
+  canBeRotated() {
+    return false;
+  }
+
+  getHeader(){
+    return this.toString();
+  }
+
+  toString() {
+    return this.str;
+  }
+
+  clone() {
+    return this;
   }
 
 }

@@ -190,6 +190,16 @@
       this.results.push(new TestResult(reg.test(arg), arg + ' should match ' + reg));
     }
 
+    assertThrows(fn) {
+      var caught = false;
+      try {
+        fn();
+      } catch(err) {
+        caught = true;
+      }
+      this.results.push(new TestResult(caught, 'Error should have been raised'));
+    }
+
     assertEqualWithTolerance(arg1, arg2, tolerance) {
       var msg  = `${arg1} should be within ${tolerance} of ${arg2}`;
       var pass = (arg1 >= arg2 - tolerance) && (arg1 <= arg2 + tolerance);
@@ -203,6 +213,7 @@
         isTrue: this.assertTrue.bind(this),
         isNull: this.assertNull.bind(this),
         exists: this.assertExists.bind(this),
+        throws: this.assertThrows.bind(this),
         isFalse: this.assertFalse.bind(this),
         isUndefined: this.assertUndefined.bind(this),
         equalWithTolerance: this.assertEqualWithTolerance.bind(this)

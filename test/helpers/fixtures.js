@@ -32,11 +32,11 @@ function appendInvertedBox(className, parent) {
 }
 
 function appendRotatedBox(className, parent) {
-  return appendFixture('rotated-box', ['box', 'rotated-box', className], parent);
+  return appendFixture('rotate-box', ['box', 'rotate-box', className], parent);
 }
 
 function appendTranslatedBox(className, parent) {
-  return appendFixture('translated-box', ['box', 'translated-box', className], parent);
+  return appendFixture('translate-box', ['box', 'translate-box', className], parent);
 }
 
 function appendTransformedBox(className, parent) {
@@ -52,7 +52,7 @@ function appendBackgroundImageBox(className, parent) {
 }
 
 function appendRotatedBackgroundImageBox(className, parent) {
-  return appendFixture('rotated-background-box', ['box', 'absolute-box', 'rotated-box', 'background-image-box', className], parent);
+  return appendFixture('rotate-background-box', ['box', 'absolute-box', 'rotate-box', 'background-image-box', className], parent);
 }
 
 function appendComplexBox(className, parent) {

@@ -38,26 +38,6 @@
   right: 100px;
 }
 
-.rotated-box {
-  transform: rotate(45deg);
-}
-
-.rotated-radian-box {
-  transform: rotate(1.57rad);
-}
-
-.rotated-gradian-box {
-  transform: rotate(100grad);
-}
-
-.rotated-turn-box {
-  transform: rotate(.5turn);
-}
-
-.translated-box {
-  transform: translate(20px, 30px);
-}
-
 .transformed-box {
   transform: rotate(45deg) translate(20px, 30px);
 }
@@ -70,6 +50,106 @@
   position: absolute;
   top: 0;
   width: 100px;
+}
+
+.matrix-box {
+  transform: matrix3d(1,0,0,1,0,0);
+}
+
+.matrix-3d-box {
+  transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+}
+
+.perspective-box {
+  transform: perspective(500px);
+}
+
+.rotate-box {
+  transform: rotate(45deg);
+}
+
+.rotate-3d-box {
+  transform: rotate3d(1, 2, 3, 20deg);
+}
+
+.rotate-x-box {
+  transform: rotateX(20deg);
+}
+
+.rotate-y-box {
+  transform: rotateY(20deg);
+}
+
+.rotate-z-box {
+  transform: rotateZ(20deg);
+}
+
+.rotate-radian-box {
+  transform: rotate(1.57rad);
+}
+
+.rotate-gradian-box {
+  transform: rotate(100grad);
+}
+
+.rotate-turn-box {
+  transform: rotate(.5turn);
+}
+
+.scale-box {
+  transform: scale(2, 3);
+}
+
+.scale-3d-box {
+  transform: scale(2, 3, 4);
+}
+
+.scale-x-box {
+  transform: scaleX(2);
+}
+
+.scale-y-box {
+  transform: scaleY(2);
+}
+
+.scale-z-box {
+  transform: scaleZ(2);
+}
+
+.skew-box {
+  transform: skew(20deg, 20deg);
+}
+
+.skew-x-box {
+  transform: skewX(20deg);
+}
+
+.skew-y-box {
+  transform: skewY(20deg);
+}
+
+.translate-box {
+  transform: translate(20px, 30px);
+}
+
+.translate-x-box {
+  transform: translateX(20px);
+}
+
+.translate-y-box {
+  transform: translateY(20px);
+}
+
+.translate-z-box {
+  transform: translateZ(20px);
+}
+
+.translate-percent-box {
+  transform: translate(20%, 30%);
+}
+
+.translate-3d-box {
+  transform: translate3d(20px, 30px, 0);
 }
 
 .background-image-box {

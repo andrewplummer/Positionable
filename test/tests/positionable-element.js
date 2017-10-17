@@ -165,7 +165,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to move the background image on a rotated box', function() {
-    el = appendAbsoluteBox('background-image-box rotated-box');
+    el = appendAbsoluteBox('background-image-box rotate-box');
     p = new PositionableElement(el, listener);
     p.pushState();
     p.moveBackground(100, 100);
@@ -536,6 +536,12 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(getUiElement(el, '.resize-handle-ne'), null);
     assert.equal(getUiElement(el, '.resize-handle-se'), null);
     assert.equal(getUiElement(el, '.resize-handle-sw'), null);
+  });
+
+  it('should not show rotation handle on a matrix3d box', function() {
+    el = appendAbsoluteBox('matrix-3d-box');
+    p = new PositionableElement(el, listener);
+    assert.equal(getUiElement(el, '.rotation-handle').style.display, 'none');
   });
 
 });

@@ -190,7 +190,7 @@ label {
 /*---------------------------] Element Area [-----------------------*/
 
 .control-panel--element-active {
-  width: 450px;
+  width: 500px;
   height: 110px;
 }
 
@@ -200,7 +200,7 @@ label {
   margin-bottom: .2em;
 }
 
-.element-area-property:not(:first-child):before {
+.element-area-property:not(:first-of-type):before {
   content: '|';
   margin-right: .2em;
 }
@@ -209,18 +209,13 @@ label {
   font-size: 14px;
   margin-bottom: 2px;
   white-space: nowrap;
-  overflow-x: auto;
 }
 
-.element-area-field:before {
-  content: '';
+.element-area-property-icon {
   display: inline-block;
   vertical-align: -2px;
-  width: 0;
-  height: 13px;
-  background-size: 13px 13px;
-  background-repeat: no-repeat;
   margin-right: 5px;
+  width: 0;
   opacity: 0;
   transition: opacity 150ms linear 200ms, width 300ms cubic-bezier(0.680, 0.000, 0.355, 1.000);
 }
@@ -231,16 +226,17 @@ label {
   max-height: 0;
 }
 
-#element-area-properties:before {
-  background-image: url('chrome-extension://__MSG_@@extension_id__/images/icons/dimensions.svg');
+.element-area-extra-property {
+  display: inline-block;
+  vertical-align: top;
+  overflow-x: auto;
+  max-width: 85%;
 }
 
-#element-area-transform:before {
-  background-image: url('chrome-extension://__MSG_@@extension_id__/images/icons/transform.svg');
-}
-
-#element-area-background-position:before {
-  background-image: url('chrome-extension://__MSG_@@extension_id__/images/icons/background-square.svg');
+.element-area-no-rotation {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 5px;
 }
 
 .control-panel--element-transform-active,
@@ -252,14 +248,14 @@ label {
   height: 152px;
 }
 
-.control-panel--element-transform-active .element-area-field:before,
-.control-panel--element-background-active .element-area-field:before {
+.control-panel--element-transform-active .element-area-property-icon,
+.control-panel--element-background-active .element-area-property-icon {
   width: 13px;
   opacity: 1;
 }
 
-.control-panel--element-transform-active #element-area-transform,
-.control-panel--element-background-active #element-area-background-position {
+.control-panel--element-transform-active .element-area-extra-transform,
+.control-panel--element-background-active .element-area-extra-background-position {
   opacity: 1;
   max-height: 3em;
 }

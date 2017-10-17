@@ -181,6 +181,14 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(manager.getTransformHeader(element), '');
   });
 
+  it('should get headers for a matrix3d box', function() {
+    var element = appendPositionableElement('matrix-3d-box');
+    assert.equal(manager.getPositionHeader(element), '100px, 100px');
+    assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
+    assert.equal(manager.getZIndexHeader(element), '');
+    assert.equal(manager.getTransformHeader(element), 'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
+  });
+
   // --- Style Declarations
 
   it('should get correct styles', function() {
@@ -201,7 +209,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendRotatedPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      #rotated-box {
+      #rotate-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -216,7 +224,7 @@ describe('OutputManager', function(uiRoot) {
     var element = appendTranslatedPositionableElement();
     assert.equal(manager.getStyles([element]), dec`
 
-      #translated-box {
+      #translate-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -424,7 +432,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should only output changed styles', function() {
-    var element = appendPositionableElement('z-box translated-box background-image-box');
+    var element = appendPositionableElement('z-box translate-box background-image-box');
 
     element.pushState();
     element.move(23, 49);
