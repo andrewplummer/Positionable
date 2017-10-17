@@ -215,15 +215,16 @@ label {
   display: inline-block;
   vertical-align: -2px;
   margin-right: 5px;
-  width: 0;
+  margin-left: -20px;
   opacity: 0;
-  transition: opacity 150ms linear 200ms, width 300ms cubic-bezier(0.680, 0.000, 0.355, 1.000);
+  transition: opacity 150ms linear 50ms, margin-left 300ms ease-in-out;
 }
 
 .element-area-extra {
-  transition: opacity 150ms linear 75ms, max-height 300ms cubic-bezier(0.680, 0.000, 0.355, 1.000);
+  transition: opacity 150ms linear 50ms, max-height 300ms ease-in-out;
   opacity: 0;
   max-height: 0;
+  overflow: hidden;
 }
 
 .element-area-extra-property {
@@ -250,14 +251,14 @@ label {
 
 .control-panel--element-transform-active .element-area-property-icon,
 .control-panel--element-background-active .element-area-property-icon {
-  width: 13px;
+  margin-left: 0;
   opacity: 1;
 }
 
 .control-panel--element-transform-active .element-area-extra-transform,
 .control-panel--element-background-active .element-area-extra-background-position {
   opacity: 1;
-  max-height: 3em;
+  max-height: 2.4em;
 }
 
 /*---------------------------] Alignment Area [-----------------------*/
@@ -809,6 +810,7 @@ label {
   text-align: center;
   font-weight: 200;
   font-size: 26px;
+  color: #333;
   opacity: 0;
   transition: opacity 500ms linear;
   font-family: "Open Sans", sans-serif;

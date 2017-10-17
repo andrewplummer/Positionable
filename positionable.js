@@ -7,10 +7,6 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - scrolling
-// - initial state
-// - undo for everything
-// - unsupported transforms
 // - double check precisions!
 // - rotate before translate??
 // - rotation with a different origin?
@@ -25,7 +21,6 @@
 // - add "8 spaces" to tab style list
 // - test background-image: none
 // - resize while flipping between sizing modes (jumps?)
-// - position drag then hit ctrl to background drag (jumps?)
 // - make sure static elements are changed to absolute
 // - test command key on windows
 // - test undefined top/left/width/height values
@@ -33,21 +28,19 @@
 // - test z-index on overlapping elements when dragging
 // - test on elements with transitions
 // - should it work on absolute elements with no left/right/top/bottom properties?
-// - should it work on static elements and force them to absolute positioning?
-// - should it unintentionally work on elements that are part of other extensions?
-// - what if they hit the extension button twice?
 // - test after save should go back to element area
 // - test finding elements after settings update
 // - test what happens if extension button hit twice
+// - test with animations?
+// - cursors working ok??
+// - bug: select multiple then command to drag one... jumps? (looks like scrolling)
+// - bug: select multiple then drag fixed with scroll... others jump way down
+// - bug: undo after align doesn't seem to work??
 
-// - TODO: matrix
-// - TODO: test apple.com
+// - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
+// - TODO: more rotate icon increments for smoother transition?
 
 // TODO: allow bottom/right position properties??
-// TODO: not sure if I'm liking the accessors... they're too mysterious
-// TODO: do we really need to round anything that toFixed can't handle?
-// TODO: distribute should be greyed out if less than 3 elements
-// TODO: why are there 2 copy animations??
 // TODO: validate query selectors! and also re-get elements on query selector change
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
@@ -538,7 +531,6 @@ class Element {
 
   constructor(el) {
     this.el = el;
-    this.isShadow = this.isShadowElement(el);
   }
 
   delegate(methodName, target) {
@@ -556,14 +548,7 @@ class Element {
   }
 
   getClassName(name) {
-    // TODO: remove this methods if all ui elements are in a shadowDOM... can't because:
-    // - PositionableElementManager needs a body class for the rotation cursor XXXXXXXXX
-    //return (this.isShadow ? '' : EXTENSION_CLASS_PREFIX) + name;
     return name;
-  }
-
-  isShadowElement(el) {
-    return el.getRootNode() !== document;
   }
 
   // TODO: clean this up
@@ -744,7 +729,11 @@ class ShadowDomInjector {
       container.style.height = '100%';
     }
     container.className = UI_HOST_CLASS_NAME;
-    var root = container.attachShadow({ mode: 'closed' });
+
+    // Note that changing this to attachShadow was causing some weird
+    // issues with eventing (window copy event was not firing) in both
+    // open and closed modes, so going back to createShadowRoot.
+    var root = container.createShadowRoot();
 
     // Relative extension paths don't seem to be supported in HTML template
     // files, so manually swap out these tokens for the extension path.
@@ -903,6 +892,11 @@ class BrowserEventTarget extends Element {
     this.bindEventWithPrevent(eventName, () => {});
   }
   */
+
+  stopEventPropagation(evt) {
+    evt.stopPropagation();
+  }
+
 
   addEventListener(eventName, handler) {
     this.listeners[eventName] = handler;
@@ -1254,10 +1248,6 @@ class DragTarget extends BrowserEventTarget {
     if (!this.dragging && !this.hovering) {
       this.onDragIntentStop(evt);
     }
-  }
-
-  stopEventPropagation(evt) {
-    evt.stopPropagation();
   }
 
   handleCtrlDoubleClick(evt) {
@@ -3396,7 +3386,6 @@ class AppController {
     this.keyManager = new KeyManager(this);
 
     this.keyManager.setupKey(KeyManager.SHIFT_KEY);
-    this.keyManager.setupKey(KeyManager.META_KEY);
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
     this.keyManager.setupKey(KeyManager.ALT_KEY);
 
@@ -5941,6 +5930,7 @@ class Form extends BrowserEventTarget {
   constructor(el, listener) {
     super(el);
     this.listener = listener;
+    this.bindEvent('keydown', this.stopEventPropagation);
     this.bindEvent('submit', this.onFormSubmit);
     this.bindEvent('reset', this.onFormReset);
   }
