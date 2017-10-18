@@ -950,6 +950,34 @@ describe('PositionableElementManager', function(uiRoot) {
     assertBoxTranslation(25.1, -10.4);
   });
 
+  it('should stay anchored when resizing a rotated box with top left origin', function() {
+    setupAbsolute('rotate-tl-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 100, 241, 100, 341);
+    assertInvertedBoxDimensions('', '', '171px', '171px');
+    assertBoxTranslation(0, 0);
+  });
+
+  it('should stay anchored when resizing a rotated box with top right origin', function() {
+    setupAbsolute('rotate-tr-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 100, 221, 100, 321);
+    assertInvertedBoxDimensions('', '', '171px', '171px');
+    assertBoxTranslation(-20.71, 50);
+  });
+
+  it('should stay anchored when resizing a rotated box with bottom left origin', function() {
+    setupAbsolute('rotate-bl-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 673, 346, 673, 446);
+    assertInvertedBoxDimensions('', '', '171px', '171px');
+    assertBoxTranslation(-50, -20.71);
+  });
+
+  it('should stay anchored when resizing a rotated box with bottom right origin', function() {
+    setupAbsolute('rotate-br-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 700, 277, 700, 377);
+    assertInvertedBoxDimensions('', '', '171px', '171px');
+    assertBoxTranslation(-70.71, 29.29);
+  });
+
   // --- Resizing multiple elements
 
   it('should resize multiple elements from se handle', function() {

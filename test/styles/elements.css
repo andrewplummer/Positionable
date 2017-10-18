@@ -96,6 +96,31 @@
   transform: rotate(.5turn);
 }
 
+.rotate-tl-box {
+  transform-origin: top left;
+  transform: rotate(45deg);
+}
+
+.rotate-tr-box {
+  transform-origin: top right;
+  transform: rotate(45deg);
+}
+
+.rotate-bl-box {
+  transform-origin: bottom left;
+  transform: rotate(45deg);
+}
+
+.rotate-br-box {
+  transform-origin: bottom right;
+  transform: rotate(45deg);
+}
+
+.rotate-point-box {
+  transform-origin: 20px 20px;
+  transform: rotate(45deg);
+}
+
 .scale-box {
   transform: scale(2, 3);
 }

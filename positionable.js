@@ -7,7 +7,6 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - double check precisions!
 // - rotate before translate??
 // - rotation with a different origin?
 // - try different rotation configurations (negative, over 360?)
@@ -39,6 +38,7 @@
 
 // - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
 // - TODO: more rotate icon increments for smoother transition?
+// - TODO: can we not handle percents in transforms??
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
@@ -1082,7 +1082,7 @@ class DragTarget extends BrowserEventTarget {
     this.lastMouseEvent = evt;
 
     if (!this.dragging) {
-      this.onDragStart(evt);
+      this.onDragStart(this.lastMouseEvent);
       this.dragging = true;
     }
     this.onDragMove(evt);
@@ -1793,7 +1793,9 @@ class PositionableElement extends BrowserEventTarget {
     */
 
     this.cssZIndex = matcher.getZIndex();
+    // TODO: rename getTransform to getCSSTransform, etc
     this.cssTransform = matcher.getTransform();
+    this.cssTransformOrigin = matcher.getTransformOrigin();
     this.cssBackgroundImage = matcher.getBackgroundImage();
   }
 
@@ -2133,52 +2135,49 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   getAnchorPosition(dir, cssBox, rotation) {
-    var boxNormal = this.getBoxNormal(cssBox);
-    var anchorNormal = this.getAnchorNormal(dir);
+    var dimensions, boxXYOffset, boxDirection, transformOrigin, anchorCoords;
 
-    // The distance to the center of the box. This will be the
-    // same regardless of the box being inverted or not.
-    var boxCenterOffset = cssBox.getDimensions().multiply(.5);
+    dimensions = cssBox.getDimensions();
+    boxXYOffset = cssBox.getXYOffset();
+    boxDirection = cssBox.getDirectionVector();
+    transformOrigin = this.cssTransformOrigin.getCoords(dimensions);
 
-    // The position of the rotated anchor point from the center of
-    // the box. Rotation needs to be applied around the center, which
-    // is why the vectors need to be broken down and then multiplied
-    // by the box normal to ensure that inverted axes remain correct
-    // relative to the box.
-    var anchorOffsetFromCenter = boxCenterOffset.multiply(anchorNormal).rotate(rotation).multiply(boxNormal);
+    // The coordinates of the anchor are the result of getting
+    // the non-rotated anchor position, rotating it around the
+    // transform origin, and adding the origin back to arrive
+    // at the final position.
+    anchorCoords = this.getAnchorNormal(dir)
+      .multiply(dimensions)
+      .subtract(transformOrigin)
+      .rotate(rotation)
+      .add(transformOrigin);
 
-    // The final return value will be the result of adding all the
-    // positions together. Note that the final value will not be an
-    // absolute point relative to the viewport or page, as it is only
-    // needed to calculate offsets from other anchor positions. However,
-    // it does need to be in an X/Y coordinate system as the result will
-    // be used for setting translation, so the final result needs to be
-    // multiplied by the box normal to flip any inverted axes of the box.
-    return cssBox.getOffsetPosition().add(boxCenterOffset).add(anchorOffsetFromCenter).multiply(boxNormal);
-  }
-
-  getBoxNormal(cssBox) {
-    // The box normal represents the direction of the internal
-    // coordinates of a box relative to its position, which may
-    // have inverted axes.
-    var x = cssBox.hasInvertedAxis('h') ? -1 : 1;
-    var y = cssBox.hasInvertedAxis('v') ? -1 : 1;
-    return new Point(x, y);
+    // The returned value is the box's offset in x/y space
+    // plus the anchor coords. If the box is inverted, it needs
+    // to take this into account by adding the amount that its
+    // dimensions expand into x/y space and flipping its direction
+    // vectors. Note that the return value does not represent
+    // an actual position, but instead is used to calculate offsets
+    // from previous values to determine how much an anchor has moved.
+    return cssBox.getOffsetPosition()
+      .add(boxXYOffset)
+      .multiply(boxDirection)
+      .add(anchorCoords);
   }
 
   getAnchorNormal(dir) {
     // The anchor normal represents the normalized offset of an
-    // anchor point opposite the given handle direction from the
-    // center. These are given in a normal X/Y coordinate system.
+    // anchor point opposite the given handle direction. These
+    // These are given in a normal X/Y coordinate system.
     switch (dir) {
-      case 'n':  return new Point( 0, 1);
-      case 's':  return new Point( 0,-1);
-      case 'w':  return new Point( 1, 0);
-      case 'e':  return new Point(-1, 0);
-      case 'sw': return new Point( 1,-1);
+      case 'n':  return new Point(.5, 1);
+      case 's':  return new Point(.5, 0);
+      case 'w':  return new Point( 1,.5);
+      case 'e':  return new Point( 0,.5);
+      case 'sw': return new Point( 1, 0);
       case 'nw': return new Point( 1, 1);
-      case 'ne': return new Point(-1, 1);
-      case 'se': return new Point(-1,-1);
+      case 'ne': return new Point( 0, 1);
+      case 'se': return new Point( 0, 0);
     }
   }
 
@@ -4711,6 +4710,9 @@ class ControlPanel extends DraggableElement {
   static get TRANSFORM_ACTIVE_CLASS()  { return 'control-panel--element-transform-active'; }
   static get BACKGROUND_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
 
+  static get LONG_SELECTOR_LENGTH() { return 30; }
+  static get LONG_SELECTOR_CLASS()  { return 'element-area-selector--long'; }
+
   constructor(root, listener) {
     super(root.getElementById('control-panel'));
     this.disableEventsForInteractiveElements();
@@ -4891,6 +4893,11 @@ class ControlPanel extends DraggableElement {
 
   renderElementSelector(selector) {
     this.renderElementDetails(this.renderedElements.selector, selector);
+    if (selector.length > ControlPanel.LONG_SELECTOR_LENGTH) {
+      this.renderedElements.selector.addClass(ControlPanel.LONG_SELECTOR_CLASS);
+    } else {
+      this.renderedElements.selector.removeClass(ControlPanel.LONG_SELECTOR_CLASS);
+    }
   }
 
   renderElementPosition(position) {
@@ -6797,6 +6804,26 @@ class CSSBox {
     this.moveEdge(y, this.cssV, this.cssHeight, this.getEdgeForDir(dir, 'v'));
   }
 
+  getDirectionVector() {
+    // A normalized vector describing the directions into which the
+    // box expands. If the box has inverted axes, then it will expand
+    // into a negative direction, otherwise positive.
+    return new Point(
+      this.hasInvertedAxis('h') ? -1 : 1,
+      this.hasInvertedAxis('v') ? -1 : 1
+    );
+  }
+
+  getXYOffset() {
+    // A vector that represents the offset into x/y space that the box
+    // expands into. A normal box will not affect this as it expands
+    // down/right. However an inverted box will move into x/y space.
+    return new Point(
+      this.hasInvertedAxis('h') ? this.cssWidth.px  : 0,
+      this.hasInvertedAxis('v') ? this.cssHeight.px : 0
+    );
+  }
+
   moveEdge(offset, cssPos, cssDim, edge) {
     var ppx, dpx, edge;
 
@@ -7307,6 +7334,7 @@ class CSSRuleMatcher {
   }
 
   getTransform() {
+    // TODO: should this not be getMatchedProperty? we don't want to default back to the matrix
     var str = this.getProperty('transform');
     if (!str || str === 'none') {
       return new CSSCompositeTransform();
@@ -7317,6 +7345,13 @@ class CSSRuleMatcher {
     } else {
       return CSSCompositeTransform.parse(str, this.el);
     }
+  }
+
+  getTransformOrigin() {
+    // Only used matched properties to get a null string if it is
+    // not set, as the computed property will return an absolute
+    // pixel value which may change as the element is resized.
+    return CSSTransformOrigin.create(this.getMatchedProperty('transform-origin'), this.el);
   }
 
   getBackgroundImage() {
@@ -7474,7 +7509,15 @@ class CSSCompositeTransformFunction {
   static get SKEW_SHORT()      { return 'skew' };
 
   static create(prop, values, el) {
-    values = values.split(',').map(str => CSSValue.parse(str, prop, el, true));
+    // TODO: handle single percent values??
+    values = values.split(', ').map((str, i) => {
+      if (i === 0) {
+        prop = CSSPercentValue.TRANSLATE_LEFT;
+      } else {
+        prop = CSSPercentValue.TRANSLATE_TOP;
+      }
+      return CSSValue.parse(str, prop, el, true)
+    });
     return new CSSCompositeTransformFunction(prop, values);
   }
 
@@ -7652,17 +7695,91 @@ class CSSMatrix3DTransform {
 
 }
 
+/*-------------------------] CSSTransformOrigin [--------------------------*/
+
+class CSSTransformOrigin {
+
+  static get TOP()    { return 'top';    }
+  static get LEFT()   { return 'left';   }
+  static get RIGHT()  { return 'right';  }
+  static get BOTTOM() { return 'bottom'; }
+  static get CENTER() { return 'center'; }
+
+  static create(str, el) {
+    var arg1, arg2, cssX, cssY;
+
+    str = str || '';
+    [arg1, arg2] = str.split(' ');
+
+    if (this.isYProperty(arg1)) {
+      cssX = this.getCSSValue(arg2, CSSPercentValue.TRANSLATE_LEFT, el);
+      cssY = this.getCSSValue(arg1, CSSPercentValue.TRANSLATE_TOP, el);
+    } else {
+      cssX = this.getCSSValue(arg1, CSSPercentValue.TRANSLATE_LEFT, el);
+      cssY = this.getCSSValue(arg2, CSSPercentValue.TRANSLATE_TOP, el);
+    }
+    return new CSSTransformOrigin(cssX, cssY);
+  }
+
+  static getCSSValue(str, percentProp, el) {
+    if (!str || str === 'initial') {
+      str = '50%';
+    } else {
+      switch (str) {
+        case CSSTransformOrigin.TOP:    str = '0%';   break;
+        case CSSTransformOrigin.LEFT:   str = '0%';   break;
+        case CSSTransformOrigin.RIGHT:  str = '100%'; break;
+        case CSSTransformOrigin.BOTTOM: str = '100%'; break;
+        case CSSTransformOrigin.CENTER: str = '50%';  break;
+      }
+    }
+    return CSSValue.parse(str, percentProp, el, true);
+  }
+
+  static isYProperty(prop) {
+    return prop === CSSTransformOrigin.TOP ||
+           prop === CSSTransformOrigin.BOTTOM;
+  }
+
+  constructor(cssX, cssY) {
+    this.cssX = cssX;
+    this.cssY = cssY;
+  }
+
+  getCoords(dim) {
+    var x, y;
+    if (dim) {
+      x = this.getCoordRelativeToDimensions(this.cssX, dim.x);
+      y = this.getCoordRelativeToDimensions(this.cssY, dim.y);
+    } else {
+      x = this.getAbsoluteCoord(this.cssX);
+      y = this.getAbsoluteCoord(this.cssY);
+    }
+    return new Point(x, y);
+  }
+
+  getCoordRelativeToDimensions(cssVal, dimVal) {
+    if (cssVal.isPercent()) {
+      if (!cssVal.val) {
+        return 0;
+      }
+      return cssVal.val / 100 * dimVal;
+    } else {
+      return this.getAbsoluteCoord(cssVal);
+    }
+  }
+
+  getAbsoluteCoord(cssVal) {
+    return cssVal.px;
+  }
+
+}
+
 /*-------------------------] CSSValue [--------------------------*/
 
 class CSSValue {
 
-  constructor(val, unit, precision) {
-    this.val       = val;
-    this.unit      = unit;
-    this.precision = precision || 0;
-  }
-
-  static parse(str, prop, el, subpixel) {
+  static parse(str, percentProp, el, subpixel) {
 
     if (!str) {
       return null;
@@ -7678,9 +7795,10 @@ class CSSValue {
     var unit  = match[2] || '';
 
     // TODO: START: put this somewhere
+    // TODO: make these constants???
     switch (unit) {
 
-      case '%':  return CSSPercentValue.create(val, prop, el);
+      case '%':  return CSSPercentValue.create(val, percentProp, el);
       case 'em': return CSSEmValue.create(val, el);
 
       case 'vw':
@@ -7703,6 +7821,12 @@ class CSSValue {
     }
   }
 
+  constructor(val, unit, precision) {
+    this.val       = val;
+    this.unit      = unit;
+    this.precision = precision || 0;
+  }
+
   /* TODO: ADD functions should not mutate, so this method either
    * needs to be changed or should go away
   add(amt) {
@@ -7715,6 +7839,10 @@ class CSSValue {
 
   isNull() {
     return this.val == null || this.val === 'auto';
+  }
+
+  isPercent() {
+    return this.unit === '%';
   }
 
   clone() {
@@ -7895,9 +8023,25 @@ class CSSTurnValue extends CSSValue {
 
 class CSSPercentValue extends CSSValue {
 
+  static get TOP()    { return 'top';    }
+  static get LEFT()   { return 'left';   }
+  static get RIGHT()  { return 'right';  }
+  static get BOTTOM() { return 'bottom'; }
+
+  static get WIDTH()  { return 'width';  }
+  static get HEIGHT() { return 'height'; }
+
+  static get TRANSLATE_TOP()   { return 'translateTop';  }
+  static get TRANSLATE_LEFT()  { return 'translateLeft'; }
+
+  static get BACKGROUND_TOP()  { return 'backgroundTop';  }
+  static get BACKGROUND_LEFT() { return 'backgroundLeft'; }
+
   static create(val, prop, el) {
-    if (CSSPercentValue.isBackgroundProperty(prop)) {
+    if (this.isBackgroundProperty(prop)) {
       return new CSSBackgroundPercentValue(val, prop, el);
+    } else if (this.isTranslateProperty(prop)) {
+      return new CSSPercentValue(val, prop, el);
     } else {
       var offsetElement = el.offsetParent;
       var isFixed = !offsetElement || this.hasStaticBodyOffset(offsetElement);
@@ -7905,8 +8049,16 @@ class CSSPercentValue extends CSSValue {
     }
   }
 
+  static propertyIsRelativeToElement(prop) {
+    return CSSPercentValue.isBackgroundProperty(prop) || CSSPercentValue.isTranslateProperty(prop);
+  }
+
+  static isTranslateProperty(prop) {
+    return prop === CSSPercentValue.TRANSLATE_LEFT || prop === CSSPercentValue.TRANSLATE_TOP;
+  }
+
   static isBackgroundProperty(prop) {
-    return prop === 'backgroundLeft' || prop === 'backgroundTop';
+    return prop === CSSPercentValue.BACKGROUND_LEFT || prop === CSSPercentValue.BACKGROUND_TOP;
   }
 
   // It seems that CSS/CSSOM has a bug/quirk where absolute elements are relative
@@ -7937,17 +8089,17 @@ class CSSPercentValue extends CSSValue {
     this.val = px / this.getOffset() * 100;
   }
 
+  isWidthProperty() {
+    return this.prop === CSSPercentValue.TRANSLATE_LEFT ||
+           this.prop === CSSPercentValue.RIGHT ||
+           this.prop === CSSPercentValue.WIDTH ||
+           this.prop === CSSPercentValue.LEFT;
+  }
+
   getOffset() {
-    switch (this.prop) {
-      case 'left':
-      case 'right':
-      case 'width':
-        return this.isFixed ? window.innerWidth : this.offsetElement.offsetWidth;
-      case 'top':
-      case 'bottom':
-      case 'height':
-        return this.isFixed ? window.innerHeight : this.offsetElement.offsetHeight;
-    }
+    return this.isWidthProperty() ?
+      this.isFixed ? window.innerWidth : this.offsetElement.offsetWidth :
+      this.isFixed ? window.innerHeight : this.offsetElement.offsetHeight;
   }
 
   clone() {

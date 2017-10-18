@@ -219,6 +219,45 @@ describe('CSSBox', function(uiRoot) {
     assert.equal(box.getDimensionsHeader(), '150px, 150px');
   });
 
+  // --- Offsets
+
+  it('should get the correct direction for a top/left box', function() {
+    setupNormal();
+    var dir = box.getDirectionVector();
+    assert.equal(dir.x, 1);
+    assert.equal(dir.y, 1);
+  });
+
+  it('should get the correct direction for a bottom/right box', function() {
+    setupInverted();
+    var dir = box.getDirectionVector();
+    assert.equal(dir.x, -1);
+    assert.equal(dir.y, -1);
+  });
+
+  it('should get the x/y offset for a top/left box', function() {
+    setupNormal();
+    var dir = box.getXYOffset();
+    assert.equal(dir.x, 0);
+    assert.equal(dir.y, 0);
+  });
+
+  it('should get the x/y offset for a bottom/right box', function() {
+    setupInverted();
+    var dir = box.getXYOffset();
+    assert.equal(dir.x, 100);
+    assert.equal(dir.y, 100);
+  });
+
+  // --- Transform Origins
+
+  it('should get its position header', function() {
+    var box = CSSBox.fromPixelValues(100, 100, 150, 150)
+    var origin = box.get
+    assert.equal(box.getPositionHeader(), '100px, 100px');
+    assert.equal(box.getDimensionsHeader(), '150px, 150px');
+  });
+
   // --- CSS Declarations
 
   it('should append its CSS declarations', function() {

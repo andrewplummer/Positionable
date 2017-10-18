@@ -196,7 +196,12 @@ label {
 
 .element-area-selector {
   font-size: 28px;
-  line-height: 1;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.element-area-selector--long {
+  font-size: 20px;
   margin-bottom: .2em;
 }
 
