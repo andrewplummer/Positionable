@@ -38,6 +38,11 @@
   right: 100px;
 }
 
+.big-box {
+  width: 200px;
+  height: 200px;
+}
+
 .transformed-box {
   transform: rotate(45deg) translate(20px, 30px);
 }
@@ -116,7 +121,7 @@
   transform: rotate(45deg);
 }
 
-.rotate-point-box {
+.rotate-fixed-box {
   transform-origin: 20px 20px;
   transform: rotate(45deg);
 }
@@ -177,25 +182,32 @@
   transform: translate3d(20px, 30px, 0);
 }
 
+/*
+ * Note that Chrome has a bug that will report the entire background
+ * property if declared when querying style.backgroundPosition and
+ * using CSS variables, so make sure to use background-image instead.
+ */
 .background-image-box {
-  /*
-   * Data URI representing an image:
-   *
-   * ------
-   * -rr---
-   * -rr---
-   * ---gg-
-   * ---gg-
-   * ------
-   *
-   * Where:
-   *
-   * - is a transprent pixel
-   * r is a red pixel
-   * g is a green pixel
-   *
-   */
-  background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5QTdDN0E3REE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5QTdDN0E3RUE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjlBN0M3QTdCQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjlBN0M3QTdDQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+7OsEKgAAAC5JREFUeNpi/P//PwM2wAQi3vHx/QdhDAlsgBHZKMajXGDOf+tvjMTpQAYAAQYAl5sRE6ZOq60AAAAASUVORK5CYII=') 20px 40px no-repeat;
+  background-image: var(--mock-image);
+  background-position: 20px 40px;
+  background-repeat: no-repeat;
+}
+
+.background-multiple-box {
+  background-image: var(--mock-image), var(--mock-image);
+  background-position: 20px 40px, 50px 50px;
+  background-repeat: no-repeat;
+}
+
+.background-percent-box {
+  background-position: 25% 50%;
+}
+
+.var-box {
+  top:    var(--mock-position);
+  left:   var(--mock-position);
+  width:  var(--mock-position);
+  height: var(--mock-position);
 }
 
 .align-box-1 {
@@ -240,3 +252,27 @@ body {
    */
   visibility: hidden;
 }
+
+:root {
+  --mock-position: 200px;
+
+  /*
+   * Data URI representing an image:
+   *
+   * ------
+   * -rr---
+   * -rr---
+   * ---gg-
+   * ---gg-
+   * ------
+   *
+   * Where:
+   *
+   * - is a transprent pixel
+   * r is a red pixel
+   * g is a green pixel
+   *
+   */
+  --mock-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5QTdDN0E3REE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5QTdDN0E3RUE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjlBN0M3QTdCQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjlBN0M3QTdDQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+7OsEKgAAAC5JREFUeNpi/P//PwM2wAQi3vHx/QdhDAlsgBHZKMajXGDOf+tvjMTpQAYAAQYAl5sRE6ZOq60AAAAASUVORK5CYII=');
+}
+

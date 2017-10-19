@@ -67,10 +67,14 @@ describe('PositionableElement', function(uiRoot) {
 
   setup(function() {
     listener = new Listener();
+    promiseMock.apply();
+    imageLoadMock.apply();
   });
 
   teardown(function() {
     releaseAppendedFixtures();
+    promiseMock.release();
+    imageLoadMock.release();
   });
 
   function createRotationMoveEvent(abs, offset) {
@@ -80,14 +84,6 @@ describe('PositionableElement', function(uiRoot) {
         offset: offset
       }
     }
-  }
-
-  function forceBackgroundImageLoad(element) {
-    // Force image loaded event to keep everything synchronous.
-    // This can be done since the image is using a dataUri
-    var backgroundImage = element.cssBackgroundImage;
-    backgroundImage.img.src = backgroundImage.url;
-    backgroundImage.onImageLoaded();
   }
 
   it('should set initial state from stylesheet', function() {
@@ -352,7 +348,6 @@ describe('PositionableElement', function(uiRoot) {
   it('should snap to a background sprite', function() {
     el = appendBackgroundImageBox();
     p = new PositionableElement(el, listener);
-    forceBackgroundImageLoad(p);
 
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     assert.equal(el.style.top,    '141px');
@@ -382,7 +377,6 @@ describe('PositionableElement', function(uiRoot) {
   it('should be able to move while peeking', function() {
     el = appendBackgroundImageBox();
     p = new PositionableElement(el, listener);
-    forceBackgroundImageLoad(p);
 
     p.pushState();
     p.move(100, 100);
@@ -429,7 +423,6 @@ describe('PositionableElement', function(uiRoot) {
   it('should be able to snap while peeking', function() {
     el = appendBackgroundImageBox();
     p = new PositionableElement(el, listener);
-    forceBackgroundImageLoad(p);
 
     p.setPeekMode(true);
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
@@ -444,7 +437,6 @@ describe('PositionableElement', function(uiRoot) {
   it('should be able to get back to initial state after peeking', function() {
     el = appendBackgroundImageBox();
     p = new PositionableElement(el, listener);
-    forceBackgroundImageLoad(p);
 
     p.setPeekMode(true);
     p.lockPeekMode();
@@ -538,10 +530,14 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(getUiElement(el, '.resize-handle-sw'), null);
   });
 
-  it('should not show rotation handle on a matrix3d box', function() {
-    el = appendAbsoluteBox('matrix-3d-box');
+  it('should not fail on a box using CSS variables', function() {
+    el = appendAbsoluteBox('var-box');
     p = new PositionableElement(el, listener);
-    assert.equal(getUiElement(el, '.rotation-handle').style.display, 'none');
+    p.renderBox();
+    assert.equal(el.style.top,    '200px');
+    assert.equal(el.style.left,   '200px');
+    assert.equal(el.style.width,  '200px');
+    assert.equal(el.style.height, '200px');
   });
 
 });

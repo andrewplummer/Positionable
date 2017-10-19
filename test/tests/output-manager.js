@@ -186,7 +186,7 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(manager.getPositionHeader(element), '100px, 100px');
     assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
     assert.equal(manager.getZIndexHeader(element), '');
-    assert.equal(manager.getTransformHeader(element), 'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
+    assert.equal(manager.getTransformHeader(element), 'matrix3d: 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1');
   });
 
   // --- Style Declarations

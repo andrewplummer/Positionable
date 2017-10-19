@@ -1795,7 +1795,6 @@ class PositionableElement extends BrowserEventTarget {
     this.cssZIndex = matcher.getZIndex();
     // TODO: rename getTransform to getCSSTransform, etc
     this.cssTransform = matcher.getTransform();
-    this.cssTransformOrigin = matcher.getTransformOrigin();
     this.cssBackgroundImage = matcher.getBackgroundImage();
   }
 
@@ -1829,18 +1828,10 @@ class PositionableElement extends BrowserEventTarget {
 
     this.positionHandle = new PositionHandle(root, this);
     this.rotationHandle = new RotationHandle(root, this);
-
-    if (!this.cssTransform.canBeRotated()) {
-      this.rotationHandle.hide();
-    }
-  }
-
-  hasRotation() {
-    return this.cssTransform.canBeRotated();
   }
 
   getRotation() {
-    return this.cssTransform.canBeRotated() ? this.cssTransform.getRotation() : null;
+    return this.cssTransform.getRotation();
   }
 
   setRotation(r) {
@@ -2020,6 +2011,8 @@ class PositionableElement extends BrowserEventTarget {
 
       this.lockPeekMode();
 
+      // Locking the peek mode may update the dimensions
+      // to the peek size so we need to fetch them again.
       dim = this.cssBox.getDimensions();
       iPos = this.cssBackgroundImage.getPosition();
 
@@ -2098,49 +2091,59 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   resize(x, y, dir, constrain) {
-    var lastState, lastBox, nextBox, ratio, rotation;
+    var rotation, lastState, lastBox, nextBox;
 
+    rotation  = this.getRotation();
     lastState = this.getLastState();
     lastBox   = lastState.cssBox;
     nextBox   = lastBox.clone();
-    ratio     = lastBox.getRatio();
-    //var lastRatio = lastBox.getRatio();
-    rotation = this.getRotation();
-    //var handle = this.getHandle(handleName);
 
     nextBox.moveEdges(x, y, dir);
 
     if (constrain) {
-      nextBox.constrain(ratio, dir);
+      nextBox.constrain(lastBox.getRatio(), dir);
     }
 
-    if (rotation) {
-      // If a box is rotated, then the anchor positions will shift
-      // as the box is resized, so update the translation here based
-      // on this shift to keep the anchors aligned.
-      var anchorOffset = this.getAnchorOffset(dir, lastBox, nextBox, rotation);
-      var lastTranslation = lastState.cssTransform.getTranslation();
-      this.cssTransform.setTranslation(lastTranslation.add(anchorOffset));
-      this.renderTransform();
-    }
-
+    // Render the box first so that percentage values can update
+    // below to ensure correct anchor calculations.
     this.cssBox = nextBox;
     this.renderBox();
+
+    // When the box is resized, both the background image and
+    // transform (origin and percentage translations) may change,
+    // so update their values here.
+    this.cssBackgroundImage.update();
+    this.cssTransform.update();
+
+    if (rotation || this.cssTransform.hasPercentTranslation()) {
+      // If a box is rotated or its transform has a translate using percent
+      // values, then the anchor positions will shift as the box is resized,
+      // so update the translation here to keep them aligned.
+      this.alignBoxAnchors(dir, lastState, this, rotation);
+    }
+
   }
 
-  getAnchorOffset(dir, lastBox, nextBox, rotation) {
-    var lastAnchorPos = this.getAnchorPosition(dir, lastBox, rotation);
-    var nextAnchorPos = this.getAnchorPosition(dir, nextBox, rotation);
+  alignBoxAnchors(dir, lastState, nextState, rotation) {
+    var anchorOffset = this.getAnchorOffset(dir, lastState, nextState, rotation);
+    this.cssTransform.addTranslation(anchorOffset);
+    this.renderTransform();
+  }
+
+  getAnchorOffset(dir, lastState, nextState, rotation) {
+    var lastAnchorPos = this.getAnchorPosition(dir, lastState, rotation);
+    var nextAnchorPos = this.getAnchorPosition(dir, nextState, rotation);
     return lastAnchorPos.subtract(nextAnchorPos);
   }
 
-  getAnchorPosition(dir, cssBox, rotation) {
-    var dimensions, boxXYOffset, boxDirection, transformOrigin, anchorCoords;
+  getAnchorPosition(dir, state, rotation) {
+    var origin, translation, dimensions, boxXYOffset, boxDirection, anchorCoords;
 
-    dimensions = cssBox.getDimensions();
-    boxXYOffset = cssBox.getXYOffset();
-    boxDirection = cssBox.getDirectionVector();
-    transformOrigin = this.cssTransformOrigin.getCoords(dimensions);
+    origin       = state.cssTransform.getOrigin();
+    translation  = state.cssTransform.getTranslation();
+    dimensions   = state.cssBox.getDimensions();
+    boxXYOffset  = state.cssBox.getXYOffset();
+    boxDirection = state.cssBox.getDirectionVector();
 
     // The coordinates of the anchor are the result of getting
     // the non-rotated anchor position, rotating it around the
@@ -2148,27 +2151,28 @@ class PositionableElement extends BrowserEventTarget {
     // at the final position.
     anchorCoords = this.getAnchorNormal(dir)
       .multiply(dimensions)
-      .subtract(transformOrigin)
+      .subtract(origin)
       .rotate(rotation)
-      .add(transformOrigin);
+      .add(origin);
 
-    // The returned value is the box's offset in x/y space
-    // plus the anchor coords. If the box is inverted, it needs
-    // to take this into account by adding the amount that its
-    // dimensions expand into x/y space and flipping its direction
-    // vectors. Note that the return value does not represent
-    // an actual position, but instead is used to calculate offsets
-    // from previous values to determine how much an anchor has moved.
-    return cssBox.getOffsetPosition()
+    // The returned value is the box's offset in x/y space plus
+    // the anchor coords and translation. If the box is inverted,
+    // it needs to take this into account by adding the amount
+    // that its dimensions expand into x/y space and flipping its
+    // direction vectors. Note that the return value is not an
+    // actual position, but can be used to calculate offsets to
+    // determine how much an anchor has moved.
+    return state.cssBox.getOffsetPosition()
       .add(boxXYOffset)
       .multiply(boxDirection)
-      .add(anchorCoords);
+      .add(anchorCoords)
+      .add(translation);
   }
 
   getAnchorNormal(dir) {
     // The anchor normal represents the normalized offset of an
     // anchor point opposite the given handle direction. These
-    // These are given in a normal X/Y coordinate system.
+    // These are given in a normal x/y coordinate system.
     switch (dir) {
       case 'n':  return new Point(.5, 1);
       case 's':  return new Point(.5, 0);
@@ -2194,7 +2198,6 @@ class PositionableElement extends BrowserEventTarget {
       box[handle.hSide] = box[anchor.hSide] + box.height * oldRatio * handle.xDir;
     }
   }
-  */
 
   toggleHandles(on) {
     if (on) {
@@ -2203,14 +2206,12 @@ class PositionableElement extends BrowserEventTarget {
       this.addClass('handles-hidden');
     }
   }
+  */
 
   // --- Rotation
 
   rotate(offset, constrained) {
     var r;
-    if (!this.cssTransform.canBeRotated()) {
-      return;
-    }
     if (constrained) {
       offset = Math.round(offset / PositionableElement.ROTATION_SNAPPING) * PositionableElement.ROTATION_SNAPPING;
     }
@@ -3535,11 +3536,12 @@ class AppController {
   onRotationDragStart(evt, handle, element) {
     console.info('ROTATION DRAG START');
     this.isRotating = true;
-    this.cursorManager.setRotateDragCursor(handle.name, element.getRotation());
+    this.setRotationCursor(element.getRotation());
   }
 
   onRotationDragMove(evt, handle, element) {
     console.info('ROTATION DRAG MOVE');
+    this.setRotationCursor(evt.rotation.abs);
     this.cursorManager.setRotateDragCursor(evt.rotation.abs);
   }
 
@@ -3547,6 +3549,11 @@ class AppController {
     console.info('ROTATION DRAG STOP');
     this.isRotating = false;
     this.cursorManager.clearDragCursor();
+  }
+
+  setRotationCursor(rotation) {
+    this.cursorManager.setRotateHoverCursor(rotation);
+    this.cursorManager.setRotateDragCursor(rotation);
   }
 
   // --- Background Image Events
@@ -3757,7 +3764,6 @@ class AppController {
     this.renderFocusedZIndex();
     this.renderFocusedTransform();
     this.renderFocusedBackgroundPosition();
-    this.renderNoRotation();
   }
 
   renderFocusedSelector() {
@@ -3793,12 +3799,6 @@ class AppController {
   renderFocusedBackgroundPosition() {
     this.withSingleFocusedElement(el => {
       this.controlPanel.renderElementBackgroundPosition(this.outputManager.getBackgroundPositionHeader(el));
-    });
-  }
-
-  renderNoRotation() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementCanRotate(el.hasRotation());
     });
   }
 
@@ -4767,7 +4767,6 @@ class ControlPanel extends DraggableElement {
       'dimensions':         new Element(root.getElementById('element-area-dimensions')),
       'zIndex':             new Element(root.getElementById('element-area-zindex')),
       'transform':          new Element(root.getElementById('element-area-transform')),
-      'noRotation':         new Element(root.getElementById('element-area-no-rotation')),
       'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
     };
   }
@@ -4921,14 +4920,6 @@ class ControlPanel extends DraggableElement {
       transform,
       ControlPanel.TRANSFORM_ACTIVE_CLASS
     );
-  }
-
-  renderElementCanRotate(flag) {
-    if (flag) {
-      this.renderedElements.noRotation.hide();
-    } else {
-      this.renderedElements.noRotation.unhide();
-    }
   }
 
   renderElementBackgroundPosition(backgroundPosition) {
@@ -6260,6 +6251,7 @@ class SpriteRecognizer {
 
   constructor(img) {
     this.img = img;
+    this.img.addEventListener('load', this.onImageLoaded.bind(this));
   }
 
   getSpriteBoundsForCoordinate(coord) {
@@ -6300,7 +6292,7 @@ class SpriteRecognizer {
 
   // --- Private
 
-  loadImageData() {
+  onImageLoaded() {
     var img = this.img, canvas, context;
     canvas = document.createElement('canvas');
     canvas.setAttribute('width', img.width);
@@ -7262,6 +7254,12 @@ class CSSBox {
 
 class CSSRuleMatcher {
 
+  static get TOP()    { return 'top';    }
+  static get BOTTOM() { return 'bottom'; }
+  static get HEIGHT() { return 'height'; }
+
+  static get VAR_REG() { return /var\(.+\)/; }
+
   constructor(el) {
     this.el = el;
     this.computedStyles = window.getComputedStyle(el);
@@ -7300,7 +7298,7 @@ class CSSRuleMatcher {
   }
 
   getCSSValue(prop) {
-    return CSSValue.parse(this.getProperty(prop), prop, this.el);
+    return CSSValue.parse(this.getProperty(prop), this.el, this.isVerticalProperty(prop));
 
     /* TODO: handle these
     if (str === 'auto' || str === '') {
@@ -7321,12 +7319,18 @@ class CSSRuleMatcher {
 
   }
 
+  isVerticalProperty(prop) {
+    return prop === CSSRuleMatcher.TOP    ||
+           prop === CSSRuleMatcher.BOTTOM ||
+           prop === CSSRuleMatcher.HEIGHT;
+  }
+
   getMatchedCSSValue(prop) {
-    return CSSValue.parse(this.getMatchedProperty(prop), prop, this.el);
+    return CSSValue.parse(this.getMatchedProperty(prop), this.el, this.isVerticalProperty(prop));
   }
 
   getComputedCSSValue(prop) {
-    return CSSValue.parse(this.getComputedProperty(prop), prop, this.el);
+    return CSSValue.parse(this.getComputedProperty(prop), this.el, this.isVerticalProperty(prop));
   }
 
   getZIndex() {
@@ -7334,24 +7338,11 @@ class CSSRuleMatcher {
   }
 
   getTransform() {
-    // TODO: should this not be getMatchedProperty? we don't want to default back to the matrix
-    var str = this.getProperty('transform');
-    if (!str || str === 'none') {
-      return new CSSCompositeTransform();
-    } else if (str.match(/matrix3d/)) {
-      return new CSSMatrix3DTransform(str);
-    } else if (str.match(/matrix/)) {
-      return CSSMatrixTransform.parse(str);
-    } else {
-      return CSSCompositeTransform.parse(str, this.el);
-    }
-  }
-
-  getTransformOrigin() {
-    // Only used matched properties to get a null string if it is
-    // not set, as the computed property will return an absolute
-    // pixel value which may change as the element is resized.
-    return CSSTransformOrigin.create(this.getMatchedProperty('transform-origin'), this.el);
+    return CSSTransform.create(
+      this.getMatchedProperty('transform'),
+      this.getMatchedProperty('transform-origin'),
+      this.el
+    );
   }
 
   getBackgroundImage() {
@@ -7361,23 +7352,34 @@ class CSSRuleMatcher {
     // It seems the computed initial value of backgroundPosition is 0% 0%,
     // so prevent defaulting to percentage values by using only matcheds styles.
     var backgroundPosition = this.getMatchedProperty('backgroundPosition') || 'initial';
-    return CSSBackgroundImage.fromStyles(backgroundImage, backgroundPosition, this.el);
+    return CSSBackgroundImage.create(backgroundImage, backgroundPosition, this.el);
   }
 
   getMatchedProperty(prop) {
+    var val;
+
     // Inline styles have highest priority, so attempt to use them first, then
     // fall back to matched CSS properties in reverse order to maintain priority.
     if (this.el.style[prop]) {
-      return this.el.style[prop];
-    }
-    if (this.matchedRules) {
+      val = this.el.style[prop];
+    } else if (this.matchedRules) {
       for (var rules = this.matchedRules, i = rules.length - 1, rule, val; rule = rules[i]; i--) {
         val = rule.style[prop];
         if (val) {
-          return val;
+          break;
         }
       }
     }
+
+    // Note that in many cases we don't want matched properties
+    // to fall back to computed properties unless explicitly
+    // requested to, however CSS variables are unusable, so fall
+    // back in this special case.
+    if (val && CSSRuleMatcher.VAR_REG.test(val)) {
+      return this.getComputedProperty(prop);
+    }
+
+    return val;
   }
 
   getComputedProperty(prop) {
@@ -7392,26 +7394,38 @@ class CSSRuleMatcher {
 
 }
 
-/*-------------------------] CSSCompositeTransform [--------------------------*/
+/*-------------------------] CSSTransform [--------------------------*/
 
-class CSSCompositeTransform {
+class CSSTransform {
 
+  static get NONE()      { return 'none'; }
   static get PARSE_REG() { return /(\w+)\((.+?)\)/g; };
 
-  static parse(str, el) {
-    var reg = CSSCompositeTransform.PARSE_REG, functions = [], match;
-    while (match = reg.exec(str)) {
-      functions.push(CSSCompositeTransformFunction.create(match[1], match[2], el));
+  static create(transform, transformOrigin, el) {
+    var match, reg, cssTransformOrigin, functions = [];
+
+    if (transform && transform !== CSSTransform.NONE) {
+      reg = CSSTransform.PARSE_REG;
+      while (match = reg.exec(transform)) {
+        functions.push(CSSTransformFunction.create(match[1], match[2], el));
+      }
     }
-    return new CSSCompositeTransform(functions);
+
+    cssTransformOrigin = CSSTransformOrigin.create(transformOrigin, el);
+
+    return new CSSTransform(functions, cssTransformOrigin);
   }
 
-  constructor(functions) {
+  constructor(functions, cssTransformOrigin) {
     this.functions = functions || [];
+    this.cssTransformOrigin = cssTransformOrigin;
   }
 
-  canBeRotated() {
-    return true;
+  getOrigin() {
+    return new Point(
+      this.cssTransformOrigin.cssX.px,
+      this.cssTransformOrigin.cssY.px
+    )
   }
 
   getRotation() {
@@ -7424,34 +7438,54 @@ class CSSCompositeTransform {
     if (func) {
       func.values[0].deg = deg;
     } else {
-      func = new CSSCompositeTransformFunction(CSSCompositeTransformFunction.ROTATE, [new CSSDegreeValue(deg)]);
+      func = new CSSTransformFunction(CSSTransformFunction.ROTATE, [new CSSDegreeValue(deg)], true);
       this.functions.push(func);
     }
   }
 
-  getTranslation () {
+  getTranslation() {
     var func = this.getPreceedingTranslationFunction();
-    return func ? new Point(func.values[0].px, func.values[1].px) : new Point(0, 0);
+    if (func) {
+      return new Point(func.values[0].px, func.values[1].px);
+    } else {
+      return new Point(0, 0);
+    }
   }
 
-  setTranslation (p) {
+  setTranslation(p) {
     var func = this.getPreceedingTranslationFunction();
     if (func) {
       func.values[0].px = p.x;
       func.values[1].px = p.y;
     } else {
-      // Translation respects subpixel values, so override precision here.
-      // TODO: standardize precision for translation and make sure it works when one exists already
-      var xVal = new CSSPixelValue(p.x, true);
-      var yVal = new CSSPixelValue(p.y, true);
-      func = new CSSCompositeTransformFunction(CSSCompositeTransformFunction.TRANSLATE, [xVal, yVal])
+      var cssX = new CSSPixelValue(p.x, true);
+      var cssY = new CSSPixelValue(p.y, true);
+      func = new CSSTransformFunction(CSSTransformFunction.TRANSLATE, [cssX, cssY], true)
       // Ensure that translate comes before rotation, otherwise anchors will not work.
       this.functions.unshift(func);
     }
   }
 
+  addTranslation(v) {
+    this.setTranslation(this.getTranslation().add(v));
+  }
+
+  update() {
+    this.updateOrigin();
+    this.updateTranslation();
+  }
+
+  hasPercentTranslation() {
+    var func = this.getPreceedingTranslationFunction();
+    return !!func && func.hasPercentTranslation();
+  }
+
   getHeader() {
     return this.functions.map(f => f.getHeader()).join(' | ');
+  }
+
+  toString() {
+    return this.functions.join(' ');
   }
 
   appendCSSDeclaration(declarations) {
@@ -7461,243 +7495,155 @@ class CSSCompositeTransform {
     }
   }
 
-  toString() {
-    return this.functions.join(' ');
-  }
-
   clone() {
-    var functions = this.functions.map(function(f) {
-      if (f.canMutate()) {
-        return f.clone();
-      }
-      return f;
-    });
-    return new CSSCompositeTransform(functions);
+    var functions = this.functions.map(f => f.clone());
+    return new CSSTransform(functions, this.cssTransformOrigin.clone());
   }
 
   // --- Private
 
   getRotationFunction() {
     return this.functions.find(function(f) {
-      return f.prop === CSSCompositeTransformFunction.ROTATE;
+      return f.isZRotate();
     });
   }
 
   getPreceedingTranslationFunction() {
     for (let i = 0, func; func = this.functions[i]; i++) {
-      if (func.prop === CSSCompositeTransformFunction.TRANSLATE) {
+      if (func.isTranslate()) {
         return func;
-      } else if (func.prop === CSSCompositeTransformFunction.ROTATE) {
+      } else if (func.isZRotate()) {
         return;
       }
     }
   }
 
+  updateOrigin() {
+    this.cssTransformOrigin.update();
+  }
+
+  updateTranslation() {
+    var func = this.getPreceedingTranslationFunction();
+    if (func) {
+      func.values.forEach(v => v.update());
+    }
+  }
+
 }
-/*-------------------------] CSSCompositeTransformFunction [--------------------------*/
 
-class CSSCompositeTransformFunction {
+/*-------------------------] CSSTransformFunction [--------------------------*/
 
-  static get ROTATE()    { return 'rotate' };
-  static get TRANSLATE() { return 'translate' };
-  static get SCALE()     { return 'scale' };
-  static get SKEW()      { return 'skew' };
+class CSSTransformFunction {
 
-  static get ROTATE_SHORT()    { return 'r' };
-  static get TRANSLATE_SHORT() { return 't' };
-  static get SCALE_SHORT()     { return 'scale' };
-  static get SKEW_SHORT()      { return 'skew' };
+  static get ROTATE()       { return 'rotate'      };
+  static get ROTATE_Z()     { return 'rotateZ'     };
+  static get TRANSLATE()    { return 'translate'   };
+  static get TRANSLATE_3D() { return 'translate3d' };
+  static get MATRIX()       { return 'matrix'      };
+  static get MATRIX_3D()    { return 'matrix3d'    };
 
   static create(prop, values, el) {
-    // TODO: handle single percent values??
-    values = values.split(', ').map((str, i) => {
-      if (i === 0) {
-        prop = CSSPercentValue.TRANSLATE_LEFT;
+
+    var isVertical  = this.propertyIsVertical(prop);
+    var isTranslate = this.propertyIsTranslate(prop);
+    var isZRotate   = this.propertyIsZRotate(prop);
+    var canMutate   = isTranslate || isZRotate;
+
+    values = values.split(/,\s*/).map((str, i) => {
+      if (canMutate) {
+        return CSSValue.parseTransform(str, el, isVertical || i === 1)
       } else {
-        prop = CSSPercentValue.TRANSLATE_TOP;
+        return str;
       }
-      return CSSValue.parse(str, prop, el, true)
     });
-    return new CSSCompositeTransformFunction(prop, values);
+
+    // Handle single values in translate
+    if (isTranslate && values.length === 1) {
+      values.push(new CSSPixelValue(0));
+    }
+
+    return new CSSTransformFunction(prop, values, canMutate);
   }
 
-  constructor(prop, values) {
-    this.prop = prop;
-    this.values = values;
+  static propertyIsVertical(prop) {
+    return prop.slice(-1) === 'Y';
   }
 
-  // transform: matrix(1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
-  // transform: translate(12px, 50%);
-  // transform: translateX(2em);
-  // transform: translateY(3in);
-  // transform: scale(2, 0.5);
-  // transform: scaleX(2);
-  // transform: scaleY(0.5);
-  // transform: rotate(0.5turn);
-  // transform: skew(30deg, 20deg);
-  // transform: skewX(30deg);
-  // transform: skewY(1.07rad);
+  static propertyIsTranslate(prop) {
+    return prop === CSSTransformFunction.TRANSLATE ||
+           prop === CSSTransformFunction.TRANSLATE_3D;
+  }
+
+  static propertyIsZRotate(prop) {
+    return prop === CSSTransformFunction.ROTATE ||
+           prop === CSSTransformFunction.ROTATE_Z;
+  }
+
+  static propertyIsMatrix(prop) {
+    return prop === CSSTransformFunction.MATRIX ||
+           prop === CSSTransformFunction.MATRIX_3D;
+  }
+
+  constructor(prop, values, canMutate) {
+    this.prop      = prop;
+    this.values    = values;
+    this.canMutate = canMutate;
+  }
 
   getHeader() {
-    return this.getShort() + ': ' + this.values.join(', ');
-  }
-
-  getShort() {
-    switch (this.prop) {
-      case CSSCompositeTransformFunction.ROTATE:
-        return CSSCompositeTransformFunction.ROTATE_SHORT;
-      case CSSCompositeTransformFunction.TRANSLATE:
-        return CSSCompositeTransformFunction.TRANSLATE_SHORT;
-      case CSSCompositeTransformFunction.SCALE:
-        return CSSCompositeTransformFunction.SCALE_SHORT;
-      case CSSCompositeTransformFunction.SKEW:
-        return CSSCompositeTransformFunction.SKEW_SHORT;
-    }
+    return this.getAbbreviatedHeader() + ': ' + this.values.join(this.getHeaderJoin());
   }
 
   toString() {
     return this.prop + '(' + this.values.join(', ') + ')';
   }
 
-  canMutate() {
-    return this.prop === 'rotate' ||
-           this.prop === 'translate' ||
-           this.prop === 'translateX' ||
-           this.prop === 'translateY';
+  isTranslate() {
+    return CSSTransformFunction.propertyIsTranslate(this.prop);
+  }
+
+  isZRotate() {
+    return CSSTransformFunction.propertyIsZRotate(this.prop);
+  }
+
+  isMatrix() {
+    return CSSTransformFunction.propertyIsMatrix(this.prop);
+  }
+
+  hasPercentTranslation() {
+    return this.isTranslate() && this.values.some(v => v.isPercent());
   }
 
   clone() {
-    return new CSSCompositeTransformFunction(this.prop, this.values.map(v => v.clone()));
-  }
-
-}
-
-
-/*-------------------------] CSSMatrixTransform [--------------------------*/
-
-class CSSMatrixTransform {
-
-  static get PARSE_REG() { return /matrix\((.+)\)/; }
-
-  static get PRECISION()       { return 6; }
-  static get PRECISION_SHORT() { return 2; }
-
-  static parse(str) {
-    str = str.match(CSSMatrixTransform.PARSE_REG)[1];
-    var values = str.split(', ').map(s => parseFloat(s));
-    return new CSSMatrixTransform(...values);
-  }
-
-  constructor(a, b, c, d, tx, ty) {
-    this.a  = a;
-    this.b  = b;
-    this.c  = c;
-    this.d  = d;
-    this.tx = tx;
-    this.ty = ty;
-  }
-
-  canBeRotated() {
-    return true;
-  }
-
-  getRotation() {
-    return Point.radToDeg(Math.atan2(this.b, this.a));
-  }
-
-  setRotation(deg) {
-    this.addRotation(deg - this.getRotation());
-  }
-
-  getTranslation() {
-    return new Point(this.tx, this.ty);
-  }
-
-  setTranslation(p) {
-    this.tx = p.x;
-    this.ty = p.y;
-  }
-
-  getHeader() {
-    return this.toString(true);
-  }
-
-  appendCSSDeclaration(declarations) {
-    declarations.push(`transform: ${this};`);
-  }
-
-  toString(short) {
-    var a  = this.getFixed(this.a,  short);
-    var b  = this.getFixed(this.b,  short);
-    var c  = this.getFixed(this.c,  short);
-    var d  = this.getFixed(this.d,  short);
-    var tx = this.getFixed(this.tx, short);
-    var ty = this.getFixed(this.ty, short);
-    return `matrix(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})`;
-  }
-
-  clone() {
-    return new CSSMatrixTransform(this.a, this.b, this.c, this.d, this.tx, this.ty);
+    var values = this.values;
+    if (this.canMutate) {
+      values = this.values.map(v => v.clone());
+    }
+    return new CSSTransformFunction(this.prop, values, this.canMutate);
   }
 
   // --- Private
 
-  getFixed(n, short) {
-    return roundToSignificant(n, short ? CSSMatrixTransform.PRECISION_SHORT : CSSMatrixTransform.PRECISION);
+  getHeaderJoin() {
+    return this.isMatrix() ? ',' : ', ';
   }
 
-  addRotation(deg) {
-    var rad = Point.degToRad(deg), sin, cos;
-
-    sin = Math.sin(rad);
-    cos = Math.cos(rad);
-
-    this.multiply(cos, sin, -sin, cos);
-  }
-
-  multiply(a2, b2, c2, d2) {
-    var a1 = this.a;
-    var b1 = this.b;
-    var c1 = this.c;
-    var d1 = this.d;
-
-    this.a = (a1 * a2) + (c1 * b2);
-    this.b = (b1 * a2) + (d1 * b2);
-    this.c = (a1 * c2) + (c1 * d2);
-    this.d = (b1 * c2) + (d1 * d2);
+  getAbbreviatedHeader() {
+    switch (this.prop) {
+      case CSSTransformFunction.ROTATE:    return 'r';
+      case CSSTransformFunction.TRANSLATE: return 't';
+      default:                             return this.prop;
+    }
   }
 
 }
 
-/*-------------------------] CSSMatrixTransform [--------------------------*/
-
-class CSSMatrix3DTransform {
-
-  constructor(str) {
-    this.str = str;
-  }
-
-  canBeRotated() {
-    return false;
-  }
-
-  getHeader(){
-    return this.toString();
-  }
-
-  toString() {
-    return this.str;
-  }
-
-  clone() {
-    return this;
-  }
-
-}
 
 /*-------------------------] CSSTransformOrigin [--------------------------*/
 
 class CSSTransformOrigin {
+
+  static get INITIAL() { return 'initial'; }
 
   static get TOP()    { return 'top';    }
   static get LEFT()   { return 'left';   }
@@ -7712,17 +7658,17 @@ class CSSTransformOrigin {
     [arg1, arg2] = str.split(' ');
 
     if (this.isYProperty(arg1)) {
-      cssX = this.getCSSValue(arg2, CSSPercentValue.TRANSLATE_LEFT, el);
-      cssY = this.getCSSValue(arg1, CSSPercentValue.TRANSLATE_TOP, el);
+      cssX = this.getCSSValue(arg2, el, false);
+      cssY = this.getCSSValue(arg1, el, true);
     } else {
-      cssX = this.getCSSValue(arg1, CSSPercentValue.TRANSLATE_LEFT, el);
-      cssY = this.getCSSValue(arg2, CSSPercentValue.TRANSLATE_TOP, el);
+      cssX = this.getCSSValue(arg1, el, false);
+      cssY = this.getCSSValue(arg2, el, true);
     }
     return new CSSTransformOrigin(cssX, cssY);
   }
 
-  static getCSSValue(str, percentProp, el) {
-    if (!str || str === 'initial') {
+  static getCSSValue(str, el, isVertical) {
+    if (!str || str === CSSTransformOrigin.INITIAL) {
       str = '50%';
     } else {
       switch (str) {
@@ -7733,7 +7679,7 @@ class CSSTransformOrigin {
         case CSSTransformOrigin.CENTER: str = '50%';  break;
       }
     }
-    return CSSValue.parse(str, percentProp, el, true);
+    return CSSValue.parseTransform(str, el, isVertical);
   }
 
   static isYProperty(prop) {
@@ -7746,31 +7692,13 @@ class CSSTransformOrigin {
     this.cssY = cssY;
   }
 
-  getCoords(dim) {
-    var x, y;
-    if (dim) {
-      x = this.getCoordRelativeToDimensions(this.cssX, dim.x);
-      y = this.getCoordRelativeToDimensions(this.cssY, dim.y);
-    } else {
-      x = this.getAbsoluteCoord(this.cssX);
-      y = this.getAbsoluteCoord(this.cssY);
-    }
-    return new Point(x, y);
+  update() {
+    this.cssX.update();
+    this.cssY.update();
   }
 
-  getCoordRelativeToDimensions(cssVal, dimVal) {
-    if (cssVal.isPercent()) {
-      if (!cssVal.val) {
-        return 0;
-      }
-      return cssVal.val / 100 * dimVal;
-    } else {
-      return this.getAbsoluteCoord(cssVal);
-    }
-  }
-
-  getAbsoluteCoord(cssVal) {
-    return cssVal.px;
+  clone() {
+    return new CSSTransformOrigin(this.cssX.clone(), this.cssY.clone());
   }
 
 }
@@ -7779,7 +7707,7 @@ class CSSTransformOrigin {
 
 class CSSValue {
 
-  static parse(str, percentProp, el, subpixel) {
+  static parse(str, el, isVertical, isSubpixel, isTranslate, img) {
 
     if (!str) {
       return null;
@@ -7798,7 +7726,7 @@ class CSSValue {
     // TODO: make these constants???
     switch (unit) {
 
-      case '%':  return CSSPercentValue.create(val, percentProp, el);
+      case '%':  return CSSPercentValue.create(val, el, isVertical, isTranslate, img);
       case 'em': return CSSEmValue.create(val, el);
 
       case 'vw':
@@ -7811,7 +7739,7 @@ class CSSValue {
       case 'rad':  return new CSSRadianValue(val);
       case 'grad': return new CSSGradianValue(val);
       case 'turn': return new CSSTurnValue(val);
-      case 'px':   return new CSSPixelValue(val, subpixel);
+      case 'px':   return new CSSPixelValue(val, isSubpixel);
 
       // z-index may be unitless
       case '': return new CSSValue(val);
@@ -7821,21 +7749,23 @@ class CSSValue {
     }
   }
 
+  static parseBackground(str, el, isVertical, img) {
+    return this.parse(str, el, isVertical, false, false, img);
+  }
+
+  static parseTransform(str, el, isVertical) {
+    return this.parse(str, el, isVertical, true, true);
+  }
+
   constructor(val, unit, precision) {
     this.val       = val;
     this.unit      = unit;
     this.precision = precision || 0;
   }
 
-  /* TODO: ADD functions should not mutate, so this method either
-   * needs to be changed or should go away
-  add(amt) {
-    if (this.isNull()) {
-      this.val = 0;
-    }
-    this.val += amt;
-  }
-  */
+  // Note that this method is intended to be overridden by child
+  // css values that require an update, such as CSSPercentValue.
+  update() {}
 
   isNull() {
     return this.val == null || this.val === 'auto';
@@ -8023,113 +7953,77 @@ class CSSTurnValue extends CSSValue {
 
 class CSSPercentValue extends CSSValue {
 
-  static get TOP()    { return 'top';    }
-  static get LEFT()   { return 'left';   }
-  static get RIGHT()  { return 'right';  }
-  static get BOTTOM() { return 'bottom'; }
-
-  static get WIDTH()  { return 'width';  }
-  static get HEIGHT() { return 'height'; }
-
-  static get TRANSLATE_TOP()   { return 'translateTop';  }
-  static get TRANSLATE_LEFT()  { return 'translateLeft'; }
-
-  static get BACKGROUND_TOP()  { return 'backgroundTop';  }
-  static get BACKGROUND_LEFT() { return 'backgroundLeft'; }
-
-  static create(val, prop, el) {
-    if (this.isBackgroundProperty(prop)) {
-      return new CSSBackgroundPercentValue(val, prop, el);
-    } else if (this.isTranslateProperty(prop)) {
-      return new CSSPercentValue(val, prop, el);
-    } else {
-      var offsetElement = el.offsetParent;
-      var isFixed = !offsetElement || this.hasStaticBodyOffset(offsetElement);
-      return new CSSPercentValue(val, prop, el.offsetParent, isFixed);
-    }
-  }
-
-  static propertyIsRelativeToElement(prop) {
-    return CSSPercentValue.isBackgroundProperty(prop) || CSSPercentValue.isTranslateProperty(prop);
-  }
-
-  static isTranslateProperty(prop) {
-    return prop === CSSPercentValue.TRANSLATE_LEFT || prop === CSSPercentValue.TRANSLATE_TOP;
-  }
-
-  static isBackgroundProperty(prop) {
-    return prop === CSSPercentValue.BACKGROUND_LEFT || prop === CSSPercentValue.BACKGROUND_TOP;
+  static create(val, el, isVertical, isTranslate, img) {
+    var offsetElement = isTranslate || img ? el : el.offsetParent;
+    var isFixed = this.isFixed(offsetElement);
+    return new CSSPercentValue(val, offsetElement, isVertical, isFixed, img);
   }
 
   // It seems that CSS/CSSOM has a bug/quirk where absolute elements are relative
   // to the viewport if the HTML and BODY are not positioned, however offsetParent
   // is still reported as the BODY, so check for this case.
-  static hasStaticBodyOffset(el) {
-    return el === document.body &&
-           this.isStaticPosition(document.body) &&
-           this.isStaticPosition(document.documentElement);
+  static isFixed(el) {
+    return !el ||
+      (el === document.body &&
+       this.isStaticPosition(document.body) &&
+       this.isStaticPosition(document.documentElement));
   }
 
   static isStaticPosition(el) {
     return window.getComputedStyle(el).position === 'static';
   }
 
-  constructor(val, prop, offsetElement, isFixed) {
+  constructor(val, offsetElement, isVertical, isFixed, img, size) {
     super(val, '%', 2);
-    this.prop          = prop;
     this.offsetElement = offsetElement;
+    this.isVertical    = isVertical;
     this.isFixed       = isFixed;
+    this.img           = img;
+    this.size          = size;
+
+    this.initialize();
+  }
+
+  update() {
+    this.size = this.getTotalSize();
   }
 
   get px() {
-    return (this.val || 0) / 100 * this.getOffset();
+    return (this.val || 0) / 100 * this.size;
   }
 
   set px(px) {
-    this.val = px / this.getOffset() * 100;
-  }
-
-  isWidthProperty() {
-    return this.prop === CSSPercentValue.TRANSLATE_LEFT ||
-           this.prop === CSSPercentValue.RIGHT ||
-           this.prop === CSSPercentValue.WIDTH ||
-           this.prop === CSSPercentValue.LEFT;
-  }
-
-  getOffset() {
-    return this.isWidthProperty() ?
-      this.isFixed ? window.innerWidth : this.offsetElement.offsetWidth :
-      this.isFixed ? window.innerHeight : this.offsetElement.offsetHeight;
+    this.val = px / this.size * 100;
   }
 
   clone() {
-    return new CSSPercentValue(this.val, this.prop, this.offsetElement, this.isFixed);
+    return new CSSPercentValue(this.val, this.offsetElement, this.isVertical, this.isFixed, this.img, this.size);
   }
 
-}
+  // --- Private
 
-/*-------------------------] CSSBackgroundPercentValue [--------------------------*/
-
-class CSSBackgroundPercentValue extends CSSPercentValue {
-
-  constructor(val, prop, offsetElement, img) {
-    super(val, prop, offsetElement);
-    this.img = img;
-  }
-
-  setImage(img) {
-    this.img = img;
-  }
-
-  getOffset() {
-    switch (this.prop) {
-      case 'backgroundTop': return this.offsetElement.clientHeight - this.img.height;
-      case 'backgroundLeft': return this.offsetElement.clientWidth - this.img.width;
+  initialize() {
+    if (this.size === undefined) {
+      this.size = this.getTotalSize();
     }
   }
 
-  clone() {
-    return new CSSBackgroundPercentValue(this.val, this.prop, this.offsetElement, this.img);
+  getTotalSize() {
+    return this.getElementSize() -  this.getImageSize();
+  }
+
+  getElementSize() {
+    return this.isVertical ?
+      this.isFixed ? window.innerHeight : this.offsetElement.offsetHeight :
+      this.isFixed ? window.innerWidth  : this.offsetElement.offsetWidth;
+  }
+
+  getImageSize() {
+    if (this.img) {
+      return this.isVertical ? this.img.height : this.img.width;
+    } else {
+      return 0;
+    }
   }
 
 }
@@ -8174,71 +8068,45 @@ class CSSBackgroundImage {
   static get DATA_URI_REG()    { return /^data:/; };
   static get URL_REG()         { return /url\(["']?(.+?)["']?\)/i };
 
-  static fromStyles(backgroundImage, backgroundPosition, el) {
-    var cssLeft, cssTop, pos, urlMatch, url;
+  // Note that everything in this method will happen synchronously
+  // when testing with mocks, so the order of promises and load
+  // events matter here.
+  static create(backgroundImage, backgroundPosition, el) {
+    var urlMatch, img, spriteRecognizer, cssLeft, cssTop, pos;
+
+    img = new Image();
 
     urlMatch = backgroundImage.match(CSSBackgroundImage.URL_REG);
 
     if (urlMatch) {
-      url = urlMatch[1];
+      this.fetchDomainSafeUrl(urlMatch[1]).then(url => {
+        img.src = url;
+      });
+      spriteRecognizer = new SpriteRecognizer(img);
     }
 
     if (backgroundPosition === 'initial') {
       cssLeft = new CSSPixelValue();
       cssTop  = new CSSPixelValue();
     } else {
-      if (backgroundPosition.split(',').length > 1) {
-        throwError('Only one background image allowed per element');
-      }
-      pos = backgroundPosition.split(' ');
-      cssLeft = CSSValue.parse(pos[0], 'backgroundLeft', el);
-      cssTop  = CSSValue.parse(pos[1], 'backgroundTop', el);
+      // To prevent errors on multiple background images,
+      // just take the first position in the list.
+      pos = backgroundPosition.split(',')[0].split(' ');
+      cssLeft = CSSValue.parseBackground(pos[0], el, false, img);
+      cssTop  = CSSValue.parseBackground(pos[1], el, true,  img);
     }
 
-    return new CSSBackgroundImage(url, cssLeft, cssTop);
-    //x = CSSValue.parse(xy[0], el, 'width');
-    //y = CSSValue.parse(xy[1], el, 'height');
-
-    // Background percentages are relative to the element itself.
-    // TODO: this won't work with percentages unless we have the
-    // size of the element AND the image to work with... this is
-    // getting silly, so let's move the work that CSSValue is
-    // doing into somewhere else and have CSSValue call out to
-    // it when it needs it instead.
-    //return new CSSPoint(x, y);
+    return new CSSBackgroundImage(img, cssLeft, cssTop, spriteRecognizer);
   }
 
-  constructor(url, cssLeft, cssTop, img, spriteRecognizer) {
-    this.url              = url;
-    this.cssLeft          = cssLeft;
-    this.cssTop           = cssTop;
-    this.img              = img;
-    this.spriteRecognizer = spriteRecognizer;
-
-    this.setup();
-  }
-
-  // --- Setup
-
-  setup() {
-    if (this.url && !this.img) {
-      var img = new Image();
-      this.spriteRecognizer = new SpriteRecognizer(img);
-      img.addEventListener('load', this.onImageLoaded.bind(this));
-      img.addEventListener('error', this.onImageErrored.bind(this));
-      this.fetchDomainSafeUrl(this.url).then(url => img.src = url).catch(url => this.onImageErrored());
-      this.img = img;
-    }
-  }
-
-  fetchDomainSafeUrl(url) {
+  static fetchDomainSafeUrl(url) {
     if (this.isDomainSafeUrl(url)) {
       // URL is domain safe, so return immediately.
       return Promise.resolve(url);
     } else {
       return new Promise((resolve, reject) => {
-        // The background page is the only context in which pixel data from X-Domain
-        // images can be loaded so call out to it and tell it to load the data for this url.
+        // The background tab is the only context in which pixel data from X-Domain
+        // images can be loaded, so send a message requesting a conversion to a data URI.
         var message = { message: 'convert_image_url_to_data_url', url: url };
         chrome.runtime.sendMessage(message, response => {
           if (response.success) {
@@ -8251,29 +8119,25 @@ class CSSBackgroundImage {
     }
   }
 
-  isDomainSafeUrl(url) {
-    return CSSBackgroundImage.SAME_DOMAIN_REG.test(url) ||
-           CSSBackgroundImage.DATA_URI_REG.test(url);
+  static isDomainSafeUrl(url) {
+    return this.SAME_DOMAIN_REG.test(url) ||
+           this.DATA_URI_REG.test(url);
   }
 
-  onImageLoaded() {
-    this.spriteRecognizer.loadImageData(this.img);
-    this.checkPercentageDimension(this.cssLeft, this.img);
-    this.checkPercentageDimension(this.cssTop,  this.img);
-  }
-
-  onImageErrored() {
-    throwError('Could not load ' + this.url, false);
-  }
-
-  checkPercentageDimension(cssDimension, img) {
-    if (cssDimension instanceof CSSBackgroundPercentValue) {
-      cssDimension.setImage(img);
-    }
+  constructor(img, cssLeft, cssTop, spriteRecognizer) {
+    this.img              = img;
+    this.cssLeft          = cssLeft;
+    this.cssTop           = cssTop;
+    this.spriteRecognizer = spriteRecognizer;
   }
 
   hasImage() {
-    return !!this.url;
+    return !!this.img.src;
+  }
+
+  update() {
+    this.cssLeft.update();
+    this.cssTop.update();
   }
 
   // --- Actions
@@ -8325,9 +8189,9 @@ class CSSBackgroundImage {
   }
 
   clone() {
-    // The background image data itself is never assumed to be changed, so there's
-    // no need to clone the image or sprite recognizer when cloning.
-    return new CSSBackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone(), this.img, this.spriteRecognizer);
+    // The background image data itself is never assumed to be changed,
+    // so there's no need to clone the image or sprite recognizer when cloning.
+    return new CSSBackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone(), this.spriteRecognizer);
   }
 
 }

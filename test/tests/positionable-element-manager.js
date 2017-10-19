@@ -91,6 +91,8 @@ describe('PositionableElementManager', function(uiRoot) {
 
   teardown(function() {
     releaseAppendedFixtures();
+    promiseMock.release();
+    imageLoadMock.release();
     el       = null;
     els      = null;
     manager  = null;
@@ -143,22 +145,19 @@ describe('PositionableElementManager', function(uiRoot) {
     if (backgroundPosition) {
       el.style.backgroundPosition = backgroundPosition;
     }
+    applyBackgroundImageMocks();
     manager.findElements();
-    forceBackgroundImageLoad();
   }
 
   function setupRotatedBackgroundBox() {
     el = appendRotatedBackgroundImageBox();
+    applyBackgroundImageMocks();
     manager.findElements();
-    forceBackgroundImageLoad();
   }
 
-  function forceBackgroundImageLoad() {
-    // Force image loaded event to keep everything synchronous.
-    // This can be done since the image is using a dataUri
-    var backgroundImage = manager.elements[0].cssBackgroundImage;
-    backgroundImage.img.src = backgroundImage.url;
-    backgroundImage.onImageLoaded();
+  function applyBackgroundImageMocks() {
+    promiseMock.apply();
+    imageLoadMock.apply();
   }
 
   function getElementZIndex(el) {
@@ -306,16 +305,16 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(manager.elements.length, 1);
   });
 
-  it('should not error on boxes with matrix3d', function() {
+  it('should be able to rotate matrix3d translated boxes', function() {
     var el = appendAbsoluteBox('matrix-3d-box');
     manager.findElements();
 
-    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 200);
-    dragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 250, 250);
+    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
+    dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 321);
 
-    assert.equal(el.style.transform, '');
-    assert.equal(el.style.width, '150px');
-    assert.equal(el.style.height, '150px');
+    assert.equal(el.style.transform, 'translate(-35.5px, 14.7px) matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) rotate(45deg)');
+    assert.equal(el.style.width, '171px');
+    assert.equal(el.style.height, '171px');
   });
 
   // --- Focusing
@@ -926,28 +925,28 @@ describe('PositionableElementManager', function(uiRoot) {
     setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 280);
     assertBoxDimensions(el, '100px', '100px', '142px', '142px');
-    assertBoxTranslation(-20.86, 8.64);
+    assertBoxTranslation(-21, 8.7);
   });
 
   it('should stay anchored when resizing a rotated element from nw', function() {
     setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-nw'), 150, 79, 150, 8);
     assertBoxDimensions(el, '50px', '50px', '150px', '150px');
-    assertBoxTranslation(25.1, -10.4);
+    assertBoxTranslation(25.2, -10.44);
   });
 
   it('should stay anchored when resizing an inverted rotated element from se', function() {
     setupInvertedRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 280);
     assertInvertedBoxDimensions('58px', '58px', '142px', '142px');
-    assertBoxTranslation(-20.86, 8.64);
+    assertBoxTranslation(-21, 8.7);
   });
 
   it('should stay anchored when resizing an inverted rotated element from nw', function() {
     setupInvertedRotatedBox('100px', '100px', '100px', '100px', '45deg');
     dragElement(getUiElement(el, '.resize-handle-nw'), 150, 79, 150, 8);
     assertInvertedBoxDimensions('100px', '100px', '150px', '150px');
-    assertBoxTranslation(25.1, -10.4);
+    assertBoxTranslation(25.2, -10.44);
   });
 
   it('should stay anchored when resizing a rotated box with top left origin', function() {
@@ -961,21 +960,21 @@ describe('PositionableElementManager', function(uiRoot) {
     setupAbsolute('rotate-tr-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 100, 221, 100, 321);
     assertInvertedBoxDimensions('', '', '171px', '171px');
-    assertBoxTranslation(-20.71, 50);
+    assertBoxTranslation(-20.8, 50.2);
   });
 
   it('should stay anchored when resizing a rotated box with bottom left origin', function() {
     setupAbsolute('rotate-bl-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 673, 346, 673, 446);
     assertInvertedBoxDimensions('', '', '171px', '171px');
-    assertBoxTranslation(-50, -20.71);
+    assertBoxTranslation(-50.2, -20.8);
   });
 
   it('should stay anchored when resizing a rotated box with bottom right origin', function() {
     setupAbsolute('rotate-br-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 700, 277, 700, 377);
     assertInvertedBoxDimensions('', '', '171px', '171px');
-    assertBoxTranslation(-70.71, 29.29);
+    assertBoxTranslation(-71, 29.41);
   });
 
   // --- Resizing multiple elements
@@ -1008,11 +1007,21 @@ describe('PositionableElementManager', function(uiRoot) {
     assertBoxDimensions(el2, '100px', '100px', '200px', '200px');
   });
 
+  // --- Resizing Other
+
+  it('should resize a box with percent translation', function() {
+    setupAbsolute('translate-percent-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 300, 300);
+    assert.equal(el.style.width,     '200px');
+    assert.equal(el.style.height,    '200px');
+    assert.equal(el.style.transform, 'translate(10%, 15%)');
+  });
+
   // --- Rotation
 
   it('should rotate', function() {
     setupAbsolute();
-    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 200);
+    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
     assert.equal(el.style.transform, 'rotate(45deg)');
   });
 
@@ -1064,7 +1073,7 @@ describe('PositionableElementManager', function(uiRoot) {
 
     whileFakeScrolled(500, () => {
       setupAbsolute();
-      dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 200);
+      dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
       assert.equal(el.style.transform, 'rotate(45deg)');
     });
 
@@ -1074,7 +1083,7 @@ describe('PositionableElementManager', function(uiRoot) {
     setupMultiple();
 
     clickElement(els[0]);
-    dragElement(getUiElement(els[1], '.rotation-handle'), 200, 200, 150, 200);
+    dragElement(getUiElement(els[1], '.rotation-handle'), 200, 200, 150, 221);
     assert.equal(els[0].style.transform, '');
     assert.equal(els[1].style.transform, 'rotate(45deg)');
   });
@@ -1085,7 +1094,7 @@ describe('PositionableElementManager', function(uiRoot) {
     // Focus both and drag element 1 to 45 degrees.
     // Both elements should be at 45 degrees.
     shiftClickElements(els);
-    dragElement(getUiElement(els[1], '.rotation-handle'), 200, 200, 150, 200);
+    dragElement(getUiElement(els[1], '.rotation-handle'), 200, 200, 150, 221);
     assert.equal(els[0].style.transform, 'rotate(45deg)');
     assert.equal(els[1].style.transform, 'rotate(45deg)');
 
@@ -1107,6 +1116,14 @@ describe('PositionableElementManager', function(uiRoot) {
 
   });
 
+  it('should rotate multiple times', function() {
+    setupAbsolute();
+    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 79,  150);
+    dragElement(getUiElement(el, '.rotation-handle'), 79,  150, 150, 121);
+    assert.equal(el.style.transform, 'rotate(225deg)');
+  });
+
   // --- Background Image
 
   it('should snap to sprite on double click', function() {
@@ -1120,10 +1137,19 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.backgroundPosition, '-1px -1px');
   });
 
-  it('should snap to sprite using percent value', function() {
+  it('should snap to first sprite using percent value', function() {
     setupBackgroundBox('10% 10%');
+    fireDoubleClick(getUiElement(el, '.position-handle'), 110, 110);
+    assert.equal(el.style.left,   '110px');
+    assert.equal(el.style.top,    '110px');
+    assert.equal(el.style.width,  '2px');
+    assert.equal(el.style.height, '2px');
+    assert.equal(el.style.backgroundPosition, '25% 25%');
+  });
 
-    fireDoubleClick(getUiElement(el, '.position-handle'), 113, 113);
+  it('should snap to second sprite using percent value', function() {
+    setupBackgroundBox('10% 10%');
+    fireDoubleClick(getUiElement(el, '.position-handle'), 112, 112);
     assert.equal(el.style.left,   '112px');
     assert.equal(el.style.top,    '112px');
     assert.equal(el.style.width,  '2px');
@@ -1167,6 +1193,18 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.top,    '');
     assert.equal(el.style.width,  '');
     assert.equal(el.style.height, '');
+  });
+
+  it('should not fail on elements with multiple backgrounds', function() {
+    var backgroundImage, pos;
+
+    setupBackgroundBox('background-multiple-box');
+    backgroundImage = manager.elements[0].cssBackgroundImage;
+    pos = backgroundImage.getPosition();
+
+    assert.equal(pos.x, 20);
+    assert.equal(pos.y, 40);
+    assert.equal(backgroundImage.hasImage(), true);
   });
 
   // --- Peeking

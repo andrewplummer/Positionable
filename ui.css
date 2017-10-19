@@ -218,7 +218,7 @@ label {
 
 .element-area-property-icon {
   display: inline-block;
-  vertical-align: -2px;
+  vertical-align: -1px;
   margin-right: 5px;
   margin-left: -20px;
   opacity: 0;
@@ -237,12 +237,6 @@ label {
   vertical-align: top;
   overflow-x: auto;
   max-width: 85%;
-}
-
-.element-area-no-rotation {
-  display: inline-block;
-  vertical-align: -2px;
-  margin-left: 5px;
 }
 
 .control-panel--element-transform-active,
