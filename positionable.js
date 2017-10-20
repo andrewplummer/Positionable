@@ -39,9 +39,12 @@
 // - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
 // - TODO: more rotate icon increments for smoother transition?
 // - TODO: can we not handle percents in transforms??
+// - TODO: how to handle auto values?
+// - TODO: test that it doesn't fail on display: none elements
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
+// TODO: lint!
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 
@@ -6623,7 +6626,7 @@ class CSSPositioningProperty {
 
   static getCSSValue(matcher, prop) {
     var cssValue = matcher.getMatchedCSSValue(prop);
-    return cssValue && !cssValue.isNull() ? cssValue : null;
+    return cssValue ? cssValue : null;
   }
 
   constructor(cssValue, prop) {
@@ -7258,6 +7261,7 @@ class CSSRuleMatcher {
   static get BOTTOM() { return 'bottom'; }
   static get HEIGHT() { return 'height'; }
 
+  static get AUTO()    { return 'auto'; }
   static get VAR_REG() { return /var\(.+\)/; }
 
   constructor(el) {
@@ -7275,11 +7279,11 @@ class CSSRuleMatcher {
     }
   }
 
+  /*
   getPosition(prop) {
     var val = this.getCSSValue(prop.toLowerCase());
     return val;
 
-    /*
      * TODO: check this is necessary?
     if (!val.isAuto()) {
       // If the element is already explictly positioned, then
@@ -7294,8 +7298,8 @@ class CSSRuleMatcher {
              CSSValue.parseValue(style['border' + prop + 'Width']);
 
     return new CSSValue(px);
-    */
   }
+  */
 
   getCSSValue(prop) {
     return CSSValue.parse(this.getProperty(prop), this.el, this.isVerticalProperty(prop));
@@ -7346,8 +7350,8 @@ class CSSRuleMatcher {
   }
 
   getBackgroundImage() {
-    // Must use computed styles here,
-    // otherwise the url may not include the host.
+    // Must use computed styles here, as the url may not include the
+    // host or be using CSS variables.
     var backgroundImage = this.computedStyles['backgroundImage'];
     // It seems the computed initial value of backgroundPosition is 0% 0%,
     // so prevent defaulting to percentage values by using only matcheds styles.
@@ -7375,11 +7379,10 @@ class CSSRuleMatcher {
     // to fall back to computed properties unless explicitly
     // requested to, however CSS variables are unusable, so fall
     // back in this special case.
-    if (val && CSSRuleMatcher.VAR_REG.test(val)) {
-      return this.getComputedProperty(prop);
+    // TODO: document auto here
+    if (val && val !== CSSRuleMatcher.AUTO && !CSSRuleMatcher.VAR_REG.test(val)) {
+      return val;
     }
-
-    return val;
   }
 
   getComputedProperty(prop) {
@@ -7707,6 +7710,8 @@ class CSSTransformOrigin {
 
 class CSSValue {
 
+  static get SUBPIXEL_PRECISION() { return 2; }
+
   static parse(str, el, isVertical, isSubpixel, isTranslate, img) {
 
     if (!str) {
@@ -7757,10 +7762,10 @@ class CSSValue {
     return this.parse(str, el, isVertical, true, true);
   }
 
-  constructor(val, unit, precision) {
+  constructor(val, unit, subpixel) {
     this.val       = val;
     this.unit      = unit;
-    this.precision = precision || 0;
+    this.subpixel  = subpixel;
   }
 
   // Note that this method is intended to be overridden by child
@@ -7776,7 +7781,7 @@ class CSSValue {
   }
 
   clone() {
-    return new CSSValue(this.val, this.unit, this.precision);
+    return new CSSValue(this.val, this.unit, this.subpixel);
   }
 
   appendCSSDeclaration(prop, declarations) {
@@ -7796,7 +7801,7 @@ class CSSValue {
   }
 
   toString() {
-    var str;
+    var str, precision;
 
     if (this.isNull()) {
       return this.val;
@@ -7807,7 +7812,9 @@ class CSSValue {
       return this.val.toString();
     }
 
-    return roundWithPrecision(this.val, this.precision).toString() + this.unit;
+    precision = this.subpixel ? CSSValue.SUBPIXEL_PRECISION : 0;
+
+    return roundWithPrecision(this.val, precision).toString() + this.unit;
   }
 
 }
@@ -7817,7 +7824,7 @@ class CSSValue {
 class CSSPixelValue extends CSSValue {
 
   constructor(val, subpixel) {
-    super(val, 'px', subpixel ? 2 : 0);
+    super(val, 'px', subpixel);
   }
 
   get px() {
@@ -7829,7 +7836,7 @@ class CSSPixelValue extends CSSValue {
   }
 
   clone() {
-    return new CSSPixelValue(this.val);
+    return new CSSPixelValue(this.val, this.subpixel);
   }
 
 }
@@ -7843,7 +7850,7 @@ class CSSEmValue extends CSSValue {
   }
 
   constructor(val, fontSize) {
-    super(val, 'em', 2);
+    super(val, 'em', true);
     this.fontSize = fontSize;
   }
 
@@ -7866,7 +7873,7 @@ class CSSEmValue extends CSSValue {
 class CSSDegreeValue extends CSSValue {
 
   constructor(val) {
-    super(val, 'deg', 2);
+    super(val, 'deg', true);
   }
 
   get deg() {
@@ -7888,7 +7895,7 @@ class CSSDegreeValue extends CSSValue {
 class CSSRadianValue extends CSSValue {
 
   constructor(val) {
-    super(val, 'rad', 2);
+    super(val, 'rad', true);
   }
 
   get deg() {
@@ -7932,7 +7939,7 @@ class CSSGradianValue extends CSSValue {
 class CSSTurnValue extends CSSValue {
 
   constructor(val) {
-    super(val, 'turn', 2);
+    super(val, 'turn', true);
   }
 
   get deg() {
@@ -7974,7 +7981,7 @@ class CSSPercentValue extends CSSValue {
   }
 
   constructor(val, offsetElement, isVertical, isFixed, img, size) {
-    super(val, '%', 2);
+    super(val, '%', true);
     this.offsetElement = offsetElement;
     this.isVertical    = isVertical;
     this.isFixed       = isFixed;
@@ -8033,7 +8040,7 @@ class CSSPercentValue extends CSSValue {
 class CSSViewportValue extends CSSValue {
 
   constructor(val, unit) {
-    super(val, unit, 2);
+    super(val, unit, true);
   }
 
   get px() {
@@ -8073,6 +8080,9 @@ class CSSBackgroundImage {
   // events matter here.
   static create(backgroundImage, backgroundPosition, el) {
     var urlMatch, img, spriteRecognizer, cssLeft, cssTop, pos;
+
+    backgroundImage    = backgroundImage || '';
+    backgroundPosition = backgroundPosition || '';
 
     img = new Image();
 

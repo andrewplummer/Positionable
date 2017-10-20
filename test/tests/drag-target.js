@@ -65,12 +65,12 @@ describe('DragTarget', function(uiRoot) {
   }
 
   function setupAbsolute() {
-    el = appendAbsoluteBox();
+    el = appendBox();
     target = new Target(el);
   }
 
   function setupFixed() {
-    el = appendFixedBox();
+    el = appendBox('fixed-box');
     target = new Target(el);
   }
 
@@ -191,20 +191,20 @@ describe('DragTarget', function(uiRoot) {
 
     el = createDiv();
 
-    var p      = appendChild(el, 'p');
-    var h1     = appendChild(el, 'h1');
-    var h2     = appendChild(el, 'h2');
-    var h3     = appendChild(el, 'h3');
-    var h4     = appendChild(el, 'h4');
-    var h5     = appendChild(el, 'h5');
-    var h6     = appendChild(el, 'h6');
-    var pre    = appendChild(el, 'pre');
-    var code   = appendChild(el, 'code');
-    var span   = appendChild(el, 'span');
-    var link   = appendChild(el, 'a');
-    var input  = appendChild(el, 'input');
-    var label  = appendChild(el, 'label');
-    var select = appendChild(el, 'select');
+    var p      = appendByTag(el, 'p');
+    var h1     = appendByTag(el, 'h1');
+    var h2     = appendByTag(el, 'h2');
+    var h3     = appendByTag(el, 'h3');
+    var h4     = appendByTag(el, 'h4');
+    var h5     = appendByTag(el, 'h5');
+    var h6     = appendByTag(el, 'h6');
+    var pre    = appendByTag(el, 'pre');
+    var code   = appendByTag(el, 'code');
+    var span   = appendByTag(el, 'span');
+    var link   = appendByTag(el, 'a');
+    var input  = appendByTag(el, 'input');
+    var label  = appendByTag(el, 'label');
+    var select = appendByTag(el, 'select');
 
     target = new Target(el);
     target.disableEventsForInteractiveElements();
@@ -238,7 +238,7 @@ describe('DragTarget', function(uiRoot) {
   });
 
   it('should reset the drag when ctrl key depressed', function() {
-    el = appendAbsoluteBox();
+    el = appendBox();
     target = new Target(el);
     target.setupCtrlKeyReset();
 
@@ -252,7 +252,7 @@ describe('DragTarget', function(uiRoot) {
   });
 
   it('should reset the drag when meta key depressed', function() {
-    el = appendAbsoluteBox();
+    el = appendBox();
     target = new Target(el);
     target.setupMetaKeyReset();
 
@@ -275,8 +275,8 @@ describe('DragTarget', function(uiRoot) {
   it('should trigger double click with ctrl key', function() {
     setupStatic();
     target.allowDoubleClick();
-    fireCtrlClick(el, 100, 100);
-    fireCtrlClick(el, 100, 100);
+    ctrlClickElement(el, 100, 100);
+    ctrlClickElement(el, 100, 100);
     assert.equal(target.doubleClicked, true);
   });
 

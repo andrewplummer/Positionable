@@ -14,10 +14,10 @@ describe('AlignmentManager', function(uiRoot) {
 
   function setupElements() {
     els = [];
-    els.push(new PositionableElement(appendAbsoluteBox('align-box-1')));
-    els.push(new PositionableElement(appendAbsoluteBox('align-box-2')));
-    els.push(new PositionableElement(appendAbsoluteBox('align-box-3')));
-    els.push(new PositionableElement(appendAbsoluteBox('align-box-4')));
+    els.push(new PositionableElement(appendBox('align-box-1')));
+    els.push(new PositionableElement(appendBox('align-box-2')));
+    els.push(new PositionableElement(appendBox('align-box-3')));
+    els.push(new PositionableElement(appendBox('align-box-4')));
   }
 
   // --- Align

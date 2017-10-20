@@ -99,49 +99,86 @@ describe('PositionableElementManager', function(uiRoot) {
     listener = null;
   });
 
-  function setupAbsolute(className) {
-    el = appendAbsoluteBox(className);
+  function setupBox(className) {
+    el = appendBox(className);
     manager.findElements();
   }
 
-  function setupFixed() {
-    el = appendFixedBox();
+  function setupNested(className) {
+    el = appendNestedBox(className);
     manager.findElements();
   }
 
   function setupMultiple() {
-    var el1 = appendAbsoluteBox();
-    var el2 = appendAbsoluteBox();
+    var el1 = appendBox();
+    var el2 = appendBox();
     manager.findElements();
     els = [el1, el2];
   }
 
-  function setupNested() {
-    el = appendNestedBox();
+  function setupPositionedBox(left, top, width, height) {
+    el = appendBox();
+    setBoxPosition(left, top, width, height);
     manager.findElements();
   }
 
-  function setupBox(left, top, width, height) {
-    el = appendAbsoluteBox();
-    el.style.left   = left;
-    el.style.top    = top;
-    el.style.width  = width;
-    el.style.height = height;
+  function setupPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
+    el = appendBox();
+    setBoxPosition(left, top, width, height);
+    mockOffsetParentDimensions(el, offsetWidth, offsetHeight);
+    manager.findElements();
+  }
+
+  function setupNestedPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
+    el = appendNestedBox();
+    setBoxPosition(left, top, width, height);
+    mockOffsetParentDimensions(el, offsetWidth, offsetHeight);
+    manager.findElements();
+  }
+
+  function setupRotatedBox(left, top, width, height, rotation) {
+    el = appendBox();
+    setBoxPosition(left, top, width, height);
+    el.style.transform = 'rotate(' + rotation + ')';
     manager.findElements();
   }
 
   function setupEmBox(left, top, width, height, fontSize) {
-    el = appendAbsoluteBox();
-    el.style.left   = left;
-    el.style.top    = top;
-    el.style.width  = width;
-    el.style.height = height;
+    el = appendBox();
+    setBoxPosition(left, top, width, height);
     el.style.fontSize = fontSize;
     manager.findElements();
   }
 
+  function setupInvertedBox(right, bottom, width, height) {
+    el = appendBox('inverted-box');
+    setInvertedBoxPosition(right, bottom, width, height);
+    manager.findElements();
+  }
+
+  function setupInvertedRotatedBox(right, bottom, width, height, rotation) {
+    el = appendBox('inverted-box');
+    setInvertedBoxPosition(right, bottom, width, height);
+    el.style.transform = 'rotate(' + rotation + ')';
+    manager.findElements();
+  }
+
+  function setBoxPosition(left, top, width, height) {
+    el.style.left   = left;
+    el.style.top    = top;
+    el.style.width  = width;
+    el.style.height = height;
+  }
+
+  function setInvertedBoxPosition(right, bottom, width, height) {
+    el.style.right  = right;
+    el.style.bottom = bottom;
+    el.style.width  = width;
+    el.style.height = height;
+  }
+
   function setupBackgroundBox(backgroundPosition) {
-    el = appendBackgroundImageBox();
+    el = appendBox('background-image-box');
     if (backgroundPosition) {
       el.style.backgroundPosition = backgroundPosition;
     }
@@ -150,7 +187,7 @@ describe('PositionableElementManager', function(uiRoot) {
   }
 
   function setupRotatedBackgroundBox() {
-    el = appendRotatedBackgroundImageBox();
+    el = appendBox('rotate-box background-image-box');
     applyBackgroundImageMocks();
     manager.findElements();
   }
@@ -165,71 +202,12 @@ describe('PositionableElementManager', function(uiRoot) {
     return zIndex === 'auto' ? 0 : zIndex;
   }
 
-  function setupPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
-    el = appendAbsoluteBox();
-    el.style.left   = left;
-    el.style.top    = top;
-    el.style.width  = width;
-    el.style.height = height;
-    mockOffsetParentDimensions(el, offsetWidth, offsetHeight);
-    manager.findElements();
-  }
-
-  function setupNestedPercentBox(left, top, width, height, offsetWidth, offsetHeight) {
-    el = appendNestedBox();
-    el.style.left   = left;
-    el.style.top    = top;
-    el.style.width  = width;
-    el.style.height = height;
-    mockOffsetParentDimensions(el, offsetWidth, offsetHeight);
-    manager.findElements();
-  }
-
   function mockOffsetParentDimensions(el, offsetWidth, offsetHeight) {
     mockGetter(el, 'offsetParent',  {
       offsetWidth: offsetWidth,
       offsetHeight: offsetHeight,
       style: {}
     });
-  }
-
-  function setupRotatedBox(left, top, width, height, rotation) {
-    el = appendAbsoluteBox();
-    el.style.left   = left;
-    el.style.top    = top;
-    el.style.width  = width;
-    el.style.height = height;
-    el.style.transform = 'rotate(' + rotation + ')';
-    manager.findElements();
-  }
-
-  function setupInvertedBox(right, bottom, width, height) {
-    el = appendInvertedBox();
-    el.style.right  = right;
-    el.style.bottom = bottom;
-    el.style.width  = width;
-    el.style.height = height;
-    manager.findElements();
-  }
-
-  function setupInvertedRotatedBox(right, bottom, width, height, rotation) {
-    el = appendInvertedBox();
-    el.style.right  = right;
-    el.style.bottom = bottom;
-    el.style.width  = width;
-    el.style.height = height;
-    el.style.transform = 'rotate(' + rotation + ')';
-    manager.findElements();
-  }
-
-  function clickElement(el) {
-    fireMouseDownUp(el);
-    fireClick(el)
-  }
-
-  function shiftClickElement(el) {
-    fireShiftMouseDownUp(el);
-    fireShiftClick(el)
   }
 
   function shiftClickElements(els) {
@@ -272,41 +250,41 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should find absolute and fixed elements by default', function() {
-    appendAbsoluteBox();
-    appendFixedBox();
+    appendBox();
+    appendBox('fixed-box');
     manager.findElements();
     assert.equal(manager.elements.length, 2);
   });
 
   it('should not find relative or static elements by default', function() {
-    appendRelativeBox();
-    appendStaticBox();
+    appendBox('relative-box');
+    appendBox('static-box');
     manager.findElements();
     assert.equal(manager.elements.length, 0);
   });
 
   it('should be able to use an explicit selector to include', function() {
-    appendAbsoluteBox('box-1');
-    appendAbsoluteBox('box-2');
+    appendBox('box-1');
+    appendBox('box-2');
     manager.findElements('.box-1');
     assert.equal(manager.elements.length, 1);
   });
 
   it('should be able to use an explicit selector to exclude', function() {
-    appendAbsoluteBox('box-1');
-    appendAbsoluteBox('box-2');
+    appendBox('box-1');
+    appendBox('box-2');
     manager.findElements(null, '.box-2');
     assert.equal(manager.elements.length, 1);
   });
 
   it('should not error on boxes with translate percentages', function() {
-    appendAbsoluteBox('translate-percent-box');
+    appendBox('translate-percent-box');
     manager.findElements();
     assert.equal(manager.elements.length, 1);
   });
 
   it('should be able to rotate matrix3d translated boxes', function() {
-    var el = appendAbsoluteBox('matrix-3d-box');
+    var el = appendBox('matrix-3d-box');
     manager.findElements();
 
     dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
@@ -320,20 +298,20 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Focusing
 
   it('should focus element on position handle mousedown', function() {
-    setupAbsolute();
-    fireMouseDownUp(getUiElement(el, '.position-handle'));
+    setupBox();
+    fireMouseDown(getUiElement(el, '.position-handle'));
     assertElementFocused(el, true);
   });
 
   it('should focus element on resize handle mousedown', function() {
-    setupAbsolute();
-    fireMouseDownUp(getUiElement(el, '.resize-handle'));
+    setupBox();
+    fireMouseDown(getUiElement(el, '.resize-handle'));
     assertElementFocused(el, true);
   });
 
   it('should focus elements on rotation handle mousedown', function() {
-    setupAbsolute();
-    fireMouseDownUp(getUiElement(el, '.rotation-handle'));
+    setupBox();
+    fireMouseDown(getUiElement(el, '.rotation-handle'));
     assertElementFocused(el, true);
   });
 
@@ -351,7 +329,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should not toggle focus on shift click with single element', function() {
-    setupAbsolute();
+    setupBox();
 
     clickElement(el);
     assertElementFocused(el, true);
@@ -405,13 +383,13 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should fire one focus changed event when focused added', function() {
-    setupAbsolute();
+    setupBox();
     clickElement(el);
     assert.equal(listener.focusedElementsChangedEvents, 1);
   });
 
   it('should fire one focus changed event when focused removed', function() {
-    setupAbsolute();
+    setupBox();
     clickElement(el);
     manager.unfocusAll();
     assert.equal(listener.focusedElementsChangedEvents, 2);
@@ -563,21 +541,21 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Positioning
 
   it('should move', function() {
-    setupAbsolute();
+    setupBox();
     dragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.left, '150px');
     assert.equal(el.style.top,  '150px');
   });
 
   it('should constrain move horizontally', function() {
-    setupAbsolute();
+    setupBox();
     shiftDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 160);
     assert.equal(el.style.left, '150px');
     assert.equal(el.style.top,  '100px');
   });
 
   it('should constrain move vertically', function() {
-    setupAbsolute();
+    setupBox();
     shiftDragElement(getUiElement(el, '.position-handle'), 150, 150, 160, 200);
     assert.equal(el.style.left, '100px');
     assert.equal(el.style.top,  '150px');
@@ -586,7 +564,7 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should move an absolute box with scroll', function() {
 
     whileFakeScrolled(500, () => {
-      setupAbsolute();
+      setupBox();
       fireMouseDown(getUiElement(el, '.position-handle'), 50, 50);
       fireMouseMove(getUiElement(el, '.position-handle'), 100, 100);
       manager.elements[0].positionHandle.onScroll();
@@ -598,7 +576,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should move a fixed box with scroll', function() {
-    setupFixed();
+    setupBox('fixed-box');
 
     whileFakeScrolled(500, () => {
       dragElement(getUiElement(el, '.position-handle'), 0, 0, 100, 100);
@@ -610,7 +588,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should move a fixed box while scrolling', function() {
-    setupFixed();
+    setupBox('fixed-box');
 
     fireMouseDown(getUiElement(el, '.position-handle'), 50, 50);
     fireMouseMove(getUiElement(el, '.position-handle'), 100, 100);
@@ -651,7 +629,7 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Background Positioning
 
   it('should not move background image when none exists', function() {
-    setupAbsolute();
+    setupBox();
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.backgroundPosition,  '');
   });
@@ -721,14 +699,14 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resize
 
   it('should resize', function() {
-    setupAbsolute();
+    setupBox();
     dragElement(getUiElement(el, '.resize-handle-e'), 200, 150, 300, 150);
     assert.equal(el.style.width,  '200px');
     assert.equal(el.style.height, '100px');
   });
 
   it('should resize inverted box dimensions', function() {
-    setupAbsolute();
+    setupBox();
     dragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 50, 50);
     assertBoxDimensions(el, '50px', '50px', '50px', '50px');
   });
@@ -736,13 +714,13 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resize Reflecting
 
   it('should allow a box to be reflected from its opposite edges', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     dragElement(getUiElement(el, '.resize-handle-se'), 2420, 1580, 0, 0);
     assertBoxDimensions(el, '0px', '0px', '500px', '500px');
   });
 
   it('should allow a box to be reflected from its positioned edges', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     dragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 2920, 2080);
     assertBoxDimensions(el, '2420px', '1580px', '500px', '500px');
   });
@@ -762,25 +740,25 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resize Constraining - Basics
 
   it('should constrain resize', function() {
-    setupAbsolute();
+    setupBox();
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 500, 300);
     assertBoxDimensions(el, '100px', '100px', '200px', '200px');
   });
 
   it('should not fail to constrain se resize on 0', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 0, 0);
     assertBoxDimensions(el, '0px', '0px', '0px', '0px');
   });
 
   it('should not fail to constrain nw resize on 0', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 0, 0, 1920, 1080);
     assertBoxDimensions(el, '1920px', '1080px', '0px', '0px');
   });
 
   it('should not interfere with non-constrainable handles', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-n'), 0, 0, 0, -1000);
     assertBoxDimensions(el, '0px', '-1000px', '1920px', '2080px');
   });
@@ -788,7 +766,7 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resize constraining - special
 
   it('should allow a zero size element when constraining', function() {
-    setupBox('100px', '100px', '100px', '100px');
+    setupPositionedBox('100px', '100px', '100px', '100px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 276, 100);
     assertBoxDimensions(el, '100px', '100px', '0px', '0px');
   });
@@ -796,49 +774,49 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resize Constraining - Normal Box
 
   it('should constrain ratio when dragging se corner right and down', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 2800, 1100);
     assertBoxDimensions(el, '0px', '0px', '1956px', '1100px');
   });
 
   it('should constrain ratio when dragging se corner right and up', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 2800, 900);
     assertBoxDimensions(el, '0px', '0px', '1600px', '900px');
   });
 
   it('should constrain ratio when dragging se corner left and down', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 1080, 1920);
     assertBoxDimensions(el, '0px', '0px', '1080px', '608px');
   });
 
   it('should constrain ratio when dragging se corner left and up', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 1920, 1080, 1420, 580);
     assertBoxDimensions(el, '0px', '0px', '1031px', '580px');
   });
 
   it('should constrain ratio when dragging nw corner right and down', function() {
-    setupBox('0px', '0px', '1920px', '1080px');
+    setupPositionedBox('0px', '0px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 0, 0, 500, 500);
     assertBoxDimensions(el, '889px', '500px', '1031px', '580px');
   });
 
   it('should constrain ratio when dragging nw corner right and up', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 1000, 0);
     assertBoxDimensions(el, '1000px', '781px', '1420px', '799px');
   });
 
   it('should constrain ratio when dragging nw corner left and down', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 0, 1000);
     assertBoxDimensions(el, '1389px', '1000px', '1031px', '580px');
   });
 
   it('should constrain ratio when dragging nw corner left and up', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 0, 0);
     assertBoxDimensions(el, '0px', '219px', '2420px', '1361px');
   });
@@ -896,13 +874,13 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resize constraining with reflection - normal box
 
   it('should allow a constrained resize to reflect from its opposite edge', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-se'), 2420, 1580, 0, 0);
     assertBoxDimensions(el, '0px', '219px', '500px', '281px');
   });
 
   it('should allow a constrained resize to reflect from its positioned edge', function() {
-    setupBox('500px', '500px', '1920px', '1080px');
+    setupPositionedBox('500px', '500px', '1920px', '1080px');
     shiftDragElement(getUiElement(el, '.resize-handle-nw'), 500, 500, 2920, 2080);
     assertBoxDimensions(el, '2420px', '1580px', '500px', '281px');
   });
@@ -950,28 +928,28 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should stay anchored when resizing a rotated box with top left origin', function() {
-    setupAbsolute('rotate-tl-box');
+    setupBox('rotate-tl-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 100, 241, 100, 341);
     assertInvertedBoxDimensions('', '', '171px', '171px');
     assertBoxTranslation(0, 0);
   });
 
   it('should stay anchored when resizing a rotated box with top right origin', function() {
-    setupAbsolute('rotate-tr-box');
+    setupBox('rotate-tr-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 100, 221, 100, 321);
     assertInvertedBoxDimensions('', '', '171px', '171px');
     assertBoxTranslation(-20.8, 50.2);
   });
 
   it('should stay anchored when resizing a rotated box with bottom left origin', function() {
-    setupAbsolute('rotate-bl-box');
+    setupBox('rotate-bl-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 673, 346, 673, 446);
     assertInvertedBoxDimensions('', '', '171px', '171px');
     assertBoxTranslation(-50.2, -20.8);
   });
 
   it('should stay anchored when resizing a rotated box with bottom right origin', function() {
-    setupAbsolute('rotate-br-box');
+    setupBox('rotate-br-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 700, 277, 700, 377);
     assertInvertedBoxDimensions('', '', '171px', '171px');
     assertBoxTranslation(-71, 29.41);
@@ -996,8 +974,8 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should resize multiple elements with rotation', function() {
-    var el1 = appendAbsoluteBox();
-    var el2 = appendAbsoluteBox();
+    var el1 = appendBox();
+    var el2 = appendBox();
     el2.style.transform = 'rotate(45deg)';
     manager.findElements();
 
@@ -1010,7 +988,7 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Resizing Other
 
   it('should resize a box with percent translation', function() {
-    setupAbsolute('translate-percent-box');
+    setupBox('translate-percent-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 200, 200, 300, 300);
     assert.equal(el.style.width,     '200px');
     assert.equal(el.style.height,    '200px');
@@ -1020,49 +998,49 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Rotation
 
   it('should rotate', function() {
-    setupAbsolute();
+    setupBox();
     dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
     assert.equal(el.style.transform, 'rotate(45deg)');
   });
 
   it('should rotate with radians', function() {
-    setupAbsolute('rotate-radian-box');
+    setupBox('rotate-radian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
     assert.equal(el.style.transform, 'rotate(3.14rad)');
   });
 
   it('should not allow radians to go negative', function() {
-    setupAbsolute('rotate-radian-box');
+    setupBox('rotate-radian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
     assert.equal(el.style.transform, 'rotate(5.5rad)');
   });
 
   it('should rotate with gradians', function() {
-    setupAbsolute('rotate-gradian-box');
+    setupBox('rotate-gradian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
     assert.equal(el.style.transform, 'rotate(200grad)');
   });
 
   it('should not allow gradians to go negative', function() {
-    setupAbsolute('rotate-gradian-box');
+    setupBox('rotate-gradian-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
     assert.equal(el.style.transform, 'rotate(350grad)');
   });
 
   it('should rotate with turns', function() {
-    setupAbsolute('rotate-turn-box');
+    setupBox('rotate-turn-box');
     dragElement(getUiElement(el, '.rotation-handle'), 100, 100, 200, 100);
     assert.equal(el.style.transform, 'rotate(0.75turn)');
   });
 
   it('should rotate based on the handle origin, not the original element rotation', function() {
-    setupAbsolute();
+    setupBox();
     dragElement(getUiElement(el, '.rotation-handle'), 214, 194, 214, 195);
     assert.equal(el.style.transform, 'rotate(0.6deg)');
   });
 
   it('should constrain rotation', function() {
-    setupAbsolute();
+    setupBox();
     shiftDragElement(getUiElement(el, '.rotation-handle'), 200, 200, 142, 200);
     assert.equal(el.style.transform, 'rotate(45deg)');
     shiftDragElement(getUiElement(el, '.rotation-handle'), 142, 200, 130, 200);
@@ -1072,7 +1050,7 @@ describe('PositionableElementManager', function(uiRoot) {
   it('should rotate properly while scrolled', function() {
 
     whileFakeScrolled(500, () => {
-      setupAbsolute();
+      setupBox();
       dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
       assert.equal(el.style.transform, 'rotate(45deg)');
     });
@@ -1117,7 +1095,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should rotate multiple times', function() {
-    setupAbsolute();
+    setupBox();
     dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
     dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 79,  150);
     dragElement(getUiElement(el, '.rotation-handle'), 79,  150, 150, 121);
@@ -1270,7 +1248,7 @@ describe('PositionableElementManager', function(uiRoot) {
   // --- Nudging
 
   it('should be able to nudge position', function() {
-    setupAbsolute();
+    setupBox();
     manager.focusAll();
 
     manager.pushFocusedStates();
@@ -1280,7 +1258,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should be able to nudge size se', function() {
-    setupAbsolute();
+    setupBox();
     manager.focusAll();
 
     manager.pushFocusedStates();
@@ -1290,7 +1268,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should be able to nudge size nw', function() {
-    setupAbsolute();
+    setupBox();
     manager.focusAll();
 
     manager.pushFocusedStates();
@@ -1300,7 +1278,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should be able to nudge rotation', function() {
-    setupAbsolute();
+    setupBox();
     manager.focusAll();
 
     manager.pushFocusedStates();
@@ -1309,7 +1287,7 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should be able to nudge z-index', function() {
-    setupAbsolute();
+    setupBox();
     manager.focusAll();
 
     manager.pushFocusedStates();
@@ -1331,12 +1309,20 @@ describe('PositionableElementManager', function(uiRoot) {
 
   // --- Other
 
+  it('should preserve precision after undo', function() {
+    setupRotatedBox('100px', '100px', '100px', '100px', '45deg');
+    dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 271);
+    dragElement(getUiElement(el, '.resize-handle-se'), 150, 271, 150, 321);
+    manager.undo();
+    assert.equal(el.style.transform,   'translate(-17.5px, 7.25px) rotate(45deg)');
+  });
+
   it('should find elements with incomplete positioning properties', function() {
-    el = appendIncompleteBox();
+    el = appendBox('incomplete-box');
     manager.findElements();
 
     dragElement(getUiElement(el, '.position-handle'), 0, 0, 100, 100);
-    dragElement(getUiElement(el, '.resize-handle-se'), 100, 0, 50, 70);
+    dragElement(getUiElement(el, '.resize-handle-se'), 200, 100, 150, 170);
 
     assert.equal(manager.elements.length, 1);
     assert.equal(el.style.top, '100px');

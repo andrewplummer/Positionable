@@ -4,7 +4,7 @@ describe('CSSTransformOrigin', function(uiRoot) {
   var el;
 
   setup(function() {
-    el = appendAbsoluteBox();
+    el = appendBox();
   });
 
   teardown(function() {

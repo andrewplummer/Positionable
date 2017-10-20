@@ -7,7 +7,7 @@ describe('CSSTransformFunction', function(uiRoot) {
 
   function getElementTransformFunction(className) {
     var el, matcher, transform, all, prop, values;
-    el        = appendAbsoluteBox(className);
+    el        = appendBox(className);
     matcher   = new CSSRuleMatcher(el);
     transform = matcher.getMatchedProperty('transform');
     if (transform) {

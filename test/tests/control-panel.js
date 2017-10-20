@@ -31,13 +31,13 @@ describe('ControlPanel', function(uiRoot) {
   }
 
   function setupSingle() {
-    return new PositionableElement(appendAbsoluteBox());
+    return new PositionableElement(appendBox());
   }
 
   function setupMultiple() {
     var els = [];
-    els.push(new PositionableElement(appendAbsoluteBox()));
-    els.push(new PositionableElement(appendAbsoluteBox()));
+    els.push(new PositionableElement(appendBox()));
+    els.push(new PositionableElement(appendBox()));
     return els;
   }
 

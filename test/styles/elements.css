@@ -31,7 +31,6 @@
 }
 
 .inverted-box {
-  position: absolute;
   top: auto;
   left: auto;
   bottom: 100px;
@@ -43,18 +42,31 @@
   height: 200px;
 }
 
-.transformed-box {
+.rotate-translate-box {
   transform: rotate(45deg) translate(20px, 30px);
 }
 
-.subpixel-transformed-box {
+.subpixel-rotate-translate-box {
   transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
 }
 
+.complex-box {
+  top: auto;
+  left: auto;
+  bottom: 100px;
+  right: 100px;
+  z-index: 400;
+  transform: rotate(45deg) translate(20px, 30px);
+  background-image: var(--mock-image);
+  background-position: 20px 40px;
+  background-repeat: no-repeat;
+}
+
 .incomplete-box {
-  position: absolute;
   top: 0;
+  left: auto;
   width: 100px;
+  height: auto;
 }
 
 .matrix-box {

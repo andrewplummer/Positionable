@@ -50,32 +50,8 @@ function fireMouseLeave(el, x, y, opt) {
   fireMouseEvent('mouseleave', el, x, y, opt);
 }
 
-function fireMouseDownUp(el, x, y, opt) {
-  fireMouseDown(el, x, y, opt);
-  fireMouseUp(el, x, y, opt);
-}
-
-function fireShiftMouseDown(el, x, y) {
-  fireMouseDown(el, x, y, { shiftKey: true });
-}
-
 function fireMetaMouseDown(el, x, y) {
   fireMouseDown(el, x, y, { metaKey: true });
-}
-
-function fireShiftMouseDownUp(el, x, y) {
-  fireMouseDown(el, x, y, { shiftKey: true });
-  fireMouseUp(el, x, y, { shiftKey: true });
-}
-
-function fireShiftClick(el, x, y) {
-  fireMouseEvent('click', el, x, y, { shiftKey: true });
-}
-
-function fireCtrlClick(el, x, y, opt) {
-  fireMouseDown(el, x, y, { ctrlKey: true });
-  fireMouseUp(el, x, y, { ctrlKey: true });
-  fireContextMenu(el, x, y, { ctrlKey: true });
 }
 
 function fireContextMenu(el, x, y, opt) {
@@ -157,6 +133,23 @@ function fireDocumentCtrlMouseMove(x, y) {
 
 function fireDocumentCtrlMouseUp(x, y) {
   fireDocumentMouseUp(x, y, { ctrlKey: true });
+}
+
+/*-------------------------] Click Events [--------------------------*/
+
+function clickElement(el, opt) {
+  fireMouseDown(el, 0, 0, opt);
+  fireMouseUp(el, 0, 0, opt);
+  fireClick(el, 0, 0, opt)
+}
+
+function shiftClickElement(el) {
+  clickElement(el, { shiftKey: true });
+}
+
+function ctrlClickElement(el) {
+  clickElement(el, { ctrlKey: true });
+  fireContextMenu(el, 0, 0, { ctrlKey: true });
 }
 
 /*-------------------------] Key Events [--------------------------*/

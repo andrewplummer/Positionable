@@ -1,71 +1,37 @@
 
 
-function appendFixture(id, classNames, parent) {
+function appendBox(className, parent) {
+  var el, classes, id;
+
+  className = className || 'absolute-box';
+  classes = className.split(' ');
+  id = classes[0];
+
+  if (!isPositioningBox(classes[0])) {
+    classes.unshift('absolute-box');
+  }
+
+  classes.unshift('box');
+
   parent = parent || document.getElementById('element-fixtures');
-  var el = document.createElement('div');
+
+  el = createDiv();
   el.id = id;
-  classNames.filter(n => n).forEach(n => {
-    n.split(' ').forEach(c => el.classList.add(c));
-  });
+  classes.forEach(c => el.classList.add(c));
   parent.appendChild(el);
   return el;
 }
 
-function appendAbsoluteBox(className, parent) {
-  return appendFixture('absolute-box', ['box', 'absolute-box', className], parent);
+function appendNestedBox(className) {
+  var el = appendBox('relative-box');
+  return appendBox(className, el);
 }
 
-function appendFixedBox(className, parent) {
-  return appendFixture('fixed-box', ['box', 'fixed-box', className], parent);
-}
-
-function appendRelativeBox(className, parent) {
-  return appendFixture('relative-box', ['box', 'relative-box', className], parent);
-}
-
-function appendStaticBox(className, parent) {
-  return appendFixture('static-box', ['box', 'static-box', className], parent);
-}
-
-function appendInvertedBox(className, parent) {
-  return appendFixture('inverted-box', ['box', 'inverted-box', className], parent);
-}
-
-function appendRotatedBox(className, parent) {
-  return appendFixture('rotate-box', ['box', 'rotate-box', className], parent);
-}
-
-function appendTranslatedBox(className, parent) {
-  return appendFixture('translate-box', ['box', 'translate-box', className], parent);
-}
-
-function appendTransformedBox(className, parent) {
-  return appendFixture('transformed-box', ['box', 'transformed-box', className], parent);
-}
-
-function appendSubpixelTransformedBox(className, parent) {
-  return appendFixture('subpixel-transformed-box', ['box', 'subpixel-transformed-box', className], parent);
-}
-
-function appendBackgroundImageBox(className, parent) {
-  return appendFixture('background-image-box', ['box', 'absolute-box', 'background-image-box', className], parent);
-}
-
-function appendRotatedBackgroundImageBox(className, parent) {
-  return appendFixture('rotate-background-box', ['box', 'absolute-box', 'rotate-box', 'background-image-box', className], parent);
-}
-
-function appendComplexBox(className, parent) {
-  return appendFixture('complex-box', ['box', 'z-box', 'inverted-box', 'transformed-box', 'background-image-box', className], parent);
-}
-
-function appendNestedBox() {
-  var container = appendRelativeBox();
-  return appendFixture('nested-box', ['box', 'absolute-box'], container);
-}
-
-function appendIncompleteBox(className, parent) {
-  return appendFixture('incomplete-box', ['incomplete-box', className], parent);
+function isPositioningBox(className) {
+  return className === 'absolute-box' ||
+         className === 'relative-box' ||
+         className === 'static-box' ||
+         className === 'fixed-box';
 }
 
 function releaseAppendedFixtures() {
@@ -84,7 +50,7 @@ function createLink(href) {
   return el;
 }
 
-function appendChild(el, tag) {
+function appendByTag(el, tag) {
   var child = document.createElement(tag);
   el.appendChild(child);
   return child;

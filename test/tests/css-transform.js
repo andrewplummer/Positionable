@@ -14,7 +14,7 @@ describe('CSSTransform', function(uiRoot) {
   }
 
   function getElementTransform(className) {
-    el = appendAbsoluteBox(className);
+    el = appendBox(className);
     var matcher = new CSSRuleMatcher(el);
     var tString = matcher.getMatchedProperty('transform');
     var oString = matcher.getMatchedProperty('transformOrigin');
@@ -146,7 +146,7 @@ describe('CSSTransform', function(uiRoot) {
     assertSetTranslation('matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1)', 40, 40, 'translate(40px, 40px) matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
 
     // Single value implies no translation
-    assertSetTranslation('translate(20px)', 40, 40, 'translate(40px, 40px)', appendAbsoluteBox());
+    assertSetTranslation('translate(20px)', 40, 40, 'translate(40px, 40px)', appendBox());
   });
 
   it('should be able to add translation', function() {
@@ -163,7 +163,7 @@ describe('CSSTransform', function(uiRoot) {
     assertAddTranslation('matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1)', 40, 40, 'translate(40px, 40px) matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
 
     // Single value implies no translation
-    assertAddTranslation('translate(20px)', 40, 40, 'translate(60px, 40px)', appendAbsoluteBox());
+    assertAddTranslation('translate(20px)', 40, 40, 'translate(60px, 40px)', appendBox());
   });
 
   it('should prepend translation function on null', function() {

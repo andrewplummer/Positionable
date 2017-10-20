@@ -37,7 +37,7 @@ describe('DragSelection', function(uiRoot) {
   });
 
   function setupPositionedElement(top, left, width, height) {
-    var el = appendAbsoluteBox();
+    var el = appendBox();
     el.style.left   = left;
     el.style.top    = top;
     el.style.width  = width;

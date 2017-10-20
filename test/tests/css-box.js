@@ -3,18 +3,18 @@ describe('CSSBox', function(uiRoot) {
 
   var el, box;
 
-  function setupNormal() {
-    el = appendAbsoluteBox();
+  function setupBox(className) {
+    el = appendBox(className);
     box = CSSBox.fromElement(el);
   }
 
   function setupInverted() {
-    el = appendInvertedBox();
+    el = appendBox('inverted-box');
     box = CSSBox.fromElement(el);
   }
 
   function setupPixel(left, top, width, height) {
-    el = appendAbsoluteBox();
+    el = appendBox();
     box = CSSBox.fromPixelValues(left, top, width, height);
   }
 
@@ -23,19 +23,19 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should be able to get its position', function() {
-    setupNormal();
+    setupBox();
     assert.equal(box.getOffsetPosition().x, 100);
     assert.equal(box.getOffsetPosition().y, 100);
   });
 
   it('should be able to get its dimensions', function() {
-    setupNormal();
+    setupBox();
     assert.equal(box.getDimensions().x, 100);
     assert.equal(box.getDimensions().y, 100);
   });
 
   it('should be able to move', function() {
-    setupNormal();
+    setupBox();
     box.addOffsetPosition(50, 50);
     box.render(el.style);
     assert.equal(el.style.left,   '150px');
@@ -55,7 +55,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should move the opposite edges of a normal box', function() {
-    setupNormal();
+    setupBox();
 
     box.moveEdges(50, 60, 'se');
     box.render(el.style);
@@ -85,7 +85,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should move the positioned edges of a normal box', function() {
-    setupNormal();
+    setupBox();
 
     box.moveEdges(50, 50, 'nw');
     box.render(el.style);
@@ -113,7 +113,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should ensure that normal boxes cannot move opposite edges into negative values', function() {
-    setupNormal();
+    setupBox();
 
     box.moveEdges(-150, -200, 'se');
     box.render(el.style);
@@ -141,7 +141,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should ensure that normal boxes cannot move positioned edges into negative values', function() {
-    setupNormal();
+    setupBox();
 
     box.moveEdges(150, 150, 'nw');
     box.render(el.style);
@@ -169,7 +169,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should be able to clone itself', function() {
-    setupNormal();
+    setupBox();
     var clone = box.clone();
     assert.equal(clone.cssH.px,      100);
     assert.equal(clone.cssV.px,      100);
@@ -188,7 +188,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should get the ratio of an inverted box', function() {
-    el = appendInvertedBox();
+    el = appendBox('inverted-box');
     el.style.width  = '120px';
     el.style.height = '40px';
     box = CSSBox.fromElement(el);
@@ -196,7 +196,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should not fail to get the ratio when the dimensions are 0', function() {
-    el = appendInvertedBox();
+    el = appendBox('inverted-box');
     el.style.width  = '0px';
     el.style.height = '0px';
     box = CSSBox.fromElement(el);
@@ -222,7 +222,7 @@ describe('CSSBox', function(uiRoot) {
   // --- Offsets
 
   it('should get the correct direction for a top/left box', function() {
-    setupNormal();
+    setupBox();
     var dir = box.getDirectionVector();
     assert.equal(dir.x, 1);
     assert.equal(dir.y, 1);
@@ -236,7 +236,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should get the x/y offset for a top/left box', function() {
-    setupNormal();
+    setupBox();
     var dir = box.getXYOffset();
     assert.equal(dir.x, 0);
     assert.equal(dir.y, 0);
@@ -249,15 +249,6 @@ describe('CSSBox', function(uiRoot) {
     assert.equal(dir.y, 100);
   });
 
-  // --- Transform Origins
-
-  it('should get its position header', function() {
-    var box = CSSBox.fromPixelValues(100, 100, 150, 150)
-    var origin = box.get
-    assert.equal(box.getPositionHeader(), '100px, 100px');
-    assert.equal(box.getDimensionsHeader(), '150px, 150px');
-  });
-
   // --- CSS Declarations
 
   it('should append its CSS declarations', function() {
@@ -267,6 +258,15 @@ describe('CSSBox', function(uiRoot) {
     assert.equal(decs[1], 'left: 100px;');
     assert.equal(decs[2], 'width: 150px;');
     assert.equal(decs[3], 'height: 150px;');
+  });
+
+  // --- Other
+
+  it('should get its position header', function() {
+    var box = CSSBox.fromPixelValues(100, 100, 150, 150)
+    var origin = box.get
+    assert.equal(box.getPositionHeader(), '100px, 100px');
+    assert.equal(box.getDimensionsHeader(), '150px, 150px');
   });
 
 });

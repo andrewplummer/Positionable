@@ -5,7 +5,7 @@ describe('SpriteRecognizer', function(uiRoot) {
 
   setup(function() {
     imageLoadMock.apply();
-    el = appendBackgroundImageBox();
+    el = appendBox('background-image-box');
     url = window.getComputedStyle(el).backgroundImage.match(/url\("(.+)"\)/)[1];
     img = new Image();
     img.src = url;

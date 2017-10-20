@@ -4,14 +4,14 @@ describe('CSSPositioningProperty', function(uiRoot) {
   var el, matcher, hProp, vProp;
 
   function setupNormal() {
-    el      = appendAbsoluteBox();
+    el      = appendBox();
     matcher = new CSSRuleMatcher(el);
     hProp   = CSSPositioningProperty.horizontalFromMatcher(matcher);
     vProp   = CSSPositioningProperty.verticalFromMatcher(matcher);
   }
 
   function setupInverted() {
-    el      = appendInvertedBox();
+    el      = appendBox('inverted-box');
     matcher = new CSSRuleMatcher(el);
     hProp   = CSSPositioningProperty.horizontalFromMatcher(matcher);
     vProp   = CSSPositioningProperty.verticalFromMatcher(matcher);
