@@ -44,6 +44,7 @@
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: do we really want to throw errors to halt??
+// - TODO: rotated box won't reflect
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
@@ -2679,6 +2680,7 @@ class OutputManager {
       blocks = this.getUniqueDeclarationBlocks(blocks);
     }
 
+    blocks = blocks.filter(lines => lines.length);
     return blocks.map(lines => lines.join('\n')).join('\n\n');
   }
 

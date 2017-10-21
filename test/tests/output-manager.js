@@ -569,4 +569,12 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(link.download, 'bar.css');
 
   });
+
+  it('should not output empty spaces for multiple elements', function() {
+    var el1 = getPositionableElement();
+    var el2 = getPositionableElement();
+    settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
+    assert.equal(manager.getStyles([el1, el2]), '');
+  });
+
 });

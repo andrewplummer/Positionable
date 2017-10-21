@@ -15,6 +15,10 @@ label {
   cursor: pointer;
 }
 
+input, select {
+  vertical-align: sub;
+}
+
 /*---------------------------] Animations [-----------------------*/
 
 @keyframes spin {
