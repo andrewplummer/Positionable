@@ -499,7 +499,7 @@ describe('PositionableElement', function() {
     p.pushState();
     p.move(100, 100);
     dragElement(getUiElement(el, '.rotation-handle'), 300, 300, 250, 300);
-    assert.equal(listener.lastEventRotation.abs, 45);
+    assert.equalWithTolerance(listener.lastEventRotation.abs, 45, .01);
   });
 
   it('should not remove the element on destroy', function() {

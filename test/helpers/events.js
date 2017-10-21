@@ -66,6 +66,7 @@
       x = coords[i];
       y = coords[i + 1];
       if (i === 0) {
+        fireMouseOver(el, x, y, opt);
         fireMouseDown(el, x, y, opt);
         fireDocumentMouseMove(x, y, opt);
       } else {
@@ -76,6 +77,7 @@
     if (opt.ctrlKey) {
       fireContextMenu(el, x, y, opt);
     }
+    fireMouseOut(el, x, y, opt);
   }
 
   function dragElement(el) {

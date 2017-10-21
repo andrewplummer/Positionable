@@ -7,8 +7,6 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - rotate before translate??
-// - rotation with a different origin?
 // - try different rotation configurations (negative, over 360?)
 // - resizing with rotated box and pre-existing translation
 // - pre-existing translationX or Y? how to handle?
@@ -1406,7 +1404,7 @@ class PositionHandle extends DragTarget {
 
 class ResizeHandle extends DragTarget {
 
-  static get DIRECTIONS() { return ['se','s','sw','w','nw','n','ne','e']              }
+  static get DIRECTIONS() { return ['se','s','sw','w','nw','n','ne','e'];             }
   static get CURSORS()    { return ['nwse','ns','nesw','ew','nwse','ns','nesw','ew']; }
 
   // TODO: arg order?
@@ -1573,7 +1571,9 @@ class ResizeHandle extends DragTarget {
 
 class RotationHandle extends DragTarget {
 
-  static get GRADS_PER_CURSOR() { return 16; };
+  static get OFFSET_ANGLE()     { return -45; }
+  static get TURN_THRESHOLD()   { return 180; }
+  static get GRADS_PER_CURSOR() { return 16;  }
 
   constructor(root, listener) {
     super(root.getElementById('rotation-handle'));
@@ -1582,6 +1582,20 @@ class RotationHandle extends DragTarget {
 
     this.listener = listener;
   }
+
+  setOrigin(origin) {
+    this.origin = origin;
+  }
+
+  getCursorForRotation(rotation) {
+    var grad = Point.degToGrad(rotation, true);
+    var per  = RotationHandle.GRADS_PER_CURSOR;
+    // Step the cursor into one of 25 cursors and ensure that 400 is 0.
+    grad = Math.round(grad / per) * per % 400;
+    return 'rotate-' + grad;
+  }
+
+  // --- Private
 
   onDragIntentStart(evt) {
     this.listener.onRotationHandleDragIntentStart(evt, this);
@@ -1593,11 +1607,17 @@ class RotationHandle extends DragTarget {
 
   onDragStart(evt) {
     super.onDragStart(evt);
+
+    this.startRotation = this.getRotationForEvent(evt);
+    this.lastRotation  = this.startRotation;
+    this.turns = 0;
+
     this.listener.onRotationHandleDragStart(evt, this);
   }
 
   onDragMove(evt) {
     super.onDragMove(evt);
+    this.applyRotation(evt);
     this.listener.onRotationHandleDragMove(evt, this);
   }
 
@@ -1606,12 +1626,32 @@ class RotationHandle extends DragTarget {
     this.listener.onRotationHandleDragStop(evt, this);
   }
 
-  getCursorForRotation(rotation) {
-    var grad = Point.degToGrad(rotation);
-    var per  = RotationHandle.GRADS_PER_CURSOR;
-    // Step the cursor into one of 25 cursors and ensure that 400 is 0.
-    var grad = Math.round(grad / per) * per % 400;
-    return 'rotate-' + grad;
+  applyRotation(evt) {
+    var r = this.getRotationForEvent(evt);
+    this.updateTurns(r);
+    this.setEventData(evt, r);
+    this.lastRotation = r;
+  }
+
+  getRotationForEvent(evt) {
+    // Note this method will always return 0 <= x < 360
+    var p = new Point(evt.clientX, evt.clientY);
+    var offset = RotationHandle.OFFSET_ANGLE;
+    return p.subtract(this.origin).rotate(offset).getAngle(true);
+  }
+
+  updateTurns(r) {
+    var diff = r - this.lastRotation;
+    if (Math.abs(diff) > RotationHandle.TURN_THRESHOLD) {
+      this.turns += diff < 0 ? 1 : -1;
+    }
+  }
+
+  setEventData(evt, r) {
+    evt.rotation = {
+      abs: r,
+      offset: (this.turns * 360 + r) - this.startRotation
+    };
   }
 
   /*
@@ -1634,7 +1674,6 @@ class RotationHandle extends DragTarget {
     return new Point(evt.absX, evt.absY).subtract(origin).getAngle();
   }
   */
-  // --- Private
 
 }
 
@@ -1830,6 +1869,7 @@ class PositionableElement extends BrowserEventTarget {
   // --- Rotation Handle Drag Events
 
   onRotationHandleDragIntentStart(evt, handle) {
+    handle.setOrigin(this.getViewportCenter());
     this.listener.onRotationDragIntentStart(evt, handle, this);
   }
 
@@ -1838,22 +1878,10 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   onRotationHandleDragStart(evt, handle) {
-    this.rotationOrigin = this.getViewportCenter();
-    this.startRotation  = this.getRotationForEvent(evt);
     this.listener.onRotationDragStart(evt, handle, this);
   }
 
-  getRotationForEvent(evt) {
-    // TODO: where should the 45 live?
-    return new Point(evt.clientX, evt.clientY).subtract(this.rotationOrigin).getAngle() - 45;
-  }
-
   onRotationHandleDragMove(evt, handle) {
-    var rotation = this.getRotationForEvent(evt);
-    evt.rotation = {
-      abs: rotation,
-      offset: rotation - this.startRotation
-    };
     this.listener.onRotationDragMove(evt, handle, this);
   }
 
@@ -6247,34 +6275,40 @@ class SpriteRecognizer {
 
 /*-------------------------] Point [--------------------------*/
 
+const TAU  = Math.PI * 2;
+const DEG  = 360;
+const GRAD = 400;
+
 class Point {
 
-  static get DEG_TO_RAD()  { return this.DEGREES_PER_TURN / this.RADIANS_PER_TURN;  }
-  static get DEG_TO_GRAD() { return this.DEGREES_PER_TURN / this.GRADIANS_PER_TURN; }
-
-  static get RADIANS_PER_TURN()   { return Math.PI * 2; }
-  static get DEGREES_PER_TURN()   { return 360; }
-  static get GRADIANS_PER_TURN()  { return 400; }
-
-  static degToRad(deg) {
-    return this.convertRotation(deg / Point.DEG_TO_RAD, Point.RADIANS_PER_TURN);
+  static degToRad(deg, normalize) {
+    return this.check(deg, normalize) / DEG * TAU;
   }
 
-  static radToDeg(rad) {
-    return this.convertRotation(rad * Point.DEG_TO_RAD, Point.DEGREES_PER_TURN);
+  static radToDeg(rad, normalize) {
+    return this.check(rad / TAU * DEG, normalize);
   }
 
-  static degToGrad(deg) {
-    return this.convertRotation(deg / Point.DEG_TO_GRAD, Point.GRADIANS_PER_TURN);
+  static degToGrad(deg, normalize) {
+    return this.check(deg, normalize) / DEG * GRAD;
   }
 
-  static gradToDeg(grad) {
-    return this.convertRotation(grad * Point.DEG_TO_GRAD, Point.DEGREES_PER_TURN);
+  static gradToDeg(grad, normalize) {
+    return this.check(grad / GRAD * DEG, normalize);
   }
 
-  static convertRotation(val, turn) {
-    while (val < 0) val += turn;
-    return val;
+  // This method ensures that 360 will always be
+  // returned as 0, and optionally that the angle
+  // will always be within 0 and 360.
+  static check(deg, normalize) {
+    var mult;
+    if (normalize) {
+      mult = deg / DEG;
+      if (mult < 0 || mult >= 1) {
+        deg -= Math.floor(mult) * DEG;
+      }
+    }
+    return deg;
   }
 
   constructor(x, y) {
@@ -6304,8 +6338,8 @@ class Point {
     }
   }
 
-  getAngle() {
-    return Point.radToDeg(Math.atan2(this.y, this.x));
+  getAngle(convert) {
+    return Point.radToDeg(Math.atan2(this.y, this.x), convert);
   }
 
 /*

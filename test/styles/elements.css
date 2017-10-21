@@ -116,15 +116,15 @@
 }
 
 .rotate-radian-box {
-  transform: rotate(1.57rad);
+  transform: rotate(.785398rad);
 }
 
 .rotate-gradian-box {
-  transform: rotate(100grad);
+  transform: rotate(50grad);
 }
 
 .rotate-turn-box {
-  transform: rotate(.5turn);
+  transform: rotate(.125turn);
 }
 
 .rotate-tl-box {
@@ -150,6 +150,10 @@
 .rotate-fixed-box {
   transform-origin: 20px 30px;
   transform: rotate(45deg);
+}
+
+.rotate-negative-box {
+  transform: rotate(-675deg);
 }
 
 .scale-box {

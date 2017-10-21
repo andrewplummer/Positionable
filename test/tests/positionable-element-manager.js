@@ -34,6 +34,9 @@ describe('PositionableElementManager', function() {
 
     // --- Resize Events
 
+    onResizeDragIntentStart() {
+    }
+
     onResizeDragIntentStop() {
     }
 
@@ -47,6 +50,9 @@ describe('PositionableElementManager', function() {
     }
 
     // --- Rotation Events
+
+    onRotationDragIntentStart() {
+    }
 
     onRotationDragIntentStop() {
     }
@@ -503,6 +509,7 @@ describe('PositionableElementManager', function() {
     rotationHandle1 = getUiElement(els[0], '.rotation-handle');
 
     // Meta key depressed before rotate start
+    fireMouseOver(rotationHandle1, 200, 200);
     fireMetaMouseDown(rotationHandle1, 200, 200);
     fireDocumentMetaMouseMove(200, 200);
     fireDocumentMetaMouseMove(150, 221);
@@ -530,6 +537,7 @@ describe('PositionableElementManager', function() {
     fireDocumentMouseMove(150, 79);
     fireDocumentMouseMove(200, 100);
     fireDocumentMouseUp(200, 100);
+    fireMouseOut(rotationHandle1, 200, 200);
 
     assert.equal(els[0].style.transform,  'rotate(270deg)');
     assert.equal(els[1].style.transform,  'rotate(90deg)');
@@ -1047,32 +1055,38 @@ describe('PositionableElementManager', function() {
 
   it('should rotate with radians', function() {
     setupBox('rotate-radian-box');
-    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
-    assert.equal(el.style.transform, 'rotate(3.14rad)');
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 100, 200);
+    assert.equal(el.style.transform, 'rotate(1.57rad)');
   });
 
-  it('should not allow radians to go negative', function() {
+  it('should allow radians to go negative', function() {
     setupBox('rotate-radian-box');
-    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
-    assert.equal(el.style.transform, 'rotate(5.5rad)');
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 221, 150);
+    assert.equal(el.style.transform, 'rotate(-0.79rad)');
   });
 
   it('should rotate with gradians', function() {
     setupBox('rotate-gradian-box');
-    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 100, 100);
-    assert.equal(el.style.transform, 'rotate(200grad)');
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 100, 200);
+    assert.equal(el.style.transform, 'rotate(100grad)');
   });
 
-  it('should not allow gradians to go negative', function() {
+  it('should allow gradians to go negative', function() {
     setupBox('rotate-gradian-box');
-    dragElement(getUiElement(el, '.rotation-handle'), 100, 200, 221, 150);
-    assert.equal(el.style.transform, 'rotate(350grad)');
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 221, 150);
+    assert.equal(el.style.transform, 'rotate(-50grad)');
   });
 
   it('should rotate with turns', function() {
     setupBox('rotate-turn-box');
-    dragElement(getUiElement(el, '.rotation-handle'), 100, 100, 200, 100);
-    assert.equal(el.style.transform, 'rotate(0.75turn)');
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 100, 200);
+    assert.equal(el.style.transform, 'rotate(0.25turn)');
+  });
+
+  it('should allow turns to go negative', function() {
+    setupBox('rotate-turn-box');
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 221, 150);
+    assert.equal(el.style.transform, 'rotate(-0.12turn)');
   });
 
   it('should rotate based on the handle origin, not the original element rotation', function() {
@@ -1142,6 +1156,31 @@ describe('PositionableElementManager', function() {
     dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 79,  150);
     dragElement(getUiElement(el, '.rotation-handle'), 79,  150, 150, 121);
     assert.equal(el.style.transform, 'rotate(225deg)');
+  });
+
+  it('should be able to rotate past 360', function() {
+    setupBox();
+    // From 0 to 45, then one full turn
+    dragElement(getUiElement(el, '.rotation-handle'), 200, 200, 150, 221);
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 79,  150);
+    dragElement(getUiElement(el, '.rotation-handle'), 79,  150, 150, 79);
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 79,  221, 150);
+    dragElement(getUiElement(el, '.rotation-handle'), 221, 150, 150, 221);
+    assert.equal(el.style.transform, 'rotate(405deg)');
+  });
+
+  it('should be able to rotate from -675', function() {
+    setupBox('rotate-negative-box');
+    // Rotate 2 positive full turns to bring to 45 deg
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 79,  150);
+    dragElement(getUiElement(el, '.rotation-handle'), 79,  150, 150, 79);
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 79,  221, 150);
+    dragElement(getUiElement(el, '.rotation-handle'), 221, 150, 150, 221);
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 221, 79,  150);
+    dragElement(getUiElement(el, '.rotation-handle'), 79,  150, 150, 79);
+    dragElement(getUiElement(el, '.rotation-handle'), 150, 79,  221, 150);
+    dragElement(getUiElement(el, '.rotation-handle'), 221, 150, 150, 221);
+    assert.equal(el.style.transform, 'rotate(45deg)');
   });
 
   // --- Background Image

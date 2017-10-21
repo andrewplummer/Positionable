@@ -10,7 +10,8 @@ describe('RotationHandle', function() {
       this.handleStopIntents  = 0;
     }
 
-    onRotationHandleDragIntentStart() {
+    onRotationHandleDragIntentStart(evt, handle) {
+      handle.setOrigin(new Point(50, 50));
       this.handleStartIntents += 1;
     }
 
@@ -56,9 +57,7 @@ describe('RotationHandle', function() {
   });
 
   it('should fire drag intent events', function() {
-    fireMouseOver(handle.el, 50, 100);
     dragElement(handle.el, 100, 100, 50, 100);
-    fireMouseOut(handle.el, 50, 100);
     assert.equal(listener.handleStartIntents, 1);
     assert.equal(listener.handleStopIntents, 1);
   });
