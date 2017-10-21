@@ -1,5 +1,5 @@
 
-describe('CSSTransformOrigin', function(uiRoot) {
+describe('CSSTransformOrigin', function() {
 
   var el;
 
@@ -11,8 +11,11 @@ describe('CSSTransformOrigin', function(uiRoot) {
     releaseAppendedFixtures();
   });
 
-  function getTransformOrigin(str) {
-    return CSSTransformOrigin.create(str, el);
+  function getTransformOrigin(origin) {
+    var matcher;
+    el.style.transformOrigin = origin;
+    matcher = new CSSRuleMatcher(el);
+    return CSSTransformOrigin.fromMatcher(matcher);
   }
 
   function assertParsed(str, x, y) {

@@ -1,16 +1,21 @@
 
-describe('CSSBox', function(uiRoot) {
+describe('CSSBox', function() {
 
   var el, box;
 
+  function getBox(el) {
+    var matcher = new CSSRuleMatcher(el);
+    return CSSBox.fromMatcher(matcher);
+  }
+
   function setupBox(className) {
     el = appendBox(className);
-    box = CSSBox.fromElement(el);
+    box = getBox(el);
   }
 
   function setupInverted() {
     el = appendBox('inverted-box');
-    box = CSSBox.fromElement(el);
+    box = getBox(el);
   }
 
   function setupPixel(left, top, width, height) {
@@ -183,7 +188,7 @@ describe('CSSBox', function(uiRoot) {
     el.style.top    = '30px';
     el.style.width  = '100px';
     el.style.height = '50px';
-    box = CSSBox.fromElement(el);
+    box = getBox(el);
     assert.equal(box.getRatio(), 2);
   });
 
@@ -191,7 +196,7 @@ describe('CSSBox', function(uiRoot) {
     el = appendBox('inverted-box');
     el.style.width  = '120px';
     el.style.height = '40px';
-    box = CSSBox.fromElement(el);
+    box = getBox(el);
     assert.equal(box.getRatio(), 3);
   });
 
@@ -199,7 +204,7 @@ describe('CSSBox', function(uiRoot) {
     el = appendBox('inverted-box');
     el.style.width  = '0px';
     el.style.height = '0px';
-    box = CSSBox.fromElement(el);
+    box = getBox(el);
     assert.equal(box.getRatio(), 0);
   });
 
@@ -214,7 +219,7 @@ describe('CSSBox', function(uiRoot) {
   });
 
   it('should get its position header', function() {
-    var box = CSSBox.fromPixelValues(100, 100, 150, 150)
+    var box = CSSBox.fromPixelValues(100, 100, 150, 150);
     assert.equal(box.getPositionHeader(), '100px, 100px');
     assert.equal(box.getDimensionsHeader(), '150px, 150px');
   });
@@ -263,8 +268,7 @@ describe('CSSBox', function(uiRoot) {
   // --- Other
 
   it('should get its position header', function() {
-    var box = CSSBox.fromPixelValues(100, 100, 150, 150)
-    var origin = box.get
+    var box = CSSBox.fromPixelValues(100, 100, 150, 150);
     assert.equal(box.getPositionHeader(), '100px, 100px');
     assert.equal(box.getDimensionsHeader(), '150px, 150px');
   });

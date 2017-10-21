@@ -1,5 +1,5 @@
 
-describe('ResizeHandle', function(uiRoot) {
+describe('ResizeHandle', function() {
 
   var listener, fragment;
 
@@ -19,7 +19,7 @@ describe('ResizeHandle', function(uiRoot) {
     onResizeHandleMouseDown() {
     }
 
-    onResizeHandleDragStart(evt, handle) {
+    onResizeHandleDragStart() {
     }
 
     onResizeHandleDragMove(evt, handle) {
@@ -27,7 +27,7 @@ describe('ResizeHandle', function(uiRoot) {
       this.lastEventHandle = handle;
     }
 
-    onResizeHandleDragStop(evt, handle) {
+    onResizeHandleDragStop() {
     }
 
   }
@@ -39,11 +39,6 @@ describe('ResizeHandle', function(uiRoot) {
 
   function createHandle(name) {
     return new ResizeHandle(fragment, name, listener);
-  }
-
-  function assertAxisProps(handle, hProp, vProp) {
-    assert.equal(handle.hProp, hProp);
-    assert.equal(handle.vProp, vProp);
   }
 
   it('should fire resize handle events', function() {

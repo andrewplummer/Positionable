@@ -1,24 +1,29 @@
+(function() {
 
-class MockLocalStorage {
+  class MockLocalStorage {
 
-  constructor() {
-    this.clear();
+    constructor() {
+      this.clear();
+    }
+
+    getItem(key) {
+      return this.data[key];
+    }
+
+    setItem(key, value) {
+      this.data[key] = value;
+    }
+
+    removeItem(key) {
+      delete this.data[key];
+    }
+
+    clear() {
+      this.data = {};
+    }
+
   }
 
-  getItem(key) {
-    return this.data[key];
-  }
+  window.MockLocalStorage = MockLocalStorage;
 
-  setItem(key, value) {
-    this.data[key] = value;
-  }
-
-  removeItem(key) {
-    delete this.data[key];
-  }
-
-  clear(key) {
-    this.data = {};
-  }
-
-}
+})();

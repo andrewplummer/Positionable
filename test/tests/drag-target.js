@@ -1,5 +1,5 @@
 
-describe('DragTarget', function(uiRoot) {
+describe('DragTarget', function() {
 
   var target, el;
 
@@ -39,11 +39,11 @@ describe('DragTarget', function(uiRoot) {
       this.dragStops += 1;
     }
 
-    onClick(evt) {
+    onClick() {
       this.clicked = true;
     }
 
-    onDoubleClick(evt) {
+    onDoubleClick() {
       this.doubleClicked = true;
     }
 
@@ -66,11 +66,6 @@ describe('DragTarget', function(uiRoot) {
 
   function setupAbsolute() {
     el = appendBox();
-    target = new Target(el);
-  }
-
-  function setupFixed() {
-    el = appendBox('fixed-box');
     target = new Target(el);
   }
 
@@ -129,11 +124,10 @@ describe('DragTarget', function(uiRoot) {
   });
 
   it('should set dragging to false before firing onDragStop', function() {
-    var moving = true;
     setupStatic();
     target.onDragStop = () => {
       assert.equal(target.dragging, false);
-    }
+    };
     dragElement(el, 50, 50, 100, 100);
   });
 
@@ -183,7 +177,7 @@ describe('DragTarget', function(uiRoot) {
 
   it('should not follow links on click', function() {
     setupLink('#foo');
-    fireClick(el);
+    clickElement(el);
     assert.equal(window.location.hash, '');
   });
 

@@ -1,230 +1,229 @@
 
-describe('CSSTransformFunction', function(uiRoot) {
+describe('CSSTransformFunction', function() {
 
-  function getTransformFunction(prop, values, el) {
-    return CSSTransformFunction.create(prop, values, el);
-  }
+  teardown(function() {
+    releaseAppendedFixtures();
+  });
 
-  function getElementTransformFunction(className) {
-    var el, matcher, transform, all, prop, values;
-    el        = appendBox(className);
-    matcher   = new CSSRuleMatcher(el);
-    transform = matcher.getMatchedProperty('transform');
+  function getTransformFunction(className) {
+    var el, prop, transform, match, name, values;
+    el = appendBox(className);
+    prop = new CSSRuleMatcher(el).getProperty('transform');
+    transform = prop.getValue();
     if (transform) {
-      [all, prop, values] = transform.match(/(\w+)\((.+)\)/);
+      match  = transform.match(/(\w+)\((.+)\)/);
+      name   = match[1];
+      values = match[2];
     } else {
-      prop = '';
+      name = '';
       values = '';
     }
-    return getTransformFunction(prop, values, el);
+    return CSSTransformFunction.create(name, values, prop, el);
   }
 
-  function assertIdentity(prop, values, expected) {
-    assert.equal(getTransformFunction(prop, values).toString(), expected || prop + '(' + values + ')');
+  function assertIdentity(className, expected) {
+    assert.equal(getTransformFunction(className).toString(), expected || name + '(' + values + ')');
   }
 
-  function assertHeader(prop, values, expected) {
-    assert.equal(getTransformFunction(prop, values).getHeader(), expected);
+  function assertHeader(className, expected) {
+    assert.equal(getTransformFunction(className).getHeader(), expected);
   }
 
-  function assertMutate(prop, values, expected) {
-    assert.equal(getTransformFunction(prop, values).canMutate, expected);
+  function assertMutate(className, expected) {
+    assert.equal(getTransformFunction(className).canMutate, expected);
   }
 
-  function assertTranslate(prop, values, expected) {
-    assert.equal(getTransformFunction(prop, values).isTranslate(), expected);
+  function assertTranslate(className, expected) {
+    assert.equal(getTransformFunction(className).isTranslate(), expected);
   }
 
-  function assertZRotate(prop, values, expected) {
-    assert.equal(getTransformFunction(prop, values).isZRotate(), expected);
+  function assertZRotate(className, expected) {
+    assert.equal(getTransformFunction(className).isZRotate(), expected);
   }
 
-  function assertMatrix(prop, values, expected) {
-    assert.equal(getTransformFunction(prop, values).isMatrix(), expected);
+  function assertMatrix(className, expected) {
+    assert.equal(getTransformFunction(className).isMatrix(), expected);
   }
 
-  function assertSetElementTranslation(className, x, y, expected) {
-    var func = getElementTransformFunction(className);
+  function assertSetTranslation(className, x, y, expected) {
+    var func = getTransformFunction(className);
     func.values[0].px = x;
     func.values[1].px = y;
     assert.equal(func.toString(), expected);
   }
 
   it('should handle percent values in translate as a function of element', function() {
-    assertSetElementTranslation('big-box translate-percent-box', 40, 50, 'translate(20%, 25%)');
+    assertSetTranslation('big-box translate-percent-box', 40, 50, 'translate(20%, 25%)');
   });
 
-  it('should be able to clone mutating properties', function() {
-    var func = getTransformFunction('rotate', '45deg').clone();
+  it('should be able to clone mutating functions', function() {
+    var func = getTransformFunction('rotate-box', '45deg').clone();
     assert.equal(func.toString(), 'rotate(45deg)');
   });
 
-  it('should be able to clone static properties', function() {
-    var func = getTransformFunction('scale', '2, 2').clone();
-    assert.equal(func.toString(), 'scale(2, 2)');
+  it('should be able to clone static functions', function() {
+    var func = getTransformFunction('scale-box').clone();
+    assert.equal(func.toString(), 'scale(2, 3)');
   });
 
   it('should be able to create', function() {
-    assertIdentity('skew', '10deg');
-    assertIdentity('skew', '10deg, 10deg');
-    assertIdentity('skewX', '10deg');
-    assertIdentity('skewY', '10deg');
-    assertIdentity('translate', '20px, 20px');
-    assertIdentity('translateX', '20px');
-    assertIdentity('translateY', '20px');
-    assertIdentity('translateZ', '20px');
-    assertIdentity('translate3d', '20px, 20px, 20px');
-    assertIdentity('scale', '2');
-    assertIdentity('scale', '2, 2');
-    assertIdentity('scale3d', '2, 2, 2');
-    assertIdentity('scaleX', '2');
-    assertIdentity('scaleY', '2');
-    assertIdentity('scaleZ', '2');
-    assertIdentity('rotate', '10deg');
-    assertIdentity('rotateX', '10deg');
-    assertIdentity('rotateY', '10deg');
-    assertIdentity('rotateZ', '10deg');
-    assertIdentity('rotate3d', '2, 2, 2, 10deg');
-    assertIdentity('matrix', '1, 0, 0, 1, 0, 0');
-    assertIdentity('matrix3d', '1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1');
-    assertIdentity('perspective', '10px');
+    assertIdentity('skew-box',        'skew(20deg, 20deg)');
+    assertIdentity('skew-x-box',      'skewX(20deg)');
+    assertIdentity('skew-y-box',      'skewY(20deg)');
+    assertIdentity('skew-single-box', 'skew(20deg)');
+
+    assertIdentity('translate-box',    'translate(20px, 30px)');
+    assertIdentity('translate-x-box',  'translateX(20px)');
+    assertIdentity('translate-y-box',  'translateY(30px)');
+    assertIdentity('translate-z-box',  'translateZ(40px)');
+    assertIdentity('translate-3d-box', 'translate3d(20px, 30px, 40px)');
+
+    assertIdentity('scale-box',        'scale(2, 3)');
+    assertIdentity('scale-x-box',      'scaleX(2)');
+    assertIdentity('scale-y-box',      'scaleY(2)');
+    assertIdentity('scale-z-box',      'scaleZ(2)');
+    assertIdentity('scale-3d-box',     'scale3d(2, 3, 4)');
+    assertIdentity('scale-single-box', 'scale(2)');
+
+    assertIdentity('rotate-box',    'rotate(45deg)');
+    assertIdentity('rotate-x-box',  'rotateX(45deg)');
+    assertIdentity('rotate-y-box',  'rotateY(45deg)');
+    assertIdentity('rotate-z-box',  'rotateZ(45deg)');
+    assertIdentity('rotate-3d-box', 'rotate3d(1, 2, 3, 45deg)');
+
+    assertIdentity('matrix-box'   , 'matrix(1, 0, 0, 1, 0, 0)');
+    assertIdentity('matrix-3d-box', 'matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)');
+
+    assertIdentity('perspective-box', 'perspective(500px)');
 
     // Single values on translate
-    assertIdentity('translate', '20px', 'translate(20px, 0px)');
-    assertIdentity('translate', '10%', 'translate(10%, 0px)');
-  });
-
-  it('should handle no space between commas', function() {
-    assertIdentity('translate3d', '20px,20px,20px', 'translate3d(20px, 20px, 20px)');
+    assertIdentity('translate-single-box',         'translate(20px, 0px)');
+    assertIdentity('translate-single-percent-box', 'translate(20%, 0px)');
   });
 
   it('should get abbreviated headers for rotation and translation', function() {
-    assertHeader('rotate', '20deg', 'r: 20deg');
-    assertHeader('translate', '20px, 20px', 't: 20px, 20px');
+    assertHeader('rotate-box', 'r: 45deg');
+    assertHeader('translate-box', 't: 20px, 30px');
   });
 
   it('should get abbreviated headers for others', function() {
-    assertHeader('skew', '20deg', 'skew: 20deg');
-    assertHeader('translateX', '20px', 'translateX: 20px');
-    assertHeader('translateY', '20px', 'translateY: 20px');
-    assertHeader('matrix', '1, 0, 0, 1, 0, 0', 'matrix: 1,0,0,1,0,0');
+    assertHeader('skew-single-box', 'skew: 20deg');
+    assertHeader('translate-x-box', 'translateX: 20px');
+    assertHeader('translate-y-box', 'translateY: 30px');
+    assertHeader('matrix-box', 'matrix: 1,0,0,1,0,0');
   });
 
   it('should report whether it can mutate', function() {
-    assertMutate('skew', '10deg',                   false);
-    assertMutate('skew', '10deg, 10deg',            false);
-    assertMutate('skewX', '10deg',                  false);
-    assertMutate('skewY', '10deg',                  false);
-    assertMutate('translate', '20px',               true);
-    assertMutate('translate', '20px, 20px',         true);
-    assertMutate('translateX', '20px',              false);
-    assertMutate('translateY', '20px',              false);
-    assertMutate('translateZ', '20px',              false);
-    assertMutate('translate3d', '20px, 20px, 20px', true);
-    assertMutate('scale', '2',                      false);
-    assertMutate('scale', '2, 2',                   false);
-    assertMutate('scale3d', '2, 2, 2',              false);
-    assertMutate('scaleX', '2',                     false);
-    assertMutate('scaleY', '2',                     false);
-    assertMutate('scaleZ', '2',                     false);
-    assertMutate('rotate', '10deg',                 true);
-    assertMutate('rotateX', '10deg',                false);
-    assertMutate('rotateY', '10deg',                false);
-    assertMutate('rotateZ', '10deg',                true);
-    assertMutate('rotate3d', '2, 2, 2, 10deg',      false);
-    assertMutate('perspective', '10px',             false);
-
-    assertMutate('matrix', '1,0,0,1,0,0', false);
-    assertMutate('matrix3d', '1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1', false);
+    assertMutate('skew-box',             false);
+    assertMutate('skew-x-box',           false);
+    assertMutate('skew-y-box',           false);
+    assertMutate('skew-single-box',      false);
+    assertMutate('translate-box',        true);
+    assertMutate('translate-x-box',      false);
+    assertMutate('translate-y-box',      false);
+    assertMutate('translate-z-box',      false);
+    assertMutate('translate-3d-box',     true);
+    assertMutate('translate-single-box', true);
+    assertMutate('scale-box',            false);
+    assertMutate('scale-3d-box',         false);
+    assertMutate('scale-x-box',          false);
+    assertMutate('scale-y-box',          false);
+    assertMutate('scale-z-box',          false);
+    assertMutate('scale-single-box',     false);
+    assertMutate('rotate-box',           true);
+    assertMutate('rotate-x-box',         false);
+    assertMutate('rotate-y-box',         false);
+    assertMutate('rotate-z-box',         true);
+    assertMutate('rotate-3d-box',        false);
+    assertMutate('perspective-box',      false);
+    assertMutate('matrix-box',           false);
+    assertMutate('matrix-3d-box',        false);
   });
 
   it('should report whether it is translate', function() {
-    assertTranslate('skew', '10deg',                   false);
-    assertTranslate('skew', '10deg, 10deg',            false);
-    assertTranslate('skewX', '10deg',                  false);
-    assertTranslate('skewY', '10deg',                  false);
-    assertTranslate('translate', '20px',               true);
-    assertTranslate('translate', '20px, 20px',         true);
-    assertTranslate('translateX', '20px',              false);
-    assertTranslate('translateY', '20px',              false);
-    assertTranslate('translateZ', '20px',              false);
-    assertTranslate('translate3d', '20px, 20px, 20px', true);
-    assertTranslate('scale', '2',                      false);
-    assertTranslate('scale', '2, 2',                   false);
-    assertTranslate('scale3d', '2, 2, 2',              false);
-    assertTranslate('scaleX', '2',                     false);
-    assertTranslate('scaleY', '2',                     false);
-    assertTranslate('scaleZ', '2',                     false);
-    assertTranslate('rotate', '10deg',                 false);
-    assertTranslate('rotateX', '10deg',                false);
-    assertTranslate('rotateY', '10deg',                false);
-    assertTranslate('rotateZ', '10deg',                false);
-    assertTranslate('rotate3d', '2, 2, 2, 10deg',      false);
-    assertTranslate('perspective', '10px',             false);
-
-    assertTranslate('matrix', '1,0,0,1,0,0', false);
-    assertTranslate('matrix3d', '1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1', false);
+    assertTranslate('skew-box',             false);
+    assertTranslate('skew-x-box',           false);
+    assertTranslate('skew-y-box',           false);
+    assertTranslate('skew-single-box',      false);
+    assertTranslate('translate-box',        true);
+    assertTranslate('translate-x-box',      false);
+    assertTranslate('translate-y-box',      false);
+    assertTranslate('translate-z-box',      false);
+    assertTranslate('translate-3d-box',     true);
+    assertTranslate('translate-single-box', true);
+    assertTranslate('scale-box',            false);
+    assertTranslate('scale-3d-box',         false);
+    assertTranslate('scale-x-box',          false);
+    assertTranslate('scale-y-box',          false);
+    assertTranslate('scale-z-box',          false);
+    assertTranslate('scale-single-box',     false);
+    assertTranslate('rotate-box',           false);
+    assertTranslate('rotate-x-box',         false);
+    assertTranslate('rotate-y-box',         false);
+    assertTranslate('rotate-z-box',         false);
+    assertTranslate('rotate-3d-box',        false);
+    assertTranslate('perspective-box',      false);
+    assertTranslate('matrix-box',           false);
+    assertTranslate('matrix-3d-box',        false);
   });
 
   it('should report whether it is z rotation', function() {
-    assertZRotate('skew', '10deg',                   false);
-    assertZRotate('skew', '10deg, 10deg',            false);
-    assertZRotate('skewX', '10deg',                  false);
-    assertZRotate('skewY', '10deg',                  false);
-    assertZRotate('translate', '20px',               false);
-    assertZRotate('translate', '20px, 20px',         false);
-    assertZRotate('translateX', '20px',              false);
-    assertZRotate('translateY', '20px',              false);
-    assertZRotate('translateZ', '20px',              false);
-    assertZRotate('translate3d', '20px, 20px, 20px', false);
-    assertZRotate('scale', '2',                      false);
-    assertZRotate('scale', '2, 2',                   false);
-    assertZRotate('scale3d', '2, 2, 2',              false);
-    assertZRotate('scaleX', '2',                     false);
-    assertZRotate('scaleY', '2',                     false);
-    assertZRotate('scaleZ', '2',                     false);
-    assertZRotate('rotate', '10deg',                 true);
-    assertZRotate('rotateX', '10deg',                false);
-    assertZRotate('rotateY', '10deg',                false);
-    assertZRotate('rotateZ', '10deg',                true);
-    assertZRotate('rotate3d', '2, 2, 2, 10deg',      false);
-    assertZRotate('perspective', '10px',             false);
-
-    assertZRotate('matrix', '1,0,0,1,0,0', false);
-    assertZRotate('matrix3d', '1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1', false);
+    assertZRotate('skew-box',             false);
+    assertZRotate('skew-x-box',           false);
+    assertZRotate('skew-y-box',           false);
+    assertZRotate('skew-single-box',      false);
+    assertZRotate('translate-box',        false);
+    assertZRotate('translate-x-box',      false);
+    assertZRotate('translate-y-box',      false);
+    assertZRotate('translate-z-box',      false);
+    assertZRotate('translate-3d-box',     false);
+    assertZRotate('translate-single-box', false);
+    assertZRotate('scale-box',            false);
+    assertZRotate('scale-3d-box',         false);
+    assertZRotate('scale-x-box',          false);
+    assertZRotate('scale-y-box',          false);
+    assertZRotate('scale-z-box',          false);
+    assertZRotate('scale-single-box',     false);
+    assertZRotate('rotate-box',           true);
+    assertZRotate('rotate-x-box',         false);
+    assertZRotate('rotate-y-box',         false);
+    assertZRotate('rotate-z-box',         true);
+    assertZRotate('rotate-3d-box',        false);
+    assertZRotate('perspective-box',      false);
+    assertZRotate('matrix-box',           false);
+    assertZRotate('matrix-3d-box',        false);
   });
 
   it('should report whether it is a matrix transform', function() {
-    assertMatrix('skew', '10deg',                   false);
-    assertMatrix('skew', '10deg, 10deg',            false);
-    assertMatrix('skewX', '10deg',                  false);
-    assertMatrix('skewY', '10deg',                  false);
-    assertMatrix('translate', '20px',               false);
-    assertMatrix('translate', '20px, 20px',         false);
-    assertMatrix('translateX', '20px',              false);
-    assertMatrix('translateY', '20px',              false);
-    assertMatrix('translateZ', '20px',              false);
-    assertMatrix('translate3d', '20px, 20px, 20px', false);
-    assertMatrix('scale', '2',                      false);
-    assertMatrix('scale', '2, 2',                   false);
-    assertMatrix('scale3d', '2, 2, 2',              false);
-    assertMatrix('scaleX', '2',                     false);
-    assertMatrix('scaleY', '2',                     false);
-    assertMatrix('scaleZ', '2',                     false);
-    assertMatrix('rotate', '10deg',                 false);
-    assertMatrix('rotateX', '10deg',                false);
-    assertMatrix('rotateY', '10deg',                false);
-    assertMatrix('rotateZ', '10deg',                false);
-    assertMatrix('rotate3d', '2, 2, 2, 10deg',      false);
-    assertMatrix('perspective', '10px',             false);
-
-    assertMatrix('matrix', '1,0,0,1,0,0', true);
-    assertMatrix('matrix3d', '1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1', true);
+    assertMatrix('skew-box',             false);
+    assertMatrix('skew-x-box',           false);
+    assertMatrix('skew-y-box',           false);
+    assertMatrix('skew-single-box',      false);
+    assertMatrix('translate-box',        false);
+    assertMatrix('translate-x-box',      false);
+    assertMatrix('translate-y-box',      false);
+    assertMatrix('translate-z-box',      false);
+    assertMatrix('translate-3d-box',     false);
+    assertMatrix('translate-single-box', false);
+    assertMatrix('scale-box',            false);
+    assertMatrix('scale-3d-box',         false);
+    assertMatrix('scale-x-box',          false);
+    assertMatrix('scale-y-box',          false);
+    assertMatrix('scale-z-box',          false);
+    assertMatrix('scale-single-box',     false);
+    assertMatrix('rotate-box',           false);
+    assertMatrix('rotate-x-box',         false);
+    assertMatrix('rotate-y-box',         false);
+    assertMatrix('rotate-z-box',         false);
+    assertMatrix('rotate-3d-box',        false);
+    assertMatrix('perspective-box',      false);
+    assertMatrix('matrix-box',           true);
+    assertMatrix('matrix-3d-box',        true);
   });
 
   it('should correctly report if it has percent translation', function() {
-    assert.equal(getElementTransformFunction().hasPercentTranslation(), false);
-    assert.equal(getElementTransformFunction('translate-percent-box').hasPercentTranslation(), true);
+    assert.equal(getTransformFunction('translate-box').hasPercentTranslation(), false);
+    assert.equal(getTransformFunction('translate-percent-box').hasPercentTranslation(), true);
   });
 
 });

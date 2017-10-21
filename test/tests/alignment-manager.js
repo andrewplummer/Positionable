@@ -1,5 +1,5 @@
 
-describe('AlignmentManager', function(uiRoot) {
+describe('AlignmentManager', function() {
 
   var els, manager;
 

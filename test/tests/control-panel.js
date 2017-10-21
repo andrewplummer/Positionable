@@ -1,7 +1,7 @@
 
 describe('ControlPanel', function(uiRoot) {
 
-  var panel, listener, el;
+  var panel, listener;
 
   class Listener {
 
@@ -24,22 +24,6 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   // --- Helpers
-
-  function assertAreaVisible(areaName) {
-    var className = `control-panel--${areaName}-active`;
-    assert.isTrue(panel.el.classList.contains(className));
-  }
-
-  function setupSingle() {
-    return new PositionableElement(appendBox());
-  }
-
-  function setupMultiple() {
-    var els = [];
-    els.push(new PositionableElement(appendBox()));
-    els.push(new PositionableElement(appendBox()));
-    return els;
-  }
 
   it('should have auto dimensions', function() {
     panel.render(panel.el.style);
@@ -82,7 +66,7 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   it('should not render zIndex when empty empty fields', function() {
-    var zIndexEl = getUiElement(document.documentElement, '#element-area-zindex')
+    var zIndexEl = getUiElement(document.documentElement, '#element-area-zindex');
     panel.showElementArea();
 
     panel.renderElementZIndex('');
@@ -95,7 +79,7 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   it('should deactivate transform when empty', function() {
-    var transformEl = getUiElement(document.documentElement, '#element-area-transform')
+    var transformEl = getUiElement(document.documentElement, '#element-area-transform');
 
     panel.showElementArea();
     panel.renderElementTransform('');

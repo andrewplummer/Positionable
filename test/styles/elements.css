@@ -5,14 +5,7 @@
   height: 100px;
 }
 
-.z-box {
-  z-index: 400;
-}
-
-.box--override {
-  transform: rotate(30deg);
-  z-index: 10;
-}
+/*---------------------------] Positioning [-----------------------*/
 
 .fixed-box {
   position: fixed;
@@ -37,40 +30,61 @@
   right: 100px;
 }
 
+.vw-box {
+  top: 10vw;
+  left: 10vw;
+  width: 10vw;
+  height: 10vw;
+}
+
+.vh-box {
+  top: 10vh;
+  left: 10vh;
+  width: 10vh;
+  height: 10vh;
+}
+
+.vmin-box {
+  top: 10vmin;
+  left: 10vmin;
+  width: 10vmin;
+  height: 10vmin;
+}
+
+.vmax-box {
+  top: 10vmax;
+  left: 10vmax;
+  width: 10vmax;
+  height: 10vmax;
+}
+
 .big-box {
   width: 200px;
   height: 200px;
 }
 
-.rotate-translate-box {
-  transform: rotate(45deg) translate(20px, 30px);
+.percent-box {
+  top: 100%;
+  left: 100%;
+  width: 100%;
+  height: 100%;
 }
 
-.subpixel-rotate-translate-box {
-  transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
+.zero-dimension-box {
+  width: 0;
+  height: 0;
 }
 
-.complex-box {
-  top: auto;
-  left: auto;
-  bottom: 100px;
-  right: 100px;
+/*---------------------------] Z-Index [-----------------------*/
+
+.z-box {
   z-index: 400;
-  transform: rotate(45deg) translate(20px, 30px);
-  background-image: var(--mock-image);
-  background-position: 20px 40px;
-  background-repeat: no-repeat;
 }
 
-.incomplete-box {
-  top: 0;
-  left: auto;
-  width: 100px;
-  height: auto;
-}
+/*---------------------------] Transforms [-----------------------*/
 
 .matrix-box {
-  transform: matrix3d(1,0,0,1,0,0);
+  transform: matrix(1,0,0,1,0,0);
 }
 
 .matrix-3d-box {
@@ -86,19 +100,19 @@
 }
 
 .rotate-3d-box {
-  transform: rotate3d(1, 2, 3, 20deg);
+  transform: rotate3d(1, 2, 3, 45deg);
 }
 
 .rotate-x-box {
-  transform: rotateX(20deg);
+  transform: rotateX(45deg);
 }
 
 .rotate-y-box {
-  transform: rotateY(20deg);
+  transform: rotateY(45deg);
 }
 
 .rotate-z-box {
-  transform: rotateZ(20deg);
+  transform: rotateZ(45deg);
 }
 
 .rotate-radian-box {
@@ -134,7 +148,7 @@
 }
 
 .rotate-fixed-box {
-  transform-origin: 20px 20px;
+  transform-origin: 20px 30px;
   transform: rotate(45deg);
 }
 
@@ -142,8 +156,12 @@
   transform: scale(2, 3);
 }
 
+.scale-single-box {
+  transform: scale(2);
+}
+
 .scale-3d-box {
-  transform: scale(2, 3, 4);
+  transform: scale3d(2, 3, 4);
 }
 
 .scale-x-box {
@@ -162,6 +180,10 @@
   transform: skew(20deg, 20deg);
 }
 
+.skew-single-box {
+  transform: skew(20deg);
+}
+
 .skew-x-box {
   transform: skewX(20deg);
 }
@@ -174,16 +196,24 @@
   transform: translate(20px, 30px);
 }
 
+.translate-single-box {
+  transform: translate(20px);
+}
+
+.translate-single-percent-box {
+  transform: translate(20%);
+}
+
 .translate-x-box {
   transform: translateX(20px);
 }
 
 .translate-y-box {
-  transform: translateY(20px);
+  transform: translateY(30px);
 }
 
 .translate-z-box {
-  transform: translateZ(20px);
+  transform: translateZ(40px);
 }
 
 .translate-percent-box {
@@ -191,28 +221,82 @@
 }
 
 .translate-3d-box {
-  transform: translate3d(20px, 30px, 0);
+  transform: translate3d(20px, 30px, 40px);
 }
+
+.translate-rotate-box {
+  transform: translate(20px, 30px) rotate(45deg);
+}
+
+.rotate-translate-box {
+  transform: rotate(45deg) translate(20px, 30px);
+}
+
+.subpixel-rotate-translate-box {
+  transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
+}
+
+/*---------------------------] Background Image [-----------------------*/
 
 /*
  * Note that Chrome has a bug that will report the entire background
  * property if declared when querying style.backgroundPosition and
  * using CSS variables, so make sure to use background-image instead.
  */
-.background-image-box {
-  background-image: var(--mock-image);
+/* TODO: rename to background-box */
+.background-box {
+  background-image: var(--small-image);
   background-position: 20px 40px;
   background-repeat: no-repeat;
 }
 
+.background-big-box {
+  background-image: var(--big-image);
+  background-position: 20px 40px;
+  background-repeat: no-repeat;
+}
+
+.background-big-percent-box {
+  background-image: var(--big-image);
+  background-position: 25% 50%;
+  background-repeat: no-repeat;
+}
+
 .background-multiple-box {
-  background-image: var(--mock-image), var(--mock-image);
+  background-image: var(--small-image), var(--big-image);
   background-position: 20px 40px, 50px 50px;
   background-repeat: no-repeat;
 }
 
 .background-percent-box {
+  background-image: var(--small-image);
   background-position: 25% 50%;
+}
+
+.background-initial-box {
+  background-image: var(--small-image);
+  background-position: initial;
+}
+
+/*---------------------------] Special Cases [-----------------------*/
+
+.complex-box {
+  top: auto;
+  left: auto;
+  bottom: 100px;
+  right: 100px;
+  z-index: 400;
+  transform: rotate(45deg) translate(20px, 30px);
+  background-image: var(--mock-image);
+  background-position: 20px 40px;
+  background-repeat: no-repeat;
+}
+
+.incomplete-box {
+  top: 0;
+  left: auto;
+  width: 100px;
+  height: auto;
 }
 
 .var-box {
@@ -221,6 +305,8 @@
   width:  var(--mock-position);
   height: var(--mock-position);
 }
+
+/*---------------------------] Alignment [-----------------------*/
 
 .align-box-1 {
   top: 50px;
@@ -249,6 +335,8 @@
   width: 200px;
   height: 140px;
 }
+
+/*---------------------------] Suite [-----------------------*/
 
 body {
   /* Note these values are important to test positioning */
@@ -285,6 +373,9 @@ body {
    * g is a green pixel
    *
    */
-  --mock-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5QTdDN0E3REE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5QTdDN0E3RUE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjlBN0M3QTdCQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjlBN0M3QTdDQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+7OsEKgAAAC5JREFUeNpi/P//PwM2wAQi3vHx/QdhDAlsgBHZKMajXGDOf+tvjMTpQAYAAQYAl5sRE6ZOq60AAAAASUVORK5CYII=');
+  --small-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5QTdDN0E3REE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5QTdDN0E3RUE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjlBN0M3QTdCQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjlBN0M3QTdDQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+7OsEKgAAAC5JREFUeNpi/P//PwM2wAQi3vHx/QdhDAlsgBHZKMajXGDOf+tvjMTpQAYAAQYAl5sRE6ZOq60AAAAASUVORK5CYII=');
+
+  /* A large red image 200px by 200px */
+  --big-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAIAAAAiOjnJAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpDQkI1RjZGOUFFN0IxMUU3QTI5OUIxNDFERjQzOTI1RiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpDQkI1RjZGQUFFN0IxMUU3QTI5OUIxNDFERjQzOTI1RiI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOkNCQjVGNkY3QUU3QjExRTdBMjk5QjE0MURGNDM5MjVGIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOkNCQjVGNkY4QUU3QjExRTdBMjk5QjE0MURGNDM5MjVGIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+wP3dkgAAAXZJREFUeNrs0jERAAAIxDDAv+fHBANDIqHXTsG9kQBjYSyMBcbCWBgLjIWxMBYYC2NhLDAWxsJYYCyMhbHAWBgLY4GxMBbGAmNhLIwFxsJYGAuMhbEwFhgLY2EsMBbGwlhgLIyFscBYGAtjgbEwFsYCY2EsjAXGwlgYC4yFsTAWGAtjYSwwFsbCWGAsjIWxwFgYC2OBsTAWxgJjYSyMBcbCWBgLjIWxMBYYC2NhLDAWxsJYGAuMhbEwFhgLY2EsMBbGwlhgLIyFscBYGAtjgbEwFsYCY2EsjAXGwlgYC4yFsTAWGAtjYSwwFsbCWGAsjIWxwFgYC2OBsTAWxgJjYSyMBcbCWBgLjIWxMBYYC2NhLDAWxsJYYCyMhbHAWBgLY4GxMBbGAmNhLIwFxsJYGAuMhbEwFhgLY2EsMBbGwlhgLIyFsTAWGAtjYSwwFsbCWGAsjIWxwFgYC2OBsTAWxgJjYSyMBcbCWBgLjIWxMBYYi29WAAEGAIo9Ao8hclVgAAAAAElFTkSuQmCC');
 }
 

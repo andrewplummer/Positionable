@@ -1,5 +1,5 @@
 
-describe('PositionableElement', function(uiRoot) {
+describe('PositionableElement', function() {
 
   var listener, el, p;
 
@@ -7,7 +7,7 @@ describe('PositionableElement', function(uiRoot) {
 
     // --- Element Events
 
-    onElementMouseDown(evt) {
+    onElementMouseDown() {
     }
 
     onElementDragStart(evt) {
@@ -24,38 +24,38 @@ describe('PositionableElement', function(uiRoot) {
 
     // --- Resize Events
 
-    onResizeDragIntentStart(evt) {
+    onResizeDragIntentStart() {
     }
 
-    onResizeDragIntentStop(evt) {
+    onResizeDragIntentStop() {
     }
 
-    onResizeDragStart(evt) {
+    onResizeDragStart() {
     }
 
     onResizeDragMove(evt) {
       this.lastEventResizeDrag = evt.drag;
     }
 
-    onResizeDragStop(evt) {
+    onResizeDragStop() {
     }
 
     // --- Rotation Events
 
-    onRotationDragIntentStart(evt) {
+    onRotationDragIntentStart() {
     }
 
-    onRotationDragIntentStop(evt) {
+    onRotationDragIntentStop() {
     }
 
-    onRotationDragStart(evt) {
+    onRotationDragStart() {
     }
 
     onRotationDragMove(evt) {
       this.lastEventRotation = evt.rotation;
     }
 
-    onRotationDragStop(evt) {
+    onRotationDragStop() {
     }
 
     // --- Background Image Events
@@ -77,15 +77,6 @@ describe('PositionableElement', function(uiRoot) {
     imageLoadMock.release();
   });
 
-  function createRotationMoveEvent(abs, offset) {
-    return {
-      data: {
-        abs: abs,
-        offset: offset
-      }
-    }
-  }
-
   it('should set initial state from stylesheet', function() {
     el = appendBox();
     p = new PositionableElement(el, listener);
@@ -93,16 +84,14 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(p.cssBox.cssV.px, 100);
     assert.equal(p.cssBox.cssWidth.px, 100);
     assert.equal(p.cssBox.cssHeight.px, 100);
+    assert.equal(p.cssZIndex.cssValue.val, 0);
     assert.equal(p.getRotation(), 0);
-    assert.isTrue(p.cssZIndex.isNull());
   });
 
   it('more specific styles should take precedence', function() {
-    el = appendBox();
-    el.classList.add('box--override');
+    el = appendBox('z-box');
     p = new PositionableElement(el, listener);
-    assert.equal(p.cssZIndex.val, 10);
-    assert.equal(p.getRotation(), 30);
+    assert.equal(p.cssZIndex.cssValue.val, 400);
   });
 
   it('inline styles should take precedence', function() {
@@ -118,7 +107,7 @@ describe('PositionableElement', function(uiRoot) {
     assert.equal(p.cssBox.cssV.px, 100);
     assert.equal(p.cssBox.cssWidth.px, 100);
     assert.equal(p.cssBox.cssHeight.px, 100);
-    assert.equal(p.cssZIndex.val, 5);
+    assert.equal(p.cssZIndex.cssValue.val, 5);
     assert.equal(p.getRotation(), 45);
     assert.equal(p.cssTransform.getTranslation().x, 100);
     assert.equal(p.cssTransform.getTranslation().y, 100);
@@ -153,7 +142,7 @@ describe('PositionableElement', function(uiRoot) {
   // --- Background Moving
 
   it('should be able to move the background image', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
     p.pushState();
     p.moveBackground(200, 200);
@@ -161,7 +150,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to move the background image on a rotated box', function() {
-    el = appendBox('background-image-box rotate-box');
+    el = appendBox('background-box rotate-box');
     p = new PositionableElement(el, listener);
     p.pushState();
     p.moveBackground(100, 100);
@@ -303,7 +292,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to undo background move', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
 
     p.pushState();
@@ -346,7 +335,7 @@ describe('PositionableElement', function(uiRoot) {
   // --- Background Snapping
 
   it('should snap to a background sprite', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
 
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
@@ -359,7 +348,7 @@ describe('PositionableElement', function(uiRoot) {
   // --- Peeking
 
   it('should allow peeking on an element with a background', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
     p.setPeekMode(true);
     assert.equal(el.style.width, '500px');
@@ -375,7 +364,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to move while peeking', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
 
     p.pushState();
@@ -405,7 +394,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to resize while peeking', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
 
     p.setPeekMode(true);
@@ -421,7 +410,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to snap while peeking', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
 
     p.setPeekMode(true);
@@ -435,7 +424,7 @@ describe('PositionableElement', function(uiRoot) {
   });
 
   it('should be able to get back to initial state after peeking', function() {
-    el = appendBox('background-image-box');
+    el = appendBox('background-box');
     p = new PositionableElement(el, listener);
 
     p.setPeekMode(true);

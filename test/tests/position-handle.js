@@ -1,5 +1,5 @@
 
-describe('PositionHandle', function(uiRoot) {
+describe('PositionHandle', function() {
 
   var listener, fragment;
 
@@ -21,14 +21,14 @@ describe('PositionHandle', function(uiRoot) {
     onPositionHandleMouseDown() {
     }
 
-    onPositionHandleDragStart(evt) {
+    onPositionHandleDragStart() {
     }
 
     onPositionHandleDragMove(evt) {
       this.lastEventDrag = evt.drag;
     }
 
-    onPositionHandleDragStop(evt) {
+    onPositionHandleDragStop() {
     }
 
   }

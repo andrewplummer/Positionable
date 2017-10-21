@@ -19,7 +19,7 @@
   class MockPromise {
 
     static resolve(arg) {
-      return new MockPromise((resolve, reject) => {
+      return new MockPromise((resolve) => {
         resolve(arg);
       });
     }

@@ -72,7 +72,7 @@
       this.tests.forEach(test => {
         if (!test.skipped) {
           this.runSetup();
-          test.run()
+          test.run();
           this.runTeardown();
         }
       });
@@ -217,7 +217,7 @@
         isFalse: this.assertFalse.bind(this),
         isUndefined: this.assertUndefined.bind(this),
         equalWithTolerance: this.assertEqualWithTolerance.bind(this)
-      }
+      };
     }
 
     // --- Output
@@ -375,7 +375,7 @@
 
       this.outputFinalResult(el, failed);
       this.outputTotal(el, passed, 'passed');
-      this.outputTotal(el, failed, 'failed')
+      this.outputTotal(el, failed, 'failed');
       this.outputTotal(el, skipped, 'skipped', true);
       this.outputTotal(el, suitesSkipped, suitesSkippedLabel, true);
       this.outputRuntime(el);

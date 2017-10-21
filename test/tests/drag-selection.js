@@ -14,7 +14,7 @@ describe('DragSelection', function(uiRoot) {
     onDragSelectionStart() {
     }
 
-    onDragSelectionMove(dragSelection) {
+    onDragSelectionMove() {
     }
 
     onDragSelectionStop(dragSelection) {

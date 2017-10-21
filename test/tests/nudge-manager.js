@@ -1,5 +1,5 @@
 
-describe('NudgeManager', function(uiRoot) {
+describe('NudgeManager', function() {
 
   var listener, manager;
 

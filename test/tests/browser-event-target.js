@@ -1,5 +1,5 @@
 
-describe('BrowserEventTarget', function(uiRoot) {
+describe('BrowserEventTarget', function() {
 
   var target, el;
 
@@ -16,7 +16,7 @@ describe('BrowserEventTarget', function(uiRoot) {
       this.lastEvent = evt;
     }
 
-    onMouseDown(evt) {
+    onMouseDown() {
       this.mousedown = true;
     }
 
@@ -27,15 +27,10 @@ describe('BrowserEventTarget', function(uiRoot) {
     target = new Target(el);
   }
 
-  function setupLinkTarget() {
-    el = createLink('#foo');
-    target = new Target(el);
-  }
-
   it('should bind events', function() {
     setupDivTarget();
     target.bindEvent('click', target.onClick);
-    fireClick(el);
+    clickElement(el);
     assert.equal(target.clicked, true);
   });
 
@@ -43,7 +38,7 @@ describe('BrowserEventTarget', function(uiRoot) {
     setupDivTarget();
     target.bindEvent('click', target.onClick);
     target.bindEvent('mousedown', target.onMouseDown);
-    fireClick(el);
+    clickElement(el);
     fireMouseDown(el);
     assert.equal(target.clicked, true);
     assert.equal(target.mousedown, true);
@@ -53,7 +48,7 @@ describe('BrowserEventTarget', function(uiRoot) {
     setupDivTarget();
     target.bindEvent('click', target.onClick);
     target.removeEventListener('click');
-    fireClick(el);
+    clickElement(el);
     assert.equal(target.clicked, false);
   });
 
@@ -62,7 +57,7 @@ describe('BrowserEventTarget', function(uiRoot) {
     target.bindEvent('click', target.onClick);
     target.bindEvent('mousedown', target.onMouseDown);
     target.removeAllListeners();
-    fireClick(el);
+    clickElement(el);
     fireMouseDown(el);
     assert.equal(target.clicked, false);
     assert.equal(target.mousedown, false);

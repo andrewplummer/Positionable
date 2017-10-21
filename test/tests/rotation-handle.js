@@ -1,5 +1,5 @@
 
-describe('RotationHandle', function(uiRoot) {
+describe('RotationHandle', function() {
 
   var listener, fragment;
 
@@ -21,14 +21,14 @@ describe('RotationHandle', function(uiRoot) {
     onRotationHandleMouseDown() {
     }
 
-    onRotationHandleDragStart(evt) {
+    onRotationHandleDragStart() {
     }
 
     onRotationHandleDragMove(evt) {
       this.lastDragMove = evt;
     }
 
-    onRotationHandleDragStop(evt) {
+    onRotationHandleDragStop() {
     }
 
   }

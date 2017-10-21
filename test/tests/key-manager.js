@@ -1,5 +1,5 @@
 
-describe('KeyManager', function(uiRoot) {
+describe('KeyManager', function() {
 
   var listener, manager;
 
@@ -92,8 +92,8 @@ describe('KeyManager', function(uiRoot) {
     manager.setupKey(KeyManager.A_KEY);
     manager.setupCommandKey(KeyManager.A_KEY);
 
-    fireDocumentKeyDown(KeyManager.A_KEY, { altKey: true, });
-    fireDocumentKeyDown(KeyManager.A_KEY, { ctrlKey: true, });
+    fireDocumentKeyDown(KeyManager.A_KEY, { altKey: true });
+    fireDocumentKeyDown(KeyManager.A_KEY, { ctrlKey: true });
     assert.equal(listener.keyDownEvents[KeyManager.A_KEY], undefined);
     assert.equal(listener.commandKeyDownEvents[KeyManager.A_KEY], undefined);
 

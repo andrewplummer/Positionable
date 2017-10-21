@@ -1,6 +1,6 @@
 
 describe('OutputManager', function(uiRoot) {
-  var settings, manager, el;
+  var settings, manager, element, el;
 
   setup(function() {
     settings = new Settings({}, new MockLocalStorage(), uiRoot);
@@ -11,9 +11,18 @@ describe('OutputManager', function(uiRoot) {
     releaseAppendedFixtures();
   });
 
-  function setupBox(classNames) {
-    el = appendBox(classNames);
+  function getPositionableElement(className) {
+    el = appendBox(className);
     return new PositionableElement(el);
+  }
+
+  function setupBox(className) {
+    element = getPositionableElement(className);
+  }
+
+  function setupNestedBox(className, parentClassName) {
+    el = appendNestedBox(className, parentClassName);
+    element = new PositionableElement(el);
   }
 
   function assertSimpleBoxSelector(styles, selector, expected) {
@@ -67,79 +76,77 @@ describe('OutputManager', function(uiRoot) {
   // --- Selectors
 
   it('should get correct selector', function() {
-    var element1 = setupBox();
-    var element2 = setupBox();
+    setupBox();
 
     // Auto (id)
-    assert.equal(manager.getSelector(element2), '#absolute-box');
+    assert.equal(manager.getSelector(element), '#absolute-box');
 
     // Auto (first class)
-    element2.el.removeAttribute('id');
-    assert.equal(manager.getSelector(element2), '.box');
-    element2.el.setAttribute('id', 'absolute-box');
+    element.el.removeAttribute('id');
+    assert.equal(manager.getSelector(element), '.box');
+    element.el.setAttribute('id', 'absolute-box');
 
     // First class
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_FIRST);
-    assert.equal(manager.getSelector(element2), '.box');
+    assert.equal(manager.getSelector(element), '.box');
 
     // Longest class
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_LONGEST);
-    assert.equal(manager.getSelector(element2), '.absolute-box');
+    assert.equal(manager.getSelector(element), '.absolute-box');
 
     // Tag
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG);
-    assert.equal(manager.getSelector(element2), 'div');
+    assert.equal(manager.getSelector(element), 'div');
 
     // Tag:nth
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG_NTH);
-    assert.equal(manager.getSelector(element2), 'div:nth-child(2)');
+    assert.equal(manager.getSelector(element), 'div:nth-child(1)');
 
     // None
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_NONE);
-    assert.equal(manager.getSelector(element2), '');
-    assert.equal(manager.getSelectorWithDefault(element2), '[element]');
+    assert.equal(manager.getSelector(element), '');
+    assert.equal(manager.getSelectorWithDefault(element), '[element]');
 
   });
 
   // --- Headers
 
   it('should get correct headers for default box', function() {
-    var element = setupBox();
+    setupBox();
 
     assert.equal(manager.getPositionHeader(element), '100px, 100px');
     assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
     assert.equal(manager.getZIndexHeader(element), '');
     assert.equal(manager.getTransformHeader(element), '');
-
   });
 
   it('should get correct header for a rotated box', function() {
-    var element = setupBox('rotate-box');
+    setupBox('rotate-box');
     assert.equal(manager.getTransformHeader(element), 'r: 45deg');
   });
 
   it('should get correct header for a translated box', function() {
-    var element = setupBox('translate-box');
+    setupBox('translate-box');
     assert.equal(manager.getTransformHeader(element), 't: 20px, 30px');
   });
 
   it('should get correct header for a rotated and translated box', function() {
-    var element = setupBox('rotate-translate-box');
+    setupBox('rotate-translate-box');
     assert.equal(manager.getTransformHeader(element), 'r: 45deg | t: 20px, 30px');
   });
 
   it('should get correct header for a rotated and translated box using decimals', function() {
-    var element = setupBox('subpixel-rotate-translate-box');
+    setupBox('subpixel-rotate-translate-box');
     assert.equal(manager.getTransformHeader(element), 'r: 45.33deg | t: 20.23px, 30.21px');
   });
 
   it('should get correct background image', function() {
-    var element = setupBox('background-image-box');
+    setupBox('background-box');
     assert.equal(manager.getBackgroundPositionHeader(element), '20px, 40px');
   });
 
   it('should get headers for incomplete box', function() {
-    var element = setupBox('incomplete-box');
+    setupBox('incomplete-box');
     assert.equal(manager.getPositionHeader(element), '0px, 0px');
     assert.equal(manager.getDimensionsHeader(element), '100px, 0px');
     assert.equal(manager.getZIndexHeader(element), '');
@@ -147,7 +154,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get headers for a matrix3d box', function() {
-    var element = setupBox('matrix-3d-box');
+    setupBox('matrix-3d-box');
     assert.equal(manager.getPositionHeader(element), '100px, 100px');
     assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
     assert.equal(manager.getZIndexHeader(element), '');
@@ -157,7 +164,7 @@ describe('OutputManager', function(uiRoot) {
   // --- Style Declarations
 
   it('should get correct styles', function() {
-    var element = setupBox();
+    setupBox();
     assert.equal(manager.getStyles([element]), dec`
 
       #absolute-box {
@@ -171,7 +178,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get correct styles for rotated element', function() {
-    var element = setupBox('rotate-box');
+    setupBox('rotate-box');
     assert.equal(manager.getStyles([element]), dec`
 
       #rotate-box {
@@ -186,7 +193,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get correct styles for translated element', function() {
-    var element = setupBox('translate-box');
+    setupBox('translate-box');
     assert.equal(manager.getStyles([element]), dec`
 
       #translate-box {
@@ -201,7 +208,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get correct styles for rotate translate element', function() {
-    var element = setupBox('rotate-translate-box');
+    setupBox('rotate-translate-box');
     assert.equal(manager.getStyles([element]), dec`
 
       #rotate-translate-box {
@@ -216,7 +223,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get correct styles for subpixel element', function() {
-    var element = setupBox('subpixel-rotate-translate-box');
+    setupBox('subpixel-rotate-translate-box');
     assert.equal(manager.getStyles([element]), dec`
 
       #subpixel-rotate-translate-box {
@@ -231,10 +238,10 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get correct styles for background image element', function() {
-    var element = setupBox('background-image-box');
+    setupBox('background-box');
     assert.equal(manager.getStyles([element]), dec`
 
-      #background-image-box {
+      #background-box {
         top: 100px;
         left: 100px;
         width: 100px;
@@ -246,7 +253,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should get correct styles for complex element', function() {
-    var element = setupBox('complex-box');
+    setupBox('complex-box');
     assert.equal(manager.getStyles([element]), dec`
 
       #complex-box {
@@ -264,8 +271,8 @@ describe('OutputManager', function(uiRoot) {
 
   it('should get correct styles for multiple elements', function() {
 
-    var el1 = setupBox();
-    var el2 = setupBox('complex-box');
+    var el1 = getPositionableElement();
+    var el2 = getPositionableElement('complex-box');
 
     assert.equal(manager.getStyles([el1, el2]), dec`
 
@@ -289,15 +296,13 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
-  it('should get correct styles for an incomplete box', function() {
-    var element = setupBox('incomplete-box');
+  it('should not output missing styles from incomplete properties', function() {
+    setupBox('incomplete-box');
     assert.equal(manager.getStyles([element]), dec`
 
       #incomplete-box {
         top: 0px;
-        left: 0px;
         width: 100px;
-        height: 0px;
       }
 
     `);
@@ -306,43 +311,45 @@ describe('OutputManager', function(uiRoot) {
   // --- Style Selectors
 
   it('should get styles with an id selector', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_ID);
     assertSimpleBoxSelector(manager.getStyles([element]), '#absolute-box');
   });
 
   it('should get styles with all selectors', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_ALL);
     assertSimpleBoxSelector(manager.getStyles([element]), '.box.absolute-box');
   });
 
   it('should get styles with tag selector', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG);
     assertSimpleBoxSelector(manager.getStyles([element]), 'div');
   });
 
   it('should get styles with tag nth selector', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG_NTH);
     assertSimpleBoxSelector(manager.getStyles([element]), 'div:nth-child(1)');
   });
 
   it('should get styles with first selector', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_FIRST);
     assertSimpleBoxSelector(manager.getStyles([element]), '.box');
   });
 
   it('should get styles with longest selector', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_LONGEST);
     assertSimpleBoxSelector(manager.getStyles([element]), '.absolute-box');
   });
 
   it('should get styles with no selector', function() {
-    var element = setupBox(), styles, expected;
+    var styles, expected;
+
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_NONE);
 
     styles = manager.getStyles([element]);
@@ -359,7 +366,7 @@ describe('OutputManager', function(uiRoot) {
   // --- Tabs
 
   it('should use 4 spaces for tab', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.TAB_STYLE, Settings.TABS_FOUR_SPACES);
     assert.equal(manager.getStyles([element]), dec`
 
@@ -374,7 +381,7 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should use tab character for tab', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.TAB_STYLE, Settings.TABS_TAB);
     assert.equal(manager.getStyles([element]), dec`
 
@@ -391,13 +398,13 @@ describe('OutputManager', function(uiRoot) {
   // --- Changed Only Setting
 
   it('should output no styles when nothing has changed', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
     assert.equal(manager.getStyles([element]), '');
   });
 
   it('should only output changed styles', function() {
-    var element = setupBox('z-box translate-box background-image-box');
+    setupBox('z-box translate-box background-box');
 
     element.pushState();
     element.move(23, 49);
@@ -422,7 +429,7 @@ describe('OutputManager', function(uiRoot) {
   // --- Unique Setting
 
   it('should output all styles when only one element is passed', function() {
-    var element = setupBox();
+    setupBox();
     settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
     assert.equal(manager.getStyles([element]), dec`
 
@@ -438,8 +445,8 @@ describe('OutputManager', function(uiRoot) {
 
   it('should output only styles unique to each element', function() {
 
-    var el1 = setupBox('background-image-box');
-    var el2 = setupBox('z-box rotate-translate-box');
+    var el1 = getPositionableElement('background-box');
+    var el2 = getPositionableElement('z-box rotate-translate-box');
 
     el1.el.id = 'one';
     el2.el.id = 'two';
@@ -460,8 +467,8 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should work on elements with no common styles', function() {
-    var el1 = setupBox();
-    var el2 = setupBox();
+    var el1 = getPositionableElement();
+    var el2 = getPositionableElement();
 
     el2.el.id = 'absolute-box-2';
     el2.pushState();
@@ -491,8 +498,8 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should work on elements with all common styles', function() {
-    var el1 = setupBox();
-    var el2 = setupBox();
+    var el1 = getPositionableElement();
+    var el2 = getPositionableElement();
 
     el2.el.id = 'absolute-box-2';
     settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
@@ -511,6 +518,42 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(link.href, 'data:text/css;base64,' + btoa('foo'));
     assert.equal(link.download, 'styles.css');
 
+  });
+
+  // --- Other
+
+  it('should not output incorrect headers on a percent box when the parent has no dimensions', function() {
+    setupNestedBox('percent-box', 'zero-dimension-box');
+
+    // Manipulate the element to force values to update
+    element.pushState();
+    element.move(50, 50);
+    element.pushState();
+    element.resize(50, 50, 'se');
+
+    assert.equal(manager.getPositionHeader(element), '0%, 0%');
+    assert.equal(manager.getDimensionsHeader(element), '0%, 0%');
+  });
+
+  it('should not output incorrect styles on a percent box when the parent has no dimensions', function() {
+    setupNestedBox('percent-box', 'zero-dimension-box');
+
+    // Manipulate the element to force values to update
+    element.pushState();
+    element.move(50, 50);
+    element.pushState();
+    element.resize(50, 50, 'se');
+
+    assert.equal(manager.getStyles([element]), dec`
+
+      #percent-box {
+        top: 0%;
+        left: 0%;
+        width: 0%;
+        height: 0%;
+      }
+
+    `);
   });
 
   it('should allow a filename based on settings', function() {

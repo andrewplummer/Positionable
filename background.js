@@ -1,6 +1,6 @@
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  if (request.message == 'convert_image_url_to_data_url'){
+  if (request.message == 'convert_image_url_to_data_url') {
     var canvas = document.createElement('canvas');
     var img = new Image();
     img.addEventListener('load', function() {
@@ -24,7 +24,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   return true;
 });
 
-chrome.browserAction.onClicked.addListener(function(tab) {
+chrome.browserAction.onClicked.addListener(function() {
   chrome.tabs.executeScript(null, {
     file: 'positionable.js'
   });

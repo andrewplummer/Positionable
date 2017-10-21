@@ -1,5 +1,5 @@
 
-describe('CursorManager', function(uiRoot) {
+describe('CursorManager', function() {
 
   var manager = new CursorManager(ShadowDomInjector.BASE_PATH);
 

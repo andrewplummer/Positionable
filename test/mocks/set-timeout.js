@@ -87,7 +87,7 @@
       timeMarker = {
         time: time,
         callbacks: []
-      }
+      };
       this.timeMarkers.push(timeMarker);
       return timeMarker;
     }

@@ -1,41 +1,46 @@
+(function() {
 
-function withMockedWindowEvents(fn) {
-  var mock = new WindowFunctionMock([
-    'confirm',
-    'prompt'
-  ])
-  fn(mock);
-  mock.release();
-}
-
-class WindowFunctionMock {
-
-  constructor(props) {
-    this.props   = props;
-    this.calls   = {};
-    this.natives = {};
-    this.setup();
+  function withMockedWindowEvents(fn) {
+    var mock = new WindowFunctionMock([
+      'confirm',
+      'prompt'
+    ]);
+    fn(mock);
+    mock.release();
   }
 
-  getCalls(prop) {
-    return this.calls[prop];
+  class WindowFunctionMock {
+
+    constructor(props) {
+      this.props   = props;
+      this.calls   = {};
+      this.natives = {};
+      this.setup();
+    }
+
+    getCalls(prop) {
+      return this.calls[prop];
+    }
+
+    setup() {
+      this.props.forEach(prop => {
+        this.calls[prop] = 0;
+        this.natives[prop] = window[prop];
+        window[prop] = () => {
+          this.calls[prop] += 1;
+          return true;
+        };
+      });
+    }
+
+    release() {
+      this.props.forEach(prop => {
+        window[prop] = this.natives[prop];
+      });
+    }
+
   }
 
-  setup() {
-    this.props.forEach(prop => {
-      this.calls[prop] = 0;
-      this.natives[prop] = window[prop];
-      window[prop] = () => {
-        this.calls[prop] += 1;
-        return true;
-      };
-    });
-  }
+  window.withMockedWindowEvents = withMockedWindowEvents;
 
-  release() {
-    this.props.forEach(prop => {
-      window[prop] = this.natives[prop];
-    });
-  }
-
-}
+})();

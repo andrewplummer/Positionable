@@ -6,7 +6,7 @@
 
     // --- Mocks
 
-    apply(width, height) {
+    apply() {
       window.Image = MockImage;
     }
 

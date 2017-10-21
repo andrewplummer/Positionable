@@ -1,58 +1,66 @@
+(function() {
 
+  function appendBox(className, parent) {
+    var el, classes, id;
 
-function appendBox(className, parent) {
-  var el, classes, id;
+    className = className || 'absolute-box';
+    classes = className.split(' ');
+    id = classes[0];
 
-  className = className || 'absolute-box';
-  classes = className.split(' ');
-  id = classes[0];
+    if (!isPositioningBox(classes[0])) {
+      classes.unshift('absolute-box');
+    }
 
-  if (!isPositioningBox(classes[0])) {
-    classes.unshift('absolute-box');
+    classes.unshift('box');
+
+    parent = parent || document.getElementById('element-fixtures');
+
+    el = createDiv();
+    el.id = id;
+    classes.forEach(c => el.classList.add(c));
+    parent.appendChild(el);
+    return el;
   }
 
-  classes.unshift('box');
+  function appendNestedBox(className, parentClassName) {
+    var el = appendBox(parentClassName || 'relative-box');
+    return appendBox(className, el);
+  }
 
-  parent = parent || document.getElementById('element-fixtures');
+  function isPositioningBox(className) {
+    return className === 'absolute-box' ||
+           className === 'relative-box' ||
+           className === 'static-box' ||
+           className === 'fixed-box';
+  }
 
-  el = createDiv();
-  el.id = id;
-  classes.forEach(c => el.classList.add(c));
-  parent.appendChild(el);
-  return el;
-}
+  function releaseAppendedFixtures() {
+    document.getElementById('element-fixtures').innerHTML = '';
+  }
 
-function appendNestedBox(className) {
-  var el = appendBox('relative-box');
-  return appendBox(className, el);
-}
+  /*-------------------------] Generic Elements [--------------------------*/
 
-function isPositioningBox(className) {
-  return className === 'absolute-box' ||
-         className === 'relative-box' ||
-         className === 'static-box' ||
-         className === 'fixed-box';
-}
+  function createDiv() {
+    return document.createElement('div');
+  }
 
-function releaseAppendedFixtures() {
-  document.getElementById('element-fixtures').innerHTML = '';
-}
+  function createLink(href) {
+    var el = document.createElement('a');
+    el.href = href;
+    return el;
+  }
 
-/*-------------------------] Generic Elements [--------------------------*/
+  function appendByTag(el, tag) {
+    var child = document.createElement(tag);
+    el.appendChild(child);
+    return child;
+  }
 
-function createDiv() {
-  return document.createElement('div');
-}
+  window.appendBox = appendBox;
+  window.appendNestedBox = appendNestedBox;
+  window.releaseAppendedFixtures = releaseAppendedFixtures;
+  window.createDiv = createDiv;
+  window.createLink = createLink;
+  window.appendByTag = appendByTag;
 
-function createLink(href) {
-  var el = document.createElement('a');
-  el.href = href;
-  return el;
-}
-
-function appendByTag(el, tag) {
-  var child = document.createElement(tag);
-  el.appendChild(child);
-  return child;
-}
-
+})();

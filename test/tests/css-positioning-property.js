@@ -1,5 +1,5 @@
 
-describe('CSSPositioningProperty', function(uiRoot) {
+describe('CSSPositioningProperty', function() {
 
   var el, matcher, hProp, vProp;
 
@@ -87,9 +87,9 @@ describe('CSSPositioningProperty', function(uiRoot) {
     assert.equal(decs[1], 'top: 100px;');
   });
 
-  it('should not append its CSS declaration if null', function() {
+  it('should not append its CSS declaration if initial', function() {
     var decs = [], prop;
-    prop = new CSSPositioningProperty(new CSSValue(), 'left');
+    prop = new CSSPositioningProperty(new CSSPixelValue(50, true), 'left');
     prop.appendCSSDeclaration(decs);
     assert.equal(decs.length, 0);
   });

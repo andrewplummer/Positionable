@@ -1,5 +1,5 @@
 
-describe('PositionableElementManager', function(uiRoot) {
+describe('PositionableElementManager', function() {
 
   var manager, listener, els, el;
 
@@ -92,6 +92,7 @@ describe('PositionableElementManager', function(uiRoot) {
   teardown(function() {
     releaseAppendedFixtures();
     promiseMock.release();
+    viewportMock.release();
     imageLoadMock.release();
     el       = null;
     els      = null;
@@ -177,17 +178,14 @@ describe('PositionableElementManager', function(uiRoot) {
     el.style.height = height;
   }
 
-  function setupBackgroundBox(backgroundPosition) {
-    el = appendBox('background-image-box');
-    if (backgroundPosition) {
-      el.style.backgroundPosition = backgroundPosition;
-    }
+  function setupBackgroundBox(className) {
+    el = appendBox(className || 'background-box');
     applyBackgroundImageMocks();
     manager.findElements();
   }
 
   function setupRotatedBackgroundBox() {
-    el = appendBox('rotate-box background-image-box');
+    el = appendBox('rotate-box background-box');
     applyBackgroundImageMocks();
     manager.findElements();
   }
@@ -626,6 +624,38 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.top,  '13em');
   });
 
+  it('should move a vw positioned element', function() {
+    viewportMock.apply(1000, 2000);
+    setupBox('vw-box');
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.left, '15vw');
+    assert.equal(el.style.top,  '15vw');
+  });
+
+  it('should move a vh positioned element', function() {
+    viewportMock.apply(1000, 2000);
+    setupBox('vh-box');
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.left, '12.5vh');
+    assert.equal(el.style.top,  '12.5vh');
+  });
+
+  it('should move a vmin positioned element', function() {
+    viewportMock.apply(1000, 2000);
+    setupBox('vmin-box');
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.left, '15vmin');
+    assert.equal(el.style.top,  '15vmin');
+  });
+
+  it('should move a vmax positioned element', function() {
+    viewportMock.apply(1000, 2000);
+    setupBox('vmax-box');
+    dragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.left, '12.5vmax');
+    assert.equal(el.style.top,  '12.5vmax');
+  });
+
   // --- Background Positioning
 
   it('should not move background image when none exists', function() {
@@ -691,9 +721,21 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should move background using percent values', function() {
-    setupBackgroundBox('10% 10%');
+    setupBackgroundBox('background-percent-box');
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
-    assert.equal(el.style.backgroundPosition,  '63.19% 63.19%');
+    assert.equal(el.style.backgroundPosition,  '78.19% 103.19%');
+  });
+
+  it('should move a big background using percent values', function() {
+    setupBackgroundBox('background-big-percent-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '-25% 0%');
+  });
+
+  it('should not be able to move the background image when its size is the same as its element', function() {
+    setupBackgroundBox('big-box background-big-percent-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '0% 0%');
   });
 
   // --- Resize
@@ -1116,20 +1158,20 @@ describe('PositionableElementManager', function(uiRoot) {
   });
 
   it('should snap to first sprite using percent value', function() {
-    setupBackgroundBox('10% 10%');
-    fireDoubleClick(getUiElement(el, '.position-handle'), 110, 110);
-    assert.equal(el.style.left,   '110px');
-    assert.equal(el.style.top,    '110px');
+    setupBackgroundBox('background-percent-box');
+    fireDoubleClick(getUiElement(el, '.position-handle'), 125, 148);
+    assert.equal(el.style.left,   '125px');
+    assert.equal(el.style.top,    '148px');
     assert.equal(el.style.width,  '2px');
     assert.equal(el.style.height, '2px');
     assert.equal(el.style.backgroundPosition, '25% 25%');
   });
 
   it('should snap to second sprite using percent value', function() {
-    setupBackgroundBox('10% 10%');
-    fireDoubleClick(getUiElement(el, '.position-handle'), 112, 112);
-    assert.equal(el.style.left,   '112px');
-    assert.equal(el.style.top,    '112px');
+    setupBackgroundBox('background-percent-box');
+    fireDoubleClick(getUiElement(el, '.position-handle'), 127, 150);
+    assert.equal(el.style.left,   '127px');
+    assert.equal(el.style.top,    '150px');
     assert.equal(el.style.width,  '2px');
     assert.equal(el.style.height, '2px');
     assert.equal(el.style.backgroundPosition, '75% 75%');
@@ -1291,10 +1333,12 @@ describe('PositionableElementManager', function(uiRoot) {
     manager.focusAll();
 
     manager.pushFocusedStates();
-    manager.applyZIndexNudge(50);
+    manager.applyZIndexNudge(1);
+    manager.applyZIndexNudge(2);
+    manager.applyZIndexNudge(3);
     manager.unfocusAll();
 
-    assert.equal(el.style.zIndex, '50');
+    assert.equal(el.style.zIndex, '3');
   });
 
   it('should be able to nudge the background image', function() {
@@ -1307,6 +1351,72 @@ describe('PositionableElementManager', function(uiRoot) {
     assert.equal(el.style.backgroundPosition, '50px 70px');
   });
 
+  // --- Missing Properties
+
+  it('should update box for elements with incomplete positioning properties', function() {
+    setupBox('incomplete-box');
+
+    dragElement(getUiElement(el, '.position-handle'), 0, 0, 100, 100);
+    dragElement(getUiElement(el, '.resize-handle-se'), 200, 100, 150, 170);
+
+    assert.equal(el.style.top, '100px');
+    assert.equal(el.style.left, '100px');
+    assert.equal(el.style.width, '50px');
+    assert.equal(el.style.height, '70px');
+  });
+
+  it('should update initial background position when moving', function() {
+    setupBackgroundBox('background-initial-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 100, 100, 150, 160);
+    assert.equal(el.style.backgroundPosition, '50px 60px');
+  });
+
+  it('should update initial background position when snapping', function() {
+    setupBackgroundBox('background-initial-box');
+    fireDoubleClick(getUiElement(el, '.position-handle'), 101, 101);
+    assert.equal(el.style.backgroundPosition, '-1px -1px');
+  });
+
+  it('should update auto z-index', function() {
+    setupBox();
+    manager.focusAll();
+    manager.pushFocusedStates();
+    manager.applyZIndexNudge(50);
+    manager.unfocusAll();
+    assert.equal(el.style.zIndex, '50');
+  });
+
+  it('should be able to undo back to initial state', function() {
+    setupBox('incomplete-box background-initial-box');
+    manager.focusAll();
+
+    // Apply z-index nudge
+    manager.pushFocusedStates();
+    manager.applyZIndexNudge(50);
+
+    // Drag position handle
+    dragElement(getUiElement(el, '.position-handle'), 100, 100, 200, 200);
+
+    // Drag resize handle
+    dragElement(getUiElement(el, '.resize-handle-se'), 300, 300, 400, 400);
+
+    // Drag background
+    ctrlDragElement(getUiElement(el, '.position-handle'), 100, 100, 150, 160);
+
+    // Now pop 4 states to arrive at initial
+    manager.undo();
+    manager.undo();
+    manager.undo();
+    manager.undo();
+
+    assert.equal(el.style.top,    '0px');
+    assert.equal(el.style.left,   'auto');
+    assert.equal(el.style.width,  '100px');
+    assert.equal(el.style.height, 'auto');
+    assert.equal(el.style.zIndex, '');
+    assert.equal(el.style.backgroundPosition, '');
+  });
+
   // --- Other
 
   it('should preserve precision after undo', function() {
@@ -1315,21 +1425,6 @@ describe('PositionableElementManager', function(uiRoot) {
     dragElement(getUiElement(el, '.resize-handle-se'), 150, 271, 150, 321);
     manager.undo();
     assert.equal(el.style.transform,   'translate(-17.5px, 7.25px) rotate(45deg)');
-  });
-
-  it('should find elements with incomplete positioning properties', function() {
-    el = appendBox('incomplete-box');
-    manager.findElements();
-
-    dragElement(getUiElement(el, '.position-handle'), 0, 0, 100, 100);
-    dragElement(getUiElement(el, '.resize-handle-se'), 200, 100, 150, 170);
-
-    assert.equal(manager.elements.length, 1);
-    assert.equal(el.style.top, '100px');
-    assert.equal(el.style.left, '100px');
-    assert.equal(el.style.width, '50px');
-    assert.equal(el.style.height, '70px');
-
   });
 
 });
