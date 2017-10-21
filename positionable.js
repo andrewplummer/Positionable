@@ -23,7 +23,6 @@
 // - make sure static elements are changed to absolute
 // - test command key on windows
 // - test undefined top/left/width/height values
-// - test same domain / cross domain image
 // - test z-index on overlapping elements when dragging
 // - test on elements with transitions
 // - should it work on absolute elements with no left/right/top/bottom properties?
@@ -45,7 +44,6 @@
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: do we really want to throw errors to halt??
 // - TODO: rotated box won't reflect
-// - TODO: mock chrome object to test x-domain imagemock chrome object to test x-domain images
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change

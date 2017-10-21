@@ -28,6 +28,10 @@ ul {
   margin: 25px 25px 0 0;
 }
 
+.test-failures {
+  word-wrap: break-word;
+}
+
 .test-suite {
   overflow: hidden;
   margin-bottom: 20px;

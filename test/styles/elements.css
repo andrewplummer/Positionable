@@ -278,6 +278,10 @@
   background-position: initial;
 }
 
+.background-x-domain-box {
+  background-image: url(https://i.imgur.com/Z82AwNK.gifv);
+}
+
 /*---------------------------] Special Cases [-----------------------*/
 
 .complex-box {
