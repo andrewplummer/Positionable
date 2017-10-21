@@ -45,6 +45,7 @@
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: do we really want to throw errors to halt??
 // - TODO: rotated box won't reflect
+// - TODO: mock chrome object to test x-domain imagemock chrome object to test x-domain images
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
@@ -715,23 +716,13 @@ class CursorManager {
 
   constructor(basePath) {
     this.basePath = basePath;
-    this.rotationNames = ['se','s','sw','w','nw','n','ne','e'];
-    this.resizeNames   = ['nwse','ns','nesw','ew','nwse','ns','nesw','ew'];
     this.injectStylesheet();
   }
 
   // --- Drag Cursors
 
-  setRotateDragCursor(rotation) {
-    this.setDragCursor(this.getRotateCursor(rotation));
-  }
-
-  setResizeDragCursor(name, rotation) {
-    this.setDragCursor(this.getResizeCursor(name, rotation));
-  }
-
-  setDragCursor(cursor) {
-    this.dragCursor = cursor;
+  setDragCursor(name, isImage) {
+    this.dragCursor = this.getFullCursor(name, isImage);
     this.render();
   }
 
@@ -740,18 +731,10 @@ class CursorManager {
     this.render();
   }
 
-  // --- Hover Cursors
+  // --- Hover Cursor
 
-  setRotateHoverCursor(rotation) {
-    this.setHoverCursor(this.getRotateCursor(rotation));
-  }
-
-  setResizeHoverCursor(name, rotation) {
-    this.setHoverCursor(this.getResizeCursor(name, rotation));
-  }
-
-  setHoverCursor(cursor) {
-    this.hoverCursor = cursor;
+  setHoverCursor(name, isImage) {
+    this.hoverCursor = this.getFullCursor(name, isImage);
     this.render();
   }
 
@@ -760,8 +743,10 @@ class CursorManager {
     this.render();
   }
 
-  setPriorityHoverCursor(cursor) {
-    this.priorityHoverCursor = cursor;
+  // --- Priority Hover Cursor
+
+  setPriorityHoverCursor(name, isImage) {
+    this.priorityHoverCursor = this.getFullCursor(name, isImage);
     this.render();
   }
 
@@ -771,6 +756,16 @@ class CursorManager {
   }
 
   // --- Private
+
+  getFullCursor(name, isImage) {
+    if (isImage) {
+      // Note that a fallback must be provided for image
+      // cursors or the style will be considered invalid.
+      return `url(${this.basePath}images/cursors/${name}.png) 13 13, pointer`;
+    } else {
+      return name;
+    }
+  }
 
   render() {
     this.style.cursor = this.getActiveCursor();
@@ -786,24 +781,6 @@ class CursorManager {
     } else {
       return '';
     }
-  }
-
-  getResizeCursor(name, rotation) {
-    var index = this.rotationNames.indexOf(name);
-    return this.getCursorForRotation(this.resizeNames, rotation, index) + '-resize';
-  }
-
-  getRotateCursor(rotation) {
-    var name = this.getCursorForRotation(this.rotationNames, rotation);
-    // Note that a fallback must be provided for image
-    // cursors or the style will be considered invalid.
-    return `url(${this.basePath}images/cursors/rotate-${name}.png) 13 13, pointer`;
-  }
-
-  getCursorForRotation(arr, rotation, addIndex) {
-    rotation = rotation || 0;
-    addIndex = addIndex || 0;
-    return arr[(((rotation + 22.5) / 45 | 0) + addIndex) % 8];
   }
 
   injectStylesheet() {
@@ -1431,15 +1408,18 @@ class PositionHandle extends DragTarget {
 
 class ResizeHandle extends DragTarget {
 
+  static get DIRECTIONS() { return ['se','s','sw','w','nw','n','ne','e']              }
+  static get CURSORS()    { return ['nwse','ns','nesw','ew','nwse','ns','nesw','ew']; }
+
   // TODO: arg order?
-  constructor(root, name, listener) {
-    super(root.getElementById('resize-handle-' + name));
+  constructor(root, dir, listener) {
+    super(root.getElementById('resize-handle-' + dir));
     this.allowDoubleClick();
     this.setupDragIntents();
     this.setupMetaKeyReset();
     this.setupCtrlKeyReset();
 
-    this.name = name;
+    this.dir = dir;
     this.listener = listener;
 
     /*
@@ -1459,6 +1439,12 @@ class ResizeHandle extends DragTarget {
     this.remove();
   }
   */
+
+  getCursorForRotation(rotation) {
+    var index   = ResizeHandle.DIRECTIONS.indexOf(this.dir);
+    var cursor  = ResizeHandle.CURSORS[(((rotation + 22.5) / 45 | 0) + index) % 8];
+    return cursor + '-resize';
+  }
 
   // --- Events
 
@@ -1488,6 +1474,8 @@ class ResizeHandle extends DragTarget {
   onDoubleClick(evt) {
     this.listener.onResizeHandleDoubleClick(evt, this);
   }
+
+  // --- Private
 
   // --- Actions
 
@@ -1587,6 +1575,8 @@ class ResizeHandle extends DragTarget {
 
 class RotationHandle extends DragTarget {
 
+  static get GRADS_PER_CURSOR() { return 16; };
+
   constructor(root, listener) {
     super(root.getElementById('rotation-handle'));
     this.setupDragIntents();
@@ -1611,34 +1601,19 @@ class RotationHandle extends DragTarget {
   onDragMove(evt) {
     super.onDragMove(evt);
     this.listener.onRotationHandleDragMove(evt, this);
-
-    /*
-    this.rotation = this.getAngleForMouseEvent(evt, this.origin);
-
-    evt.rotation = this.rotation;
-    evt.offsetRotation = this.rotation - this.startRotation;
-
-    this.listener.onRotationHandleDragMove(evt);
-    */
-
-    /*
-    var r = this.getAngleForMouseEvent(evt, this.origin) - this.startAngle;
-    if (evt.isConstrained()) {
-      r = round(r / RotationHandle.SNAPPING) * RotationHandle.SNAPPING;
-    }
-    evt.rotation = r;
-    */
-    //this.listener.onRotationHandleDragMove(evt);
-    //elementManager.rotate(r);
-    //statusBar.update();
   }
 
   onDragStop(evt) {
     super.onDragStop(evt);
     this.listener.onRotationHandleDragStop(evt, this);
-    //this.listener.onRotationHandleDragMove(this.addRotationEventData(evt));
-    //this.listener.onRotationHandleDragStart(this.addRotationEventData(evt));
-    //this.listener.onRotationHandleDragStop(this.addRotationEventData(evt));
+  }
+
+  getCursorForRotation(rotation) {
+    var grad = Point.degToGrad(rotation);
+    var per  = RotationHandle.GRADS_PER_CURSOR;
+    // Step the cursor into one of 25 cursors and ensure that 400 is 0.
+    var grad = Math.round(grad / per) * per % 400;
+    return 'rotate-' + grad;
   }
 
   /*
@@ -3406,7 +3381,7 @@ class AppController {
 
   onResizeDragIntentStart(evt, handle, element) {
     console.info('RESIZE DRAG INTENT START');
-    this.cursorManager.setResizeHoverCursor(handle.name, element.getRotation());
+    this.cursorManager.setHoverCursor(handle.getCursorForRotation(element.getRotation()));
     this.controlPanel.setMode('resize');
   }
 
@@ -3422,7 +3397,7 @@ class AppController {
       this.cursorManager.setDragCursor('move');
     } else {
       this.isResizing = true;
-      this.cursorManager.setResizeDragCursor(handle.name, element.getRotation());
+      this.cursorManager.setDragCursor(handle.getCursorForRotation(element.getRotation()));
     }
   }
 
@@ -3440,7 +3415,7 @@ class AppController {
 
   onRotationDragIntentStart(evt, handle, element) {
     console.info('ROTATION DRAG INTENT START');
-    this.cursorManager.setRotateHoverCursor(element.getRotation());
+    this.cursorManager.setHoverCursor(handle.getCursorForRotation(element.getRotation()), true);
     this.controlPanel.setMode('rotate');
   }
 
@@ -3453,13 +3428,12 @@ class AppController {
   onRotationDragStart(evt, handle, element) {
     console.info('ROTATION DRAG START');
     this.isRotating = true;
-    this.setRotationCursor(element.getRotation());
+    this.setRotationCursor(handle.getCursorForRotation(element.getRotation()));
   }
 
-  onRotationDragMove(evt) {
+  onRotationDragMove(evt, handle) {
     console.info('ROTATION DRAG MOVE');
-    this.setRotationCursor(evt.rotation.abs);
-    this.cursorManager.setRotateDragCursor(evt.rotation.abs);
+    this.setRotationCursor(handle.getCursorForRotation(evt.rotation.abs));
   }
 
   onRotationDragStop() {
@@ -3468,9 +3442,9 @@ class AppController {
     this.cursorManager.clearDragCursor();
   }
 
-  setRotationCursor(rotation) {
-    this.cursorManager.setRotateHoverCursor(rotation);
-    this.cursorManager.setRotateDragCursor(rotation);
+  setRotationCursor(name) {
+    this.cursorManager.setHoverCursor(name, true);
+    this.cursorManager.setDragCursor(name, true);
   }
 
   // --- Background Image Events
@@ -4432,7 +4406,7 @@ class PositionableElementManager {
     }
 
     this.draggingElements.forEach(el => {
-      el.resize(vector.x, vector.y, handle.name, evt.drag.constrained);
+      el.resize(vector.x, vector.y, handle.dir, evt.drag.constrained);
     });
     this.listener.onDimensionsUpdated();
   }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="21px" height="21px" viewBox="0 0 21 21" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>rotate</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <path d="M5.5,3.5 C11,3.5 14.5,7 14.5,12.5 L17.5,12.5 L13.2000008,17.5 L9,12.5 L12,12.5 C12,8.5 9.5,6 5.5,6 L5.5,9 L0.5,4.70000076 L5.5,0.5 L5.5,3.5 Z" id="path-1"></path>
+    </defs>
+    <g id="Symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Rotate" transform="translate(1.000000, 1.000000)">
+            <g id="rotate" transform="translate(9.000000, 9.000000) rotate(-270.000000) translate(-9.000000, -9.000000) ">
+                <use fill="#000000" fill-rule="evenodd" xlink:href="#path-1"></use>
+                <path stroke="#FFFFFF" stroke-width="1" d="M6,3.00945703 L6,0.5 L6,-0.572993234 L5.17840392,0.117147596 L0.178403923,4.31714836 L-0.272036819,4.69551865 L0.173980399,5.07909339 L5.1739804,9.37909263 L6,10.0894694 L6,9 L6,6.5141022 C9.26297421,6.70108252 11.2989175,8.73702579 11.4858978,12 L9,12 L7.92700677,12 L8.6171476,12.8215961 L12.8171484,17.8215961 L13.1955187,18.2720368 L13.5790934,17.8260196 L17.8790926,12.8260196 L18.5894694,12 L17.5,12 L14.990543,12 C14.7873795,6.67475142 11.3252486,3.21262053 6,3.00945703 Z"></path>
+            </g>
+        </g>
+    </g>
+</svg>
