@@ -387,6 +387,21 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
+  it('should use 8 spaces for tab', function() {
+    setupBox();
+    settings.set(Settings.TAB_STYLE, Settings.TABS_EIGHT_SPACES);
+    assert.equal(manager.getStyles([element]), dec`
+
+      #absolute-box {
+              top: 100px;
+              left: 100px;
+              width: 100px;
+              height: 100px;
+      }
+
+    `);
+  });
+
   it('should use tab character for tab', function() {
     setupBox();
     settings.set(Settings.TAB_STYLE, Settings.TABS_TAB);

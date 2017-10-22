@@ -2944,9 +2944,10 @@ class OutputManager {
 
   getTab() {
     switch(this.settings.get(Settings.TAB_STYLE)) {
-      case Settings.TABS_TWO_SPACES:  return '  ';
-      case Settings.TABS_FOUR_SPACES: return '    ';
-      case Settings.TABS_TAB:         return '\u0009';
+      case Settings.TABS_TWO_SPACES:   return '  ';
+      case Settings.TABS_FOUR_SPACES:  return '    ';
+      case Settings.TABS_EIGHT_SPACES: return '        ';
+      case Settings.TABS_TAB:          return '\u0009';
     }
   }
 
@@ -6051,6 +6052,7 @@ class Settings {
   static get OUTPUT_SELECTOR_LONGEST() { return 'longest'; }
   static get TABS_TWO_SPACES()         { return 'two';  }
   static get TABS_FOUR_SPACES()        { return 'four'; }
+  static get TABS_EIGHT_SPACES()       { return 'eight'; }
   static get TABS_TAB()                { return 'tab';  }
 
   // --- Other
