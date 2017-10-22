@@ -764,6 +764,12 @@ describe('PositionableElementManager', function() {
     assert.equal(el.style.backgroundPosition,  '153.19% 103.19%');
   });
 
+  it('should not error on background-image: none', function() {
+    setupBackgroundBox('background-box background-none-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '');
+  });
+
   // --- Resize
 
   it('should resize', function() {
