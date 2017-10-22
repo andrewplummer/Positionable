@@ -539,4 +539,12 @@ describe('PositionableElement', function() {
     assert.equal(el.style.animation, '');
   });
 
+  it('should not clear all rendered styles when destroyed', function() {
+    setupBox('animation-box');
+    element.pushState();
+    element.resize(100, 100, 'se');
+    element.destroy();
+    assert.equal(el.style.top, '100px');
+  });
+
 });

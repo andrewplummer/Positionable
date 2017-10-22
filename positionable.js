@@ -6,9 +6,6 @@
  *
  * ---------------------------- */
 
-// TODO: test with:
-// - bug: it should clear all it's rendered styles off when it's destroyed
-
 // - TODO: the mode indicator should maybe only be for nudging, as it's confusing to see it change on hover
 //  .... the cursors should be indicator enough.... ie cursors for dragging, and the panel for nudging, no?
 // - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
@@ -2384,6 +2381,7 @@ class PositionableElement extends BrowserEventTarget {
 
   // TODO: standing in for any transform now... fix this!
   renderTransform() {
+    this.cssTransform.render(this.el.style);
     /*
     var r = this.box.rotation, transforms = [];
     if (this.box.cssTranslationLeft || this.box.cssTranslationTop) {
@@ -2394,7 +2392,6 @@ class PositionableElement extends BrowserEventTarget {
     transforms.push('rotateZ('+ r +'deg)');
     this.el.style.webkitTransform = transforms.join(' ');
     */
-    this.el.style.transform = this.cssTransform;
   }
 
   /*
@@ -2590,6 +2587,10 @@ class PositionableElement extends BrowserEventTarget {
   // --- Teardown
 
   destroy() {
+    // Choosing not to destroy the rendered styles on the element.
+    // There may be cases where users want to set up their positioning
+    // and then search for other elements as a workflow. The jump that
+    // is caused when these elements are destroyed is also jarring.
     this.injector.destroy();
     this.removeAllListeners();
     this.clearOverrides();
@@ -6763,6 +6764,10 @@ class CSSPositioningProperty {
     return this.cssValue.appendCSSDeclaration(this.prop, declarations);
   }
 
+  destroy(style) {
+    style[this.prop] = '';
+  }
+
 }
 
 /*
@@ -7107,6 +7112,12 @@ class CSSBox {
     this.cssHeight.appendCSSDeclaration('height', declarations);
   }
 
+  destroy(style) {
+    this.cssH.destroy(style);
+    this.cssV.destroy(style);
+    style.width  = '';
+    style.height = '';
+  }
   /*
   getDimensionForAxis(axis) {
     return axis === 'h' ? this.cssWidth : this.cssHeight;
@@ -7716,6 +7727,14 @@ class CSSTransform {
     }
   }
 
+  render(style) {
+    style.transform = this.toString();
+  }
+
+  destroy(style) {
+    style.transform = '';
+  }
+
 }
 
 /*-------------------------] CSSTransformFunction [--------------------------*/
@@ -8287,6 +8306,10 @@ class CSSZIndex {
     }
   }
 
+  destroy(style) {
+    style.zIndex = '';
+  }
+
   toString() {
     return this.cssValue.isInitial() ? '' : this.cssValue.toString();
   }
@@ -8452,6 +8475,10 @@ class CSSBackgroundImage {
     // The background image data itself is never assumed to be changed,
     // so there's no need to clone the image or sprite recognizer when cloning.
     return new CSSBackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone(), this.spriteRecognizer);
+  }
+
+  destroy(style) {
+    style.backgroundPosition = '';
   }
 
 }
