@@ -83,10 +83,6 @@
   height: auto;
 }
 
-.transition-box {
-  transition: top 1s linear, left 1s linear, width 1s linear, height 1s linear;
-}
-
 /*---------------------------] Z-Index [-----------------------*/
 
 .z-box {
@@ -309,6 +305,24 @@
 
 .background-x-domain-box {
   background-image: url(https://i.imgur.com/Z82AwNK.gifv);
+}
+
+/*---------------------------] Animations [-----------------------*/
+
+@keyframes fake-animation {
+    0%   {left:0px;   top:0px;}
+    25%  {left:200px; top:0px;}
+    50%  {left:200px; top:200px;}
+    75%  {left:0px;   top:200px;}
+    100% {left:0px;   top:0px;}
+}
+
+.transition-box {
+  transition: top 1s linear, left 1s linear, width 1s linear, height 1s linear;
+}
+
+.animation-box {
+  animation: fake-animation 4s infinite;
 }
 
 /*---------------------------] Special Cases [-----------------------*/

@@ -8,8 +8,6 @@
 
 // TODO: test with:
 // - test command key on windows
-// - test what happens if extension button hit twice
-// - test with animations?
 // - cursors working ok??
 // - bug: select multiple then command to drag one... jumps? (looks like scrolling)
 // - bug: select multiple then drag fixed with scroll... others jump way down
@@ -1729,12 +1727,14 @@ class PositionableElement extends BrowserEventTarget {
     if (position === 'static') {
       this.el.style.position = 'absolute';
     }
+    this.el.style.animation  = 'none';
     this.el.style.transition = 'none';
     this.isFixed = position === 'fixed';
   }
 
   clearOverrides() {
-    this.el.style.position = '';
+    this.el.style.position   = '';
+    this.el.style.animation  = '';
     this.el.style.transition = '';
   }
 

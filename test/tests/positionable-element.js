@@ -530,4 +530,13 @@ describe('PositionableElement', function() {
     assert.equal(el.style.transitionProperty, '');
   });
 
+  it('should turn off animations while active', function() {
+    setupBox('animation-box');
+    element.pushState();
+    element.resize(100, 100, 'se');
+    assert.equal(el.style.animation, 'none');
+    element.destroy();
+    assert.equal(el.style.animation, '');
+  });
+
 });
