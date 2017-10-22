@@ -118,5 +118,38 @@ describe('KeyManager', function() {
     assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], 1);
   });
 
+  it('should allow deactivation', function() {
+    manager.setupKey(KeyManager.LEFT_KEY);
+
+    manager.setActive(false);
+    assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], undefined);
+
+    manager.setActive(true);
+    fireDocumentShiftKeyDown(KeyManager.LEFT_KEY);
+
+    assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], 1);
+  });
+
+  it('should allow deactivation with an exception', function() {
+    manager.setupKey(KeyManager.LEFT_KEY);
+    manager.setupCommandKey(KeyManager.Z_KEY);
+    manager.setupCommandKeyException(KeyManager.Z_KEY);
+
+    manager.setActive(false);
+    fireDocumentKeyDown(KeyManager.LEFT_KEY);
+    fireDocumentKeyDown(KeyManager.Z_KEY);
+    fireDocumentMetaKeyDown(KeyManager.Z_KEY);
+    assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], undefined);
+    assert.equal(listener.keyDownEvents[KeyManager.Z_KEY], undefined);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.Z_KEY], 1);
+
+    manager.setActive(true);
+    fireDocumentKeyDown(KeyManager.LEFT_KEY);
+    fireDocumentKeyDown(KeyManager.Z_KEY);
+    fireDocumentMetaKeyDown(KeyManager.Z_KEY);
+    assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], 1);
+    assert.equal(listener.keyDownEvents[KeyManager.Z_KEY], undefined);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.Z_KEY], 2);
+  });
 
 });

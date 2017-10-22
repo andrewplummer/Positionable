@@ -105,11 +105,11 @@
           </label>
         </div>
         <div class="settings-area-control">
-          <input type="text" id="save-filename"
+          <input type="text" id="save-filename" value="styles.css"
                  class="settings-area-input" placeholder="Filename">
         </div>
       </fieldset>
-      <fieldset class="settings-area-field">
+      <fieldset class="settings-area-field" name="include-selector-field">
         <div class="settings-area-label">
           <label for="include-selector">
             Include elements matching:
@@ -120,7 +120,7 @@
                  class="settings-area-input" placeholder="CSS Selector">
         </div>
       </fieldset>
-      <fieldset class="settings-area-field">
+      <fieldset class="settings-area-field" name="exclude-selector-field">
         <div class="settings-area-label">
           <label for="exclude-selector">
             Exclude elements matching:
@@ -140,7 +140,7 @@
         <div class="settings-area-control">
           <select id="tab-style">
             <option value="tab">Tab</option>
-            <option value="two">Two Spaces</option>
+            <option value="two" selected>Two Spaces</option>
             <option value="four">Four Spaces</option>
           </select>
         </div>
@@ -153,7 +153,7 @@
         </div>
         <div class="settings-area-control">
           <select id="output-selector">
-            <option value="auto">Auto</option>
+            <option value="auto" selected>Auto</option>
             <option value="none">None</option>
             <option value="id">Id</option>
             <option value="first">First Class</option>

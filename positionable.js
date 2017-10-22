@@ -31,6 +31,8 @@
 // - TODO: check stackoverflow and mozilla!
 // - TODO: localStorage doesn't seem to be what we want... it doesn't share settings across pages
 // - TODO: need to test display: none divs as well! they fail...
+// - TODO: command z on initial!
+// - TODO: command z on multiple goes back to single
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
@@ -783,11 +785,11 @@ class BrowserEventTarget extends Element {
     this.listeners = {};
   }
 
-  bindEvent(eventName, fn) {
+  bindEvent(eventName, fn, capture) {
     // TODO: can remove bindEventListener?
     this.addEventListener(eventName, evt => {
       fn.call(this, evt);
-    });
+    }, capture);
   }
 
   /*
@@ -809,9 +811,9 @@ class BrowserEventTarget extends Element {
   }
 
 
-  addEventListener(eventName, handler) {
+  addEventListener(eventName, handler, capture) {
     this.listeners[eventName] = handler;
-    this.el.addEventListener(eventName, handler);
+    this.el.addEventListener(eventName, handler, capture);
   }
 
   removeEventListener(eventName) {
@@ -2978,10 +2980,6 @@ class KeyManager extends BrowserEventTarget {
   static get LEFT_KEY()  { return 'ArrowLeft';  }
   static get RIGHT_KEY() { return 'ArrowRight'; }
 
-  /*
-  static get ENTER() { return 13; }
-  */
-
   static get A_KEY() { return 'a'; }
   static get B_KEY() { return 'b'; }
   static get C_KEY() { return 'c'; }
@@ -2996,6 +2994,7 @@ class KeyManager extends BrowserEventTarget {
 
     this.handledKeys = {};
     this.setupEvents();
+    this.active = true;
   }
 
   setupKey(key) {
@@ -3004,6 +3003,14 @@ class KeyManager extends BrowserEventTarget {
 
   setupCommandKey(key) {
     this.addKeyHandler(key, KeyManager.MODIFIER_COMMAND);
+  }
+
+  setActive(on) {
+    this.active = on;
+  }
+
+  setupCommandKeyException(key) {
+    this.exceptedCommandKey = key;
   }
 
   // --- Private
@@ -3019,23 +3026,39 @@ class KeyManager extends BrowserEventTarget {
   }
 
   onKeyDown(evt) {
-    var mod = this.handledKeys[evt.key];
-    if (mod === undefined) {
+    var flag = this.getMaskedFlag(evt);
+    if (!flag) {
       return;
     }
-    if (mod & KeyManager.MODIFIER_NONE && this.isSimpleKey(evt)) {
+    if (flag & KeyManager.MODIFIER_NONE && this.isSimpleKey(evt)) {
       evt.preventDefault();
       this.listener.onKeyDown(evt);
-    } else if (mod & KeyManager.MODIFIER_COMMAND && this.isCommandKey(evt)) {
+    } else if (flag & KeyManager.MODIFIER_COMMAND && this.isCommandKey(evt)) {
       evt.preventDefault();
       this.listener.onCommandKeyDown(evt);
     }
   }
 
   onKeyUp(evt) {
-    if (this.handledKeys[evt.key]) {
+    if (this.getMaskedFlag(evt)) {
       this.listener.onKeyUp(evt);
     }
+  }
+
+  getMaskedFlag(evt) {
+    var flag = this.handledKeys[evt.key];
+    if (!flag || this.isDisabled(evt)) {
+      return;
+    }
+    return flag;
+  }
+
+  isDisabled(evt) {
+    return !this.active && !this.isExceptedCommandKey(evt);
+  }
+
+  isExceptedCommandKey(evt) {
+    return this.isCommandKey(evt) && evt.key === this.exceptedCommandKey;
   }
 
   isSimpleKey(evt) {
@@ -3245,11 +3268,18 @@ class CopyManager {
   constructor(listener) {
     window.addEventListener('copy', this.onCopyEvent.bind(this));
     this.listener = listener;
+    this.active = true;
+  }
+
+  setActive(on) {
+    this.active = on;
   }
 
   onCopyEvent(evt) {
-    evt.preventDefault();
-    this.listener.onCopyEvent(evt);
+    if (this.active) {
+      evt.preventDefault();
+      this.listener.onCopyEvent(evt);
+    }
   }
 
   setCopyData(evt, str) {
@@ -3267,7 +3297,7 @@ class AppController {
 
   constructor(uiRoot) {
 
-    this.settings = new Settings(this, localStorage, uiRoot);
+    this.settings = new Settings(this, uiRoot);
     this.outputManager = new OutputManager(this.settings);
     this.alignmentManager = new AlignmentManager();
 
@@ -3275,6 +3305,7 @@ class AppController {
 
     this.copyManager = new CopyManager(this);
     this.copyAnimation = new CopyAnimation(uiRoot, this);
+    this.loadingAnimation = new LoadingAnimation(uiRoot, this);
     //this.nudgeManager = new NudgeManager();
     //this.keyEventManager  = new KeyEventManager();
 
@@ -3288,7 +3319,7 @@ class AppController {
     this.setupKeyManager();
 
     new DragSelection(uiRoot, this);
-    new LoadingAnimation(uiRoot, this).show();
+    this.loadingAnimation.show();
   }
 
   setupKeyManager() {
@@ -3313,6 +3344,11 @@ class AppController {
     this.keyManager.setupCommandKey(KeyManager.A_KEY);
     this.keyManager.setupCommandKey(KeyManager.S_KEY);
     this.keyManager.setupCommandKey(KeyManager.Z_KEY);
+
+    // Command S for save works regardless of where you are,
+    // other command keys should be able to disable as they
+    // do other things in the context of the settings form.
+    this.keyManager.setupCommandKeyException(KeyManager.S_KEY);
   }
 
   onFocusedElementsChanged() {
@@ -3336,9 +3372,28 @@ class AppController {
     }).join(' ');
   }
 
+  onSettingsClick() {
+    this.settings.focusForm();
+  }
+
   onGettingStartedSkip() {
-    this.settings.setBoolean(Settings.SKIP_GETTING_STARTED, true);
+    this.settings.set(Settings.SKIP_GETTING_STARTED, true);
     this.renderActiveControlPanel();
+  }
+
+  onFormFocus() {
+    this.keyManager.setActive(false);
+    this.copyManager.setActive(false);
+  }
+
+  onFormBlur() {
+    this.keyManager.setActive(true);
+    this.copyManager.setActive(true);
+  }
+
+  onSelectorUpdated() {
+    this.elementManager.destroyAll();
+    this.loadingAnimation.show();
   }
 
   onSettingsUpdated() {
@@ -3501,7 +3556,6 @@ class AppController {
   // --- Key Events
 
   onKeyDown(evt) {
-
     // Note mode resetting is handled by DragTarget
 
     switch (evt.key) {
@@ -3566,6 +3620,7 @@ class AppController {
 
   onCommandKeyDown(evt) {
     // Note that copying is handled by the copy event not key events.
+
     switch (evt.key) {
       case KeyManager.S_KEY:
         this.saveStyles();
@@ -4144,7 +4199,7 @@ class PositionableElementManager {
       els = document.body.querySelectorAll(query);
 
     } catch(e) {
-      logError(e.message);
+      els = [];
     }
 
     for(let i = 0, el; el = els[i]; i++) {
@@ -4649,16 +4704,16 @@ class ControlPanel extends DraggableElement {
 
   setupUiEvents(root) {
     this.setupClickEvent(root, 'control-panel-settings-button', this.onControlPanelSettingsClick);
-    this.setupClickEvent(root, 'settings-area-help-link', this.onSettingsAreaHelpLinkClick);
-    this.setupClickEvent(root, 'getting-started-skip-link', this.onGettingStartedSkipLinkClick);
-    this.setupClickEvent(root, 'align-top-button',          this.onAlignTopButtonClicked);
-    this.setupClickEvent(root, 'align-hcenter-button',      this.onAlignHCenterButtonClicked);
-    this.setupClickEvent(root, 'align-bottom-button',       this.onAlignBottomButtonClicked);
-    this.setupClickEvent(root, 'align-left-button',         this.onAlignLeftButtonClicked);
-    this.setupClickEvent(root, 'align-vcenter-button',      this.onAlignVCenterButtonClicked);
-    this.setupClickEvent(root, 'align-right-button',        this.onAlignRightButtonClicked);
-    this.setupClickEvent(root, 'distribute-hcenter-button', this.onDistributeHCenterButtonClicked);
-    this.setupClickEvent(root, 'distribute-vcenter-button', this.onDistributeVCenterButtonClicked);
+    this.setupClickEvent(root, 'settings-area-help-link',       this.onSettingsAreaHelpLinkClick);
+    this.setupClickEvent(root, 'getting-started-skip-link',     this.onGettingStartedSkipLinkClick);
+    this.setupClickEvent(root, 'align-top-button',              this.onAlignTopButtonClicked);
+    this.setupClickEvent(root, 'align-hcenter-button',          this.onAlignHCenterButtonClicked);
+    this.setupClickEvent(root, 'align-bottom-button',           this.onAlignBottomButtonClicked);
+    this.setupClickEvent(root, 'align-left-button',             this.onAlignLeftButtonClicked);
+    this.setupClickEvent(root, 'align-vcenter-button',          this.onAlignVCenterButtonClicked);
+    this.setupClickEvent(root, 'align-right-button',            this.onAlignRightButtonClicked);
+    this.setupClickEvent(root, 'distribute-hcenter-button',     this.onDistributeHCenterButtonClicked);
+    this.setupClickEvent(root, 'distribute-vcenter-button',     this.onDistributeVCenterButtonClicked);
   }
 
   setupRenderedElements(root) {
@@ -4789,6 +4844,7 @@ class ControlPanel extends DraggableElement {
      */
   }
 
+
   // --- Rendering
 
   renderMultipleSelected(count) {
@@ -4864,6 +4920,7 @@ class ControlPanel extends DraggableElement {
 
   onControlPanelSettingsClick() {
     this.showSettingsArea();
+    this.listener.onSettingsClick();
   }
 
   onSettingsAreaHelpLinkClick() {
@@ -5835,24 +5892,131 @@ class ControlPanelBlock extends ControlPanelComponent {
 
 class Form extends BrowserEventTarget {
 
+  static get TEXT()            { return 'text';       }
+  static get CHECKBOX()        { return 'checkbox';   }
+  static get SELECT_ONE()      { return 'select-one'; }
+  static get INVALID_CLASS()   { return 'settings-area-field--invalid'; }
+  static get CONFIRM_MESSAGE() { return 'Really clear all settings?'; }
+
   constructor(el, listener) {
     super(el);
     this.listener = listener;
-    this.bindEvent('keydown', this.stopEventPropagation);
-    this.bindEvent('submit', this.onFormSubmit);
-    this.bindEvent('reset', this.onFormReset);
+    this.bindEvent('submit', this.onSubmit);
+    this.bindEvent('reset', this.onReset);
+    this.bindEvent('focus', this.onFocus, true);
+    this.bindEvent('blur', this.onBlur, true);
+
+    this.validState = true;
+    this.validations = [];
   }
 
-  onFormSubmit(evt) {
+  addValidationFields(fields, validator) {
+    this.validations.push({
+      fields: fields,
+      validator: validator
+    });
+  }
+
+  getData() {
+    var data = {};
+    this.forEachControl(control => {
+      if (control.type === Form.CHECKBOX) {
+        data[control.id] = control.checked;
+      } else {
+        data[control.id] = control.value;
+      }
+    });
+    return data;
+  }
+
+  setControlsFromData(data) {
+    this.forEachControl(control => {
+      var val = data[control.id];
+      if (val) {
+        switch (control.type) {
+          case Form.SELECT_ONE:
+            for (var i = 0, option; option = control.options[i]; i++) {
+              if (option.value === val) {
+                option.selected = true;
+              }
+            }
+            break;
+          case Form.TEXT:
+            control.value = val;
+            break;
+          case Form.CHECKBOX:
+            control.checked = !!val;
+            break;
+        }
+      }
+    });
+  }
+
+  focus() {
+    // Set a bit of a timeout to focus to avoid rendering bugs.
+    setTimeout(() => this.getFirstControl().focus(), 200);
+  }
+
+  // --- Private
+
+  onSubmit(evt) {
     evt.preventDefault();
-    this.listener.onFormSubmit();
+    this.validState = this.validate();
+    if (this.validState) {
+      this.listener.onFormSubmit(evt, this);
+      this.blur();
+    }
   }
 
-  onFormReset(evt) {
-    evt.preventDefault();
-    this.listener.onFormReset();
+  onReset(evt) {
+    if (confirm(Form.CONFIRM_MESSAGE)) {
+      this.listener.onFormReset(evt, this);
+      this.blur();
+    }
   }
 
+  onFocus(evt) {
+    this.listener.onFormFocus(evt);
+  }
+
+  onBlur(evt) {
+    this.listener.onFormBlur(evt);
+  }
+
+  blur() {
+    if (document.activeElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  validate(fn) {
+    var validState = true;
+    this.validations.forEach(v => {
+      v.fields.forEach(name => {
+        var control, field;
+
+        control = this.el.elements[name];
+        field   = this.el.elements[name + '-field'];
+
+        if (v.validator(control.value)) {
+          field.classList.remove(Form.INVALID_CLASS);
+        } else {
+          validState = false;
+          field.classList.add(Form.INVALID_CLASS);
+        }
+      });
+    });
+    return validState;
+  }
+
+  getFirstControl() {
+    var els = this.el.elements;
+    for (var i = 0, control; control = els[i]; i++) {
+      if (control.id) {
+        return control;
+      }
+    }
+  }
 
   forEachControl(fn) {
     var els = this.el.elements;
@@ -5867,14 +6031,16 @@ class Form extends BrowserEventTarget {
 
 class Settings {
 
-  static get TAB_STYLE()           { return 'tab-style';           }
+  // --- Fields
   static get SAVE_FILENAME()       { return 'save-filename';       }
   static get INCLUDE_SELECTOR()    { return 'include-selector';    }
   static get EXCLUDE_SELECTOR()    { return 'exclude-selector';    }
+  static get TAB_STYLE()           { return 'tab-style';           }
   static get OUTPUT_SELECTOR()     { return 'output-selector';     }
   static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only'; }
   static get OUTPUT_UNIQUE_ONLY()  { return 'output-unique-only';  }
 
+  // --- Values
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
   static get OUTPUT_SELECTOR_ALL()     { return 'all';     }
   static get OUTPUT_SELECTOR_TAG()     { return 'tag';     }
@@ -5883,111 +6049,110 @@ class Settings {
   static get OUTPUT_SELECTOR_FIRST()   { return 'first';   }
   static get OUTPUT_SELECTOR_NONE()    { return 'inline';  }
   static get OUTPUT_SELECTOR_LONGEST() { return 'longest'; }
+  static get TABS_TWO_SPACES()         { return 'two';  }
+  static get TABS_FOUR_SPACES()        { return 'four'; }
+  static get TABS_TAB()                { return 'tab';  }
 
-  static get TABS_TWO_SPACES()  { return 'two';  }
-  static get TABS_FOUR_SPACES() { return 'four'; }
-  static get TABS_TAB()         { return 'tab';  }
+  // --- Other
+  static get QUERY_FIELDS() { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
+  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/g; }
 
-  static get SKIP_GETTING_STARTED() { return 'skip-getting-started'; }
-
-  static get DEFAULTS() {
-    return {
-      [Settings.TAB_STYLE]: Settings.TABS_TWO_SPACES,
-      [Settings.OUTPUT_SELECTOR]: Settings.OUTPUT_SELECTOR_AUTO,
-      [Settings.SAVE_FILENAME]: 'styles.css'
-    };
-  }
-
-  constructor(listener, storage, root) {
+  constructor(listener, root) {
     this.form = new Form(root.getElementById('settings-form'), this);
     this.listener = listener;
-    this.storage = storage;
-
-    //this.form = new BrowserEventTarget(root.getElementById('settings-form'));
     this.setup(root);
-    //this.form = new Form(root.getElementById('settings-form'));
-    /*
-    this.changed  = {};
-    this.defaults = {};
-    this.defaults[Settings.TABS]     = Settings.TABS_TWO_SPACES;
-    this.defaults[Settings.SELECTOR] = Settings.SELECTOR_AUTO;
-    this.defaults[Settings.OUTPUT_UNIQUE] = true;
-    this.defaults[Settings.DOWNLOAD_FILENAME] = 'styles.css';
-    this.setup(root);
-    */
-  }
-
-  setup(root) {
-    this.setFormControlsFromStorage();
-    new LinkedSelect(root.getElementById('output-selector'));
-  }
-
-  onFormSubmit() {
-    this.setStorageFromFormControls();
-    this.listener.onSettingsUpdated();
-  }
-
-  onFormReset() {
-    if (confirm('Really clear all settings?')) {
-      this.storage.clear();
-      this.setFormControlsFromStorage();
-      // Set timeout to prevent jank after confirm here
-      setTimeout(() => this.listener.onSettingsUpdated(), 0);
-    }
   }
 
   get(name) {
-    return this.storage.getItem(name) || Settings.DEFAULTS[name];
+    return this.data[name];
   }
 
-  set(name, val) {
-    if (val == null) {
-      this.storage.removeItem(name);
-    } else {
-      this.storage.setItem(name, val);
+  set(name, val, immediate) {
+    var data = Object.assign(this.data, { [name]: val });
+    this.pushData(data);
+  }
+
+  focusForm() {
+    this.form.focus();
+  }
+
+  // --- Events
+
+  onDataUpdated(data) {
+    if (this.selectorChanged(data)) {
+      this.listener.onSelectorUpdated();
     }
+    this.data = data;
+    this.listener.onSettingsUpdated();
   }
 
-  setBoolean(name, val) {
-    this.set(name, val ? '1' : null);
+  onFormFocus(evt) {
+    this.listener.onFormFocus(evt);
+  }
+
+  onFormBlur(evt) {
+    this.listener.onFormBlur(evt);
+  }
+
+  onFormSubmit(evt, form) {
+    this.pushData(this.form.getData());
+  }
+
+  onFormReset(evt, form) {
+    this.clearData();
   }
 
   // --- Private
 
-  setFormControlsFromStorage() {
-    this.form.forEachControl((control) => {
-      switch (control.type) {
-        case 'select-one':
-          for (var i = 0, option; option = control.options[i]; i++) {
-            if (option.value === this.get(control.id)) {
-              option.selected = true;
-            }
-          }
-          break;
-        case 'text':
-          control.value = this.get(control.id) || '';
-          break;
-        case 'checkbox':
-          control.checked = !!this.get(control.id);
-          break;
-      }
+  setup(root) {
+    this.defaultData = this.form.getData();
+    this.fetchData();
+    this.form.addValidationFields(Settings.QUERY_FIELDS, this.isValidQuery);
+    new LinkedSelect(root.getElementById('output-selector'));
+  }
+
+  fetchData() {
+    chrome.storage.sync.get(Settings.DEFAULTS, data => {
+      // Merge the initial form data with the fetched settings data.
+      this.data = Object.assign(this.defaultData, data);
+      this.form.setControlsFromData(this.data);
     });
   }
 
-  setStorageFromFormControls() {
-    this.form.forEachControl((control) => {
-      switch (control.type) {
-        case 'select-one':
-          this.set(control.id, control.selectedOptions[0].value);
-          break;
-        case 'text':
-          this.set(control.id, control.value);
-          break;
-        case 'checkbox':
-          this.setBoolean(control.id, control.checked);
-          break;
-      }
+  pushData(data) {
+    chrome.storage.sync.set(data, () => {
+      this.onDataUpdated(data);
     });
+  }
+
+  clearData() {
+    chrome.storage.sync.clear(() => {
+      this.onDataUpdated(this.defaultData);
+    });
+  }
+
+  isValidQuery(query) {
+    var reg, match;
+    if (!query) {
+      return true;
+    }
+    try {
+      document.querySelector(query);
+      reg = Settings.ATTRIBUTE_SELECTOR_REG;
+      while (match = reg.exec(query)) {
+        if (!match[1]) {
+          return false;
+        }
+      }
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
+  selectorChanged(data) {
+    return this.data[Settings.INCLUDE_SELECTOR] !== data[Settings.INCLUDE_SELECTOR] ||
+           this.data[Settings.EXCLUDE_SELECTOR] !== data[Settings.EXCLUDE_SELECTOR];
   }
 
 }

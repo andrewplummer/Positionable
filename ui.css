@@ -397,6 +397,11 @@ input, select {
   border: none;
   padding: 4px 0px;
   white-space: nowrap;
+  color: rgba(0,0,0,0.7);
+}
+
+.settings-area-field--invalid {
+  color: #d82323;
 }
 
 .settings-area-label {
@@ -407,7 +412,6 @@ input, select {
   width: 240px;
   font-size: 12px;
   font-weight: bold;
-  color: rgba(0,0,0,0.7);
 }
 
 .settings-area-control {
@@ -417,6 +421,7 @@ input, select {
 
 .settings-area-input {
   font-size: 14px;
+  color: inherit;
 }
 
 .settings-area-text-input {

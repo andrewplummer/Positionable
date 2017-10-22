@@ -30,6 +30,7 @@ describe('CSSBackgroundImage', function() {
     // will not, so force the image to load by appending first here.
     //setupBackgroundImage('background-big-box');
 
+    chromeMock.apply();
     chromeMock.mockSendMessage({
       url: 'http://fake.com/fake.jpg',
       data: uri,
@@ -40,6 +41,7 @@ describe('CSSBackgroundImage', function() {
     // rendering doesn't fail.
     imageLoadMock.setFakeDimensions(100, 100);
     setupBackgroundImage('background-x-domain-box');
+    chromeMock.release();
   }
 
 

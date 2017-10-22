@@ -2,13 +2,20 @@
 describe('OutputManager', function(uiRoot) {
   var settings, manager, element, el;
 
+  class Listener {
+    onSelectorUpdated() {}
+    onSettingsUpdated() {}
+  }
+
   setup(function() {
-    settings = new Settings({}, new MockLocalStorage(), uiRoot);
+    chromeMock.apply();
+    settings = new Settings(new Listener(), uiRoot);
     manager  = new OutputManager(settings);
   });
 
   teardown(function() {
     releaseAppendedFixtures();
+    chromeMock.release();
   });
 
   function getPositionableElement(className) {

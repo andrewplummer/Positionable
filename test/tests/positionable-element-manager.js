@@ -299,6 +299,13 @@ describe('PositionableElementManager', function() {
     assert.equal(el.style.height, '171px');
   });
 
+  it('should not fail on a broken selector', function() {
+    manager.findElements('foo]');
+    assert.equal(manager.elements.length, 0);
+    manager.findElements('[foo');
+    assert.equal(manager.elements.length, 0);
+  });
+
   // --- Focusing
 
   it('should focus element on position handle mousedown', function() {
