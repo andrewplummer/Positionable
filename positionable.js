@@ -7,12 +7,7 @@
  * ---------------------------- */
 
 // - TODO: rotated box won't reflect
-// - TODO: command z on initial!
-// - TODO: command z on multiple goes back to single
-
-// TODO: allow bottom/right position properties??
-// TODO: validate query selectors! and also re-get elements on query selector change
-// TODO: select multiple and scroll, if you release the meta key and don't drag any more, it will lose a couple of the elements
+// - TODO: select multiple and scroll, if you release the meta key and don't drag any more, it will lose a couple of the elements
 // ... probably need to use a key manager to handle this.
 // - cursors working ok??
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
@@ -3614,8 +3609,10 @@ class AppController {
         this.elementManager.focusAll();
         break;
       case KeyManager.Z_KEY:
-        this.elementManager.undo();
-        this.renderActiveControlPanel();
+        if (this.elementManager.hasFocusedElements()) {
+          this.elementManager.undo();
+          this.renderActiveControlPanel();
+        }
         break;
     }
   }
@@ -4492,6 +4489,10 @@ class PositionableElementManager {
 
   getFocusedSize() {
     return this.focusedElements.length;
+  }
+
+  hasFocusedElements() {
+    return this.focusedElements.length > 0;
   }
 
   getAllFocused() {
