@@ -6,8 +6,6 @@
  *
  * ---------------------------- */
 
-// - TODO: the mode indicator should maybe only be for nudging, as it's confusing to see it change on hover
-//  .... the cursors should be indicator enough.... ie cursors for dragging, and the panel for nudging, no?
 // - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
 // - TODO: more rotate icon increments for smoother transition?
 // - TODO: can we not handle percents in transforms??
@@ -7675,11 +7673,22 @@ class CSSTransform {
   }
 
   getHeader() {
+    if (this.isNull()) {
+      return '';
+    }
     return this.functions.map(f => f.getHeader()).join(' | ');
   }
 
   toString() {
-    return this.functions.join(' ');
+    return this.isNull() ? '' : this.functions.join(' ');
+  }
+
+  isNull() {
+    return this.functions.every(f => {
+      return f.values.every(v => {
+        return typeof v !== 'string' && !v.val;
+      });
+    });
   }
 
   appendCSSDeclaration(declarations) {

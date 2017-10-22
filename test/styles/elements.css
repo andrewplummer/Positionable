@@ -253,6 +253,18 @@
   transform: rotate(45.3288deg) translate(20.23428px, 30.206238px);
 }
 
+.null-rotate-box {
+  transform: rotate(0deg);
+}
+
+.null-translate-box {
+  transform: translate(0px, 0px);
+}
+
+.null-rotate-with-translate-box {
+  transform: rotate(0deg) translate(20px, 20px);
+}
+
 /*---------------------------] Background Image [-----------------------*/
 
 /*

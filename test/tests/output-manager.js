@@ -168,6 +168,21 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(manager.getTransformHeader(element), 'matrix3d: 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1');
   });
 
+  it('should not get transform headers for a null rotation box', function() {
+    setupBox('null-rotate-box');
+    assert.equal(manager.getTransformHeader(element), '');
+  });
+
+  it('should not get transform headers for a null translate box', function() {
+    setupBox('null-translate-box');
+    assert.equal(manager.getTransformHeader(element), '');
+  });
+
+  it('should get transform headers when even one function exists', function() {
+    setupBox('null-rotate-with-translate-box');
+    assert.equal(manager.getTransformHeader(element), 'r: 0deg | t: 20px, 20px');
+  });
+
   // --- Style Declarations
 
   it('should get correct styles', function() {
@@ -310,6 +325,49 @@ describe('OutputManager', function(uiRoot) {
       #incomplete-box {
         top: 0px;
         width: 100px;
+      }
+
+    `);
+  });
+
+  it('should not output rotate when null', function() {
+    setupBox('null-rotate-box');
+    assert.equal(manager.getStyles([element]), dec`
+
+      #null-rotate-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+    `);
+  });
+
+  it('should not output translate when null', function() {
+    setupBox('null-translate-box');
+    assert.equal(manager.getStyles([element]), dec`
+
+      #null-translate-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+    `);
+  });
+
+  it('should output transform when even one exists', function() {
+    setupBox('null-rotate-with-translate-box');
+    assert.equal(manager.getStyles([element]), dec`
+
+      #null-rotate-with-translate-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        transform: rotate(0deg) translate(20px, 20px);
       }
 
     `);
