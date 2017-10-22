@@ -83,6 +83,10 @@
   height: auto;
 }
 
+.transition-box {
+  transition: top 1s linear, left 1s linear, width 1s linear, height 1s linear;
+}
+
 /*---------------------------] Z-Index [-----------------------*/
 
 .z-box {

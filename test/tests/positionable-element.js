@@ -1,7 +1,7 @@
 
 describe('PositionableElement', function() {
 
-  var listener, el, p;
+  var listener, el, element;
 
   class Listener {
 
@@ -77,21 +77,24 @@ describe('PositionableElement', function() {
     imageLoadMock.release();
   });
 
+  function setupBox(className) {
+    el = appendBox(className);
+    element = new PositionableElement(el, listener);
+  }
+
   it('should set initial state from stylesheet', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssBox.cssH.px, 100);
-    assert.equal(p.cssBox.cssV.px, 100);
-    assert.equal(p.cssBox.cssWidth.px, 100);
-    assert.equal(p.cssBox.cssHeight.px, 100);
-    assert.equal(p.cssZIndex.cssValue.val, 0);
-    assert.equal(p.getRotation(), 0);
+    setupBox();
+    assert.equal(element.cssBox.cssH.px, 100);
+    assert.equal(element.cssBox.cssV.px, 100);
+    assert.equal(element.cssBox.cssWidth.px, 100);
+    assert.equal(element.cssBox.cssHeight.px, 100);
+    assert.equal(element.cssZIndex.cssValue.val, 0);
+    assert.equal(element.getRotation(), 0);
   });
 
   it('more specific styles should take precedence', function() {
-    el = appendBox('z-box');
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssZIndex.cssValue.val, 400);
+    setupBox('z-box');
+    assert.equal(element.cssZIndex.cssValue.val, 400);
   });
 
   it('inline styles should take precedence', function() {
@@ -102,39 +105,38 @@ describe('PositionableElement', function() {
     el.style.height = '100px';
     el.style.zIndex = '5';
     el.style.transform = 'translate(100px, 100px) rotate(45deg)';
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssBox.cssH.px, 100);
-    assert.equal(p.cssBox.cssV.px, 100);
-    assert.equal(p.cssBox.cssWidth.px, 100);
-    assert.equal(p.cssBox.cssHeight.px, 100);
-    assert.equal(p.cssZIndex.cssValue.val, 5);
-    assert.equal(p.getRotation(), 45);
-    assert.equal(p.cssTransform.getTranslation().x, 100);
-    assert.equal(p.cssTransform.getTranslation().y, 100);
+    element = new PositionableElement(el, listener);
+    assert.equal(element.cssBox.cssH.px, 100);
+    assert.equal(element.cssBox.cssV.px, 100);
+    assert.equal(element.cssBox.cssWidth.px, 100);
+    assert.equal(element.cssBox.cssHeight.px, 100);
+    assert.equal(element.cssZIndex.cssValue.val, 5);
+    assert.equal(element.getRotation(), 45);
+    assert.equal(element.cssTransform.getTranslation().x, 100);
+    assert.equal(element.cssTransform.getTranslation().y, 100);
   });
 
   it('should force static elements to absolute on init', function() {
-    el = appendBox('static-box');
-    new PositionableElement(el, listener);
+    setupBox('static-box');
     assert.equal(el.style.position, 'absolute');
+    element.destroy();
+    assert.equal(el.style.position, '');
   });
 
   // --- Moving
 
   it('should update position', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.move(100, 100);
+    setupBox();
+    element.pushState();
+    element.move(100, 100);
     assert.equal(el.style.left, '200px');
     assert.equal(el.style.top, '200px');
   });
 
   it('should constrain position', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.move(100, 60, true);
+    setupBox();
+    element.pushState();
+    element.move(100, 60, true);
     assert.equal(el.style.left, '200px');
     assert.equal(el.style.top, '100px');
   });
@@ -142,28 +144,25 @@ describe('PositionableElement', function() {
   // --- Background Moving
 
   it('should be able to move the background image', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.moveBackground(200, 200);
+    setupBox('background-box');
+    element.pushState();
+    element.moveBackground(200, 200);
     assert.equal(el.style.backgroundPosition,  '220px 240px');
   });
 
   it('should be able to move the background image on a rotated box', function() {
-    el = appendBox('background-box rotate-box');
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.moveBackground(100, 100);
+    setupBox('background-box rotate-box');
+    element.pushState();
+    element.moveBackground(100, 100);
     assert.equal(el.style.backgroundPosition,  '161px 40px');
   });
 
   // --- Resizing
 
   it('should resize', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.resize(30, 80, 'se');
+    setupBox();
+    element.pushState();
+    element.resize(30, 80, 'se');
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '130px');
@@ -171,10 +170,9 @@ describe('PositionableElement', function() {
   });
 
   it('should resize by positioned edges', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.resize(30, 80, 'nw');
+    setupBox();
+    element.pushState();
+    element.resize(30, 80, 'nw');
     assert.equal(el.style.left,   '130px');
     assert.equal(el.style.top,    '180px');
     assert.equal(el.style.width,  '70px');
@@ -182,10 +180,9 @@ describe('PositionableElement', function() {
   });
 
   it('should constrain resize', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.resize(200, 100, 'se', true);
+    setupBox();
+    element.pushState();
+    element.resize(200, 100, 'se', true);
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.width,  '200px');
@@ -193,8 +190,7 @@ describe('PositionableElement', function() {
   });
 
   it('should receive correct resize events', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
+    setupBox();
     dragElement(getUiElement(el, '.resize-handle-sw'), 200, 200, 300, 300);
     assert.equal(listener.lastEventResizeDrag.x, 100);
     assert.equal(listener.lastEventResizeDrag.y, 100);
@@ -205,42 +201,41 @@ describe('PositionableElement', function() {
   it('should update rotation', function() {
     el = appendBox();
     el.style.transform = 'rotate(45deg)';
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.rotate(45);
+    element = new PositionableElement(el, listener);
+    element.pushState();
+    element.rotate(45);
     assert.equal(el.style.transform, 'rotate(90deg)');
   });
 
   it('should constrain rotation', function() {
     el = appendBox();
     el.style.transform = 'rotate(30deg)';
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.rotate(55, true);
+    element = new PositionableElement(el, listener);
+    element.pushState();
+    element.rotate(55, true);
     assert.equal(el.style.transform, 'rotate(75deg)');
   });
 
   // --- Undo
 
   it('should be able to undo', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
+    setupBox();
 
     // State 2
-    p.pushState();
-    p.move(100, 100);
+    element.pushState();
+    element.move(100, 100);
 
     // State 3
-    p.pushState();
-    p.resize(30, 80, 'se');
+    element.pushState();
+    element.resize(30, 80, 'se');
 
     // State 4
-    p.pushState();
-    p.rotate(45);
+    element.pushState();
+    element.rotate(45);
 
     // State 5
-    p.pushState();
-    p.move(100, 100);
+    element.pushState();
+    element.move(100, 100);
 
     // Check state 5 (last)
     assert.equal(el.style.top,  '300px');
@@ -250,7 +245,7 @@ describe('PositionableElement', function() {
     assert.equal(el.style.transform, 'rotate(45deg)');
 
     // Undo and check state 4
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,  '200px');
     assert.equal(el.style.left, '200px');
     assert.equal(el.style.width, '130px');
@@ -258,7 +253,7 @@ describe('PositionableElement', function() {
     assert.equal(el.style.transform, 'rotate(45deg)');
 
     // Undo and check state 3
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,  '200px');
     assert.equal(el.style.left, '200px');
     assert.equal(el.style.width, '130px');
@@ -266,7 +261,7 @@ describe('PositionableElement', function() {
     assert.equal(el.style.transform, '');
 
     // Undo and check state 2
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,  '200px');
     assert.equal(el.style.left, '200px');
     assert.equal(el.style.width, '100px');
@@ -274,7 +269,7 @@ describe('PositionableElement', function() {
     assert.equal(el.style.transform, '');
 
     // Undo and check state 1
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,  '100px');
     assert.equal(el.style.left, '100px');
     assert.equal(el.style.width, '100px');
@@ -282,7 +277,7 @@ describe('PositionableElement', function() {
     assert.equal(el.style.transform, '');
 
     // First state reached, check no operation
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,  '100px');
     assert.equal(el.style.left, '100px');
     assert.equal(el.style.width, '100px');
@@ -292,42 +287,40 @@ describe('PositionableElement', function() {
   });
 
   it('should be able to undo background move', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
+    setupBox('background-box');
 
-    p.pushState();
-    p.moveBackground(200, 200);
+    element.pushState();
+    element.moveBackground(200, 200);
     assert.equal(el.style.backgroundPosition,  '220px 240px');
 
-    p.undo();
+    element.undo();
     assert.equal(el.style.backgroundPosition,  '20px 40px');
 
   });
 
   it('should restore transform to null after undo', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
+    setupBox();
 
-    p.pushState();
-    p.rotate(45);
+    element.pushState();
+    element.rotate(45);
     assert.equal(el.style.transform,  'rotate(45deg)');
 
-    p.pushState();
-    p.resize(20, 20, 'nw');
+    element.pushState();
+    element.resize(20, 20, 'nw');
     assert.equal(el.style.transform,  'translate(-10px, 4.14px) rotate(45deg)');
     assert.equal(el.style.top,  '120px');
     assert.equal(el.style.left, '120px');
     assert.equal(el.style.width, '80px');
     assert.equal(el.style.height, '80px');
 
-    p.undo();
+    element.undo();
     assert.equal(el.style.transform,  'rotate(45deg)');
     assert.equal(el.style.top,  '100px');
     assert.equal(el.style.left, '100px');
     assert.equal(el.style.width, '100px');
     assert.equal(el.style.height, '100px');
 
-    p.undo();
+    element.undo();
     assert.equal(el.style.transform,  '');
 
   });
@@ -335,8 +328,7 @@ describe('PositionableElement', function() {
   // --- Background Snapping
 
   it('should snap to a background sprite', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
+    setupBox('background-box');
 
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     assert.equal(el.style.top,    '141px');
@@ -348,44 +340,41 @@ describe('PositionableElement', function() {
   // --- Peeking
 
   it('should allow peeking on an element with a background', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
-    p.setPeekMode(true);
+    setupBox('background-box');
+    element.setPeekMode(true);
     assert.equal(el.style.width, '500px');
     assert.equal(el.style.height, '500px');
   });
 
   it('should not allow peeking on an element with no background', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.setPeekMode(true);
+    setupBox();
+    element.setPeekMode(true);
     assert.equal(el.style.width, '');
     assert.equal(el.style.height, '');
   });
 
   it('should be able to move while peeking', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
+    setupBox('background-box');
 
-    p.pushState();
-    p.move(100, 100);
+    element.pushState();
+    element.move(100, 100);
     assert.equal(el.style.top,    '200px');
     assert.equal(el.style.left,   '200px');
 
-    p.setPeekMode(true);
+    element.setPeekMode(true);
     assert.equal(el.style.width,  '500px');
     assert.equal(el.style.height, '500px');
 
-    p.setPeekMode(false);
+    element.setPeekMode(false);
     assert.equal(el.style.width,  '100px');
     assert.equal(el.style.height, '100px');
 
-    p.setPeekMode(true);
+    element.setPeekMode(true);
     assert.equal(el.style.width,  '500px');
     assert.equal(el.style.height, '500px');
 
-    p.move(200, 200);
-    p.setPeekMode(false);
+    element.move(200, 200);
+    element.setPeekMode(false);
 
     assert.equal(el.style.top,    '300px');
     assert.equal(el.style.left,   '300px');
@@ -394,14 +383,13 @@ describe('PositionableElement', function() {
   });
 
   it('should be able to resize while peeking', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
+    setupBox('background-box');
 
-    p.setPeekMode(true);
-    p.lockPeekMode();
-    p.pushState();
-    p.resize(30, 80, 'se');
-    p.setPeekMode(false);
+    element.setPeekMode(true);
+    element.lockPeekMode();
+    element.pushState();
+    element.resize(30, 80, 'se');
+    element.setPeekMode(false);
 
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.top,    '100px');
@@ -410,12 +398,11 @@ describe('PositionableElement', function() {
   });
 
   it('should be able to snap while peeking', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
+    setupBox('background-box');
 
-    p.setPeekMode(true);
+    element.setPeekMode(true);
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
-    p.setPeekMode(false);
+    element.setPeekMode(false);
 
     assert.equal(el.style.top,    '141px');
     assert.equal(el.style.left,   '121px');
@@ -424,21 +411,20 @@ describe('PositionableElement', function() {
   });
 
   it('should be able to get back to initial state after peeking', function() {
-    el = appendBox('background-box');
-    p = new PositionableElement(el, listener);
+    setupBox('background-box');
 
-    p.setPeekMode(true);
-    p.lockPeekMode();
-    p.pushState();
-    p.resize(30, 80, 'se');
+    element.setPeekMode(true);
+    element.lockPeekMode();
+    element.pushState();
+    element.resize(30, 80, 'se');
 
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.width,  '500px');
     assert.equal(el.style.height, '500px');
 
-    p.undo();
+    element.undo();
     assert.equal(el.style.top,    '100px');
     assert.equal(el.style.left,   '100px');
     assert.equal(el.style.width,  '100px');
@@ -449,11 +435,8 @@ describe('PositionableElement', function() {
   // --- CSS Declarations
 
   it('should get its CSS declarations', function() {
-    var decs;
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-
-    decs = p.getCSSDeclarations();
+    setupBox();
+    var decs = element.getCSSDeclarations();
     assert.equal(decs[0], 'top: 100px;');
     assert.equal(decs[1], 'left: 100px;');
     assert.equal(decs[2], 'width: 100px;');
@@ -462,11 +445,9 @@ describe('PositionableElement', function() {
   });
 
   it('should get its CSS declarations for complex box', function() {
-    var decs;
-    el = appendBox('complex-box');
-    p = new PositionableElement(el, listener);
+    setupBox('complex-box');
 
-    decs = p.getCSSDeclarations();
+    var decs = element.getCSSDeclarations();
     assert.equal(decs[0], 'bottom: 100px;');
     assert.equal(decs[1], 'right: 100px;');
     assert.equal(decs[2], 'width: 100px;');
@@ -478,14 +459,12 @@ describe('PositionableElement', function() {
   });
 
   it('should get only changed CSS declarations', function() {
-    var decs;
-    el = appendBox('complex-box');
-    p = new PositionableElement(el, listener);
+    setupBox('complex-box');
 
-    p.pushState();
-    p.move(-50, -50);
+    element.pushState();
+    element.move(-50, -50);
 
-    decs = p.getChangedCSSDeclarations();
+    var decs = element.getChangedCSSDeclarations();
     assert.equal(decs[0], 'bottom: 150px;');
     assert.equal(decs[1], 'right: 150px;');
     assert.equal(decs.length, 2);
@@ -494,20 +473,18 @@ describe('PositionableElement', function() {
   // --- Other
 
   it('should receive correct rotation events after a move', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.pushState();
-    p.move(100, 100);
+    setupBox();
+    element.pushState();
+    element.move(100, 100);
     dragElement(getUiElement(el, '.rotation-handle'), 300, 300, 250, 300);
     assert.equalWithTolerance(listener.lastEventRotation.abs, 45, .01);
   });
 
   it('should not remove the element on destroy', function() {
-    el = appendBox();
-    p = new PositionableElement(el, listener);
-    p.destroy();
+    setupBox();
+    element.destroy();
     assert.isTrue(!!el.parentNode);
-    assert.equal(Object.keys(p.listeners).length, 0);
+    assert.equal(Object.keys(element.listeners).length, 0);
     assert.equal(getUiElement(el, '.position-handle'), null);
     assert.equal(getUiElement(el, '.resize-handle-n'), null);
     assert.equal(getUiElement(el, '.resize-handle-s'), null);
@@ -520,9 +497,8 @@ describe('PositionableElement', function() {
   });
 
   it('should not fail on a box using CSS variables', function() {
-    el = appendBox('var-box');
-    p = new PositionableElement(el, listener);
-    p.renderBox();
+    setupBox('var-box');
+    element.renderBox();
     assert.equal(el.style.top,    '200px');
     assert.equal(el.style.left,   '200px');
     assert.equal(el.style.width,  '200px');
@@ -532,27 +508,34 @@ describe('PositionableElement', function() {
   it('should not error on unsupported values', function() {
     el = appendBox();
     el.style.width = 'max-content';
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssBox.cssWidth.px, 0);
+    element = new PositionableElement(el, listener);
+    assert.equal(element.cssBox.cssWidth.px, 0);
   });
 
   it('should not error on unsupported units', function() {
     el = appendBox();
     el.style.width = '3cm';
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssBox.cssWidth.px, 0);
+    element = new PositionableElement(el, listener);
+    assert.equal(element.cssBox.cssWidth.px, 0);
   });
 
   it('should use computed properties on an incomplete box', function() {
-    el = appendBox('incomplete-box');
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssBox.cssHeight.px, 0);
+    setupBox('incomplete-box');
+    assert.equal(element.cssBox.cssHeight.px, 0);
   });
 
   it('should not error when positioning values are auto', function() {
-    el = appendBox('hidden-box');
-    p = new PositionableElement(el, listener);
-    assert.equal(p.cssBox.cssWidth.px, 0);
+    setupBox('hidden-box');
+    assert.equal(element.cssBox.cssWidth.px, 0);
+  });
+
+  it('should turn off transitions while active', function() {
+    setupBox('transition-box');
+    element.pushState();
+    element.resize(100, 100, 'se');
+    assert.equal(el.style.transitionProperty, 'none');
+    element.destroy();
+    assert.equal(el.style.transitionProperty, '');
   });
 
 });

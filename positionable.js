@@ -9,8 +9,6 @@
 // TODO: test with:
 // - add "8 spaces" to tab style list
 // - test command key on windows
-// - test z-index on overlapping elements when dragging
-// - test on elements with transitions
 // - should it work on absolute elements with no left/right/top/bottom properties?
 // - test after save should go back to element area
 // - test finding elements after settings update
@@ -1684,7 +1682,6 @@ class PositionableElement extends BrowserEventTarget {
 
     this.states = [];
     this.setup();
-    this.isFixed = this.isFixedPosition();
     //this.addClass('positioned-element');
 
   }
@@ -1717,17 +1714,26 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   setupInitialState() {
-    var el = this.el, matcher = new CSSRuleMatcher(el);
-
-    // TODO: make sure this property is exported as well!
-    if (matcher.getValue('position') === 'static') {
-      el.style.position = 'absolute';
-    }
-
+    var matcher = new CSSRuleMatcher(this.el);
+    this.applyOverrides(matcher);
     this.cssBox = CSSBox.fromMatcher(matcher);
     this.cssZIndex = CSSZIndex.fromMatcher(matcher);
     this.cssTransform = CSSTransform.fromMatcher(matcher);
     this.cssBackgroundImage = CSSBackgroundImage.fromMatcher(matcher);
+  }
+
+  applyOverrides(matcher) {
+    var position = matcher.getComputedValue('position');
+    if (position === 'static') {
+      this.el.style.position = 'absolute';
+    }
+    this.el.style.transition = 'none';
+    this.isFixed = position === 'fixed';
+  }
+
+  clearOverrides() {
+    this.el.style.position = '';
+    this.el.style.transition = '';
   }
 
   /*
@@ -2547,6 +2553,7 @@ class PositionableElement extends BrowserEventTarget {
     this.handles.s.destroy();
     this.handles.w.destroy();
     this.removeAllListeners();
+    this.clearOverrides();
   }
 
   getCSSDeclarations() {
@@ -2592,10 +2599,6 @@ class PositionableElement extends BrowserEventTarget {
     cssBackgroundImage.appendCSSDeclaration(declarations);
     cssTransform.appendCSSDeclaration(declarations);
     return declarations;
-  }
-
-  isFixedPosition() {
-    return window.getComputedStyle(this.el).position === 'fixed';
   }
 
 }
@@ -7200,6 +7203,10 @@ class CSSRuleMatcher {
     return this.getProperty(name).getValue();
   }
 
+  getComputedValue(name) {
+    return this.computedStyles[name];
+  }
+
   // --- Private
 
   getMatchedRules(el) {
@@ -7228,10 +7235,6 @@ class CSSRuleMatcher {
     }
 
     return val;
-  }
-
-  getComputedValue(name) {
-    return this.computedStyles[name];
   }
 
 }
