@@ -3429,13 +3429,11 @@ class AppController {
   onPositionDragIntentStart() {
     console.info('POSITION DRAG INTENT START');
     this.cursorManager.setHoverCursor('move');
-    this.controlPanel.setMode('position');
   }
 
   onPositionDragIntentStop() {
     console.info('POSITION DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
-    this.controlPanel.setMode(this.nudgeManager.getCurrentMode());
   }
 
   onPositionDragStart() {
@@ -3457,13 +3455,11 @@ class AppController {
   onResizeDragIntentStart(evt, handle, element) {
     console.info('RESIZE DRAG INTENT START');
     this.cursorManager.setHoverCursor(handle.getCursorForRotation(element.getRotation()));
-    this.controlPanel.setMode('resize');
   }
 
   onResizeDragIntentStop() {
     console.info('RESIZE DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
-    this.controlPanel.setMode(this.nudgeManager.getCurrentMode());
   }
 
   onResizeDragStart(evt, handle, element) {
@@ -3491,13 +3487,11 @@ class AppController {
   onRotationDragIntentStart(evt, handle, element) {
     console.info('ROTATION DRAG INTENT START');
     this.cursorManager.setHoverCursor(handle.getCursorForRotation(element.getRotation()), true);
-    this.controlPanel.setMode('rotate');
   }
 
   onRotationDragIntentStop() {
     console.info('ROTATION DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
-    this.controlPanel.setMode(this.nudgeManager.getCurrentMode());
   }
 
   onRotationDragStart(evt, handle, element) {
@@ -3690,7 +3684,7 @@ class AppController {
   }
 
   onNudgeModeChanged(mode) {
-    this.controlPanel.setMode(mode);
+    this.controlPanel.setNudgeMode(mode);
   }
 
   // --- Control Panel Drag Events
@@ -4747,7 +4741,7 @@ class ControlPanel extends DraggableElement {
     }
   }
 
-  setMode(mode) {
+  setNudgeMode(mode) {
     var el;
     switch (mode) {
       case 'position':   el = this.renderedElements.modePosition;   break;

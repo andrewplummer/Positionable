@@ -211,7 +211,7 @@ describe('Settings', function(uiRoot) {
     assert.equal(listener.selectorUpdatedCount, 2);
   });
 
-  fit('should be able to revert back to defaults', function() {
+  it('should be able to revert back to defaults', function() {
     chrome.storage.sync.set({
       [Settings.SAVE_FILENAME]: 'test.css'
     });

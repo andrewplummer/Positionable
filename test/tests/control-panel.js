@@ -98,13 +98,13 @@ describe('ControlPanel', function(uiRoot) {
     assert.isTrue(panel.el.classList.contains(className));
   });
 
-  // --- Rendering Modes
+  // --- Rendering Nudge Modes
 
   it('should render mode area', function() {
     panel.showElementArea();
-    panel.setMode('position');
+    panel.setNudgeMode('position');
     assert.equal(getUiElement(document.documentElement, '#mode-position').style.display, 'block');
-    panel.setMode('background');
+    panel.setNudgeMode('background');
     assert.equal(getUiElement(document.documentElement, '#mode-position').style.display, 'none');
     assert.equal(getUiElement(document.documentElement, '#mode-background').style.display, 'block');
   });
@@ -112,7 +112,7 @@ describe('ControlPanel', function(uiRoot) {
   it('should render mode in alignment area', function() {
     panel.showAlignArea();
     assert.equal(getUiElement(document.documentElement, '#mode-background').style.display, 'block');
-    panel.setMode('position');
+    panel.setNudgeMode('position');
     var elementAreaPosition = getUiElement(document.documentElement, '#mode-position');
     var display = window.getComputedStyle(elementAreaPosition).display;
     assert.equal(display, 'block');
