@@ -6080,7 +6080,7 @@ class Settings {
   }
 
   set(name, val, immediate) {
-    var data = Object.assign(this.data, { [name]: val });
+    var data = Object.assign({}, this.data, { [name]: val });
     this.pushData(data);
   }
 
@@ -6126,7 +6126,7 @@ class Settings {
   fetchData() {
     chrome.storage.sync.get(Settings.DEFAULTS, data => {
       // Merge the initial form data with the fetched settings data.
-      this.data = Object.assign(this.defaultData, data);
+      this.data = Object.assign({}, this.defaultData, data);
       this.form.setControlsFromData(this.data);
     });
   }

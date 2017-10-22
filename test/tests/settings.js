@@ -197,8 +197,7 @@ describe('Settings', function(uiRoot) {
 
   it('should fire correct events when the default form was cleared', function() {
     setupSettings();
-    settings.onFormReset();
-    setTimeoutMock.tick(100);
+    resetForm();
     assert.equal(listener.settingsUpdatedCount, 1);
     assert.equal(listener.selectorUpdatedCount, 0);
   });
@@ -210,6 +209,15 @@ describe('Settings', function(uiRoot) {
     resetForm();
     assert.equal(listener.settingsUpdatedCount, 2);
     assert.equal(listener.selectorUpdatedCount, 2);
+  });
+
+  fit('should be able to revert back to defaults', function() {
+    chrome.storage.sync.set({
+      [Settings.SAVE_FILENAME]: 'test.css'
+    });
+    setupSettings();
+    resetForm();
+    assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
   });
 
   it('should validate correct queries', function() {
