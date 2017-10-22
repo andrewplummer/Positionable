@@ -179,6 +179,10 @@
     fireKeyDown(document.documentElement, key, opt);
   }
 
+  function fireDocumentKeyUp(key, opt) {
+    fireKeyUp(document.documentElement, key, opt);
+  }
+
   function fireDocumentShiftKeyDown(key) {
     fireKeyDown(document.documentElement, key, { shiftKey: true });
   }
@@ -187,12 +191,16 @@
     fireKeyDown(document.documentElement, key, { metaKey: true });
   }
 
-  function fireDocumentKeyUp(key, opt) {
-    fireKeyUp(document.documentElement, key, opt);
-  }
-
   function fireDocumentMetaKeyUp(key) {
     fireKeyUp(document.documentElement, key, { metaKey: true });
+  }
+
+  function fireDocumentCtrlKeyDown(key) {
+    fireKeyDown(document.documentElement, key, { ctrlKey: true });
+  }
+
+  function fireDocumentCtrlKeyUp(key) {
+    fireKeyUp(document.documentElement, key, { ctrlKey: true });
   }
 
   /*-------------------------] Form Events [--------------------------*/
@@ -243,6 +251,8 @@
   window.fireDocumentMetaKeyDown  = fireDocumentMetaKeyDown;
   window.fireDocumentKeyUp        = fireDocumentKeyUp;
   window.fireDocumentMetaKeyUp    = fireDocumentMetaKeyUp;
+  window.fireDocumentCtrlKeyDown  = fireDocumentCtrlKeyDown;
+  window.fireDocumentCtrlKeyUp    = fireDocumentCtrlKeyUp;
 
   window.fireSubmitEvent = fireSubmitEvent;
   window.fireResetEvent  = fireResetEvent;

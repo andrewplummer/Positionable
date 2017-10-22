@@ -8,10 +8,10 @@
 
 // TODO: test with:
 // - test command key on windows
-// - cursors working ok??
 // - bug: select multiple then command to drag one... jumps? (looks like scrolling)
 // - bug: select multiple then drag fixed with scroll... others jump way down
 // - bug: undo after align doesn't seem to work??
+// - bug: it should clear all it's rendered styles off when it's destroyed
 
 // - TODO: the mode indicator should maybe only be for nudging, as it's confusing to see it change on hover
 //  .... the cursors should be indicator enough.... ie cursors for dragging, and the panel for nudging, no?
@@ -32,8 +32,11 @@
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
+// - cursors working ok??
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
+const PLATFORM_IS_MAC    = /mac/i.test(navigator.platform);
+
 
 /*-------------------------] Utilities [--------------------------*/
 
@@ -2982,13 +2985,15 @@ class KeyManager extends BrowserEventTarget {
   static get R_KEY() { return 'r'; }
   static get Z_KEY() { return 'z'; }
 
-  constructor(listener) {
+  constructor(listener, isMacOS) {
     super(document.documentElement);
     this.listener = listener;
 
     this.handledKeys = {};
     this.setupEvents();
     this.active = true;
+
+    this.isMacOS = isMacOS;
   }
 
   setupKey(key) {
@@ -3062,7 +3067,9 @@ class KeyManager extends BrowserEventTarget {
   }
 
   isCommandKey(evt) {
-    return evt.metaKey && !evt.shiftKey && !evt.ctrlKey && !evt.altKey;
+    return this.isMacOS ?
+            evt.metaKey && !evt.shiftKey && !evt.ctrlKey && !evt.altKey :
+            evt.ctrlKey && !evt.shiftKey && !evt.metaKey && !evt.altKey;
   }
 
 }
@@ -3317,10 +3324,11 @@ class AppController {
   }
 
   setupKeyManager() {
-    this.keyManager = new KeyManager(this);
+    this.keyManager = new KeyManager(this, PLATFORM_IS_MAC);
 
     this.keyManager.setupKey(KeyManager.SHIFT_KEY);
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
+    this.keyManager.setupKey(KeyManager.META_KEY);
     this.keyManager.setupKey(KeyManager.ALT_KEY);
 
     this.keyManager.setupKey(KeyManager.A_KEY);
@@ -4666,7 +4674,8 @@ class DragSelection extends DragTarget {
 
 class ControlPanel extends DraggableElement {
 
-  static get ACTIVE_CLASS() { return 'control-panel--active'; }
+  static get ACTIVE_CLASS()  { return 'control-panel--active'; }
+  static get WINDOWS_CLASS() { return 'control-panel--win';    }
 
   static get TRANSFORM_ACTIVE_CLASS()  { return 'control-panel--element-transform-active'; }
   static get BACKGROUND_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
@@ -4686,6 +4695,7 @@ class ControlPanel extends DraggableElement {
     this.setupAreas(root);
     this.setupUiEvents(root);
     this.setupRenderedElements(root);
+    this.setupWindows();
     this.allowDoubleClick();
   }
 
@@ -4730,6 +4740,12 @@ class ControlPanel extends DraggableElement {
       'transform':          new Element(root.getElementById('element-area-transform')),
       'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
     };
+  }
+
+  setupWindows() {
+    if (!PLATFORM_IS_MAC) {
+      this.addClass(ControlPanel.WINDOWS_CLASS);
+    }
   }
 
   setMode(mode) {
@@ -6052,7 +6068,7 @@ class Settings {
 
   // --- Other
   static get QUERY_FIELDS() { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
-  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/g; }
+  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
 
   constructor(listener, root) {
     this.form = new Form(root.getElementById('settings-form'), this);

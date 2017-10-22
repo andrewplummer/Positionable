@@ -29,14 +29,19 @@ describe('KeyManager', function() {
 
   setup(function() {
     listener = new Listener();
-    manager  = new KeyManager(listener);
   });
 
   teardown(function() {
     manager.removeAllListeners();
   });
 
+  function setupManager(isWindows) {
+    manager  = new KeyManager(listener, !isWindows);
+  }
+
   it('should setup and receive key events', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.A_KEY);
     manager.setupKey(KeyManager.S_KEY);
 
@@ -64,6 +69,8 @@ describe('KeyManager', function() {
   });
 
   it('should setup and receive command key events', function() {
+    setupManager();
+
     manager.setupCommandKey(KeyManager.A_KEY);
 
     fireDocumentKeyDown(KeyManager.A_KEY);
@@ -76,6 +83,8 @@ describe('KeyManager', function() {
   });
 
   it('should handle both command and basic keys separately', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.A_KEY);
     manager.setupCommandKey(KeyManager.A_KEY);
 
@@ -89,6 +98,8 @@ describe('KeyManager', function() {
   });
 
   it('should not fire when other meta keys are pressed', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.A_KEY);
     manager.setupCommandKey(KeyManager.A_KEY);
 
@@ -100,12 +111,16 @@ describe('KeyManager', function() {
   });
 
   it('should prevent default on handled key events', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.A_KEY);
     fireDocumentKeyDown(KeyManager.A_KEY);
     assert.equal(listener.lastKeyDownEvent.defaultPrevented, true);
   });
 
   it('should not allow meta keys when not setup', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.A_KEY);
     fireDocumentMetaKeyDown(KeyManager.A_KEY);
     assert.equal(listener.keyDownEvents[KeyManager.A_KEY], undefined);
@@ -113,12 +128,16 @@ describe('KeyManager', function() {
   });
 
   it('should not allow arrow keys with shift', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.LEFT_KEY);
     fireDocumentShiftKeyDown(KeyManager.LEFT_KEY);
     assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], 1);
   });
 
   it('should allow deactivation', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.LEFT_KEY);
 
     manager.setActive(false);
@@ -131,6 +150,8 @@ describe('KeyManager', function() {
   });
 
   it('should allow deactivation with an exception', function() {
+    setupManager();
+
     manager.setupKey(KeyManager.LEFT_KEY);
     manager.setupCommandKey(KeyManager.Z_KEY);
     manager.setupCommandKeyException(KeyManager.Z_KEY);
@@ -150,6 +171,18 @@ describe('KeyManager', function() {
     assert.equal(listener.keyDownEvents[KeyManager.LEFT_KEY], 1);
     assert.equal(listener.keyDownEvents[KeyManager.Z_KEY], undefined);
     assert.equal(listener.commandKeyDownEvents[KeyManager.Z_KEY], 2);
+  });
+
+  it('should use ctrl key for windows instead of command key', function() {
+    setupManager(true);
+
+    manager.setupCommandKey(KeyManager.Z_KEY);
+
+    fireDocumentMetaKeyDown(KeyManager.Z_KEY);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.Z_KEY], undefined);
+
+    fireDocumentCtrlKeyDown(KeyManager.Z_KEY);
+    assert.equal(listener.commandKeyDownEvents[KeyManager.Z_KEY], 1);
   });
 
 });

@@ -683,30 +683,20 @@ input, select {
   line-height: 25px;
 }
 
-/*
- * TODO: needed?
-.help-area-arrow-key-icon {
-  width: 17px;
-  height: 17px;
-  margin-top: 4px;
+/* Mac/Win key shortcuts */
+
+.key-icon--win,
+.control-panel--win .key-icon--mac {
+  display: none;
 }
 
-.help-area-letter-key-icon {
-  line-height: 29px;
-  text-indent: 6px;
+.control-panel--win .key-icon--win {
+  display: block;
 }
 
-.help-area-inline-key-icon {
-  width: 20px;
-  height: 20px;
-  line-height: 22px;
-  font-size: 14px;
-  margin: 0 3px 2px 0;
-  color: rgba(0,0,0,0.8);
+.key-icon--wingdings {
+  font-family: "Wingdings";
 }
-*/
-
-
 
 
 /*---------------------------] Animation [-----------------------*/
