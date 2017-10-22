@@ -7,8 +7,6 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - test command key on windows
-// - bug: select multiple then command to drag one... jumps? (looks like scrolling)
 // - bug: select multiple then drag fixed with scroll... others jump way down
 // - bug: undo after align doesn't seem to work??
 // - bug: it should clear all it's rendered styles off when it's destroyed
@@ -1120,15 +1118,14 @@ class DragTarget extends BrowserEventTarget {
 
   resetDrag(evt) {
     if (this.dragging) {
-      // Certain drag targets may require a change in keys to reset the
-      // drag. We can accomplish this by firing mouseup, mousedown, and
-      // mousemove events in succession to simulate the drag being stopped
-      // and restarted again. The mousedown event needs to be a combination
-      // of the position of the previous event and the keys of the new
-      // event to ensure the offsets remain accurate.
-      var last = this.lastMouseEvent;
-      this.onMouseUp(evt);
-      this.onMouseDown(this.getUpdatedMouseEvent('mousedown', evt, last));
+      // Certain drag targets require a change in keys to reset the drag.
+      // We can accomplish this by firing mouseup, mousedown, and mousemove
+      // events in to simulate the drag being stopped and restarted again.
+      // The current mouse move will not continue on, so refire it to be
+      // sure that we remain in a dragging state, as the first mousedown
+      // will not yet trigger the actual drag.
+      this.onMouseUp(this.lastMouseEvent);
+      this.onMouseDown(evt);
       this.onMouseMove(evt);
     }
   }
