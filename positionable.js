@@ -6,11 +6,6 @@
  *
  * ---------------------------- */
 
-// - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
-// - TODO: more rotate icon increments for smoother transition?
-// - TODO: can we not handle percents in transforms??
-// - TODO: how to handle auto values?
-// - TODO: test that it doesn't fail on display: none elements
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: do we really want to throw errors to halt??
@@ -4196,7 +4191,7 @@ class PositionableElementManager {
     }
 
     for(let i = 0, el; el = els[i]; i++) {
-      if (includeSelector || this.elementIsOutOfFlow(el)) {
+      if (includeSelector || this.canAutoAddElement(el)) {
         this.elements.push(new PositionableElement(el, this));
       }
     }
@@ -4227,9 +4222,17 @@ class PositionableElementManager {
     }
   }
 
-  elementIsOutOfFlow(el) {
-    var position = window.getComputedStyle(el).position;
-    return position === 'absolute' || position === 'fixed';
+  canAutoAddElement(el) {
+    var style = window.getComputedStyle(el);
+    return this.elementIsVisible(style) && this.elementIsOutOfFlow(style);
+  }
+
+  elementIsVisible(style) {
+    return style.display !== 'none';
+  }
+
+  elementIsOutOfFlow(style) {
+    return style.position === 'absolute' || style.position === 'fixed';
   }
 
   /*
@@ -7673,9 +7676,6 @@ class CSSTransform {
   }
 
   getHeader() {
-    if (this.isNull()) {
-      return '';
-    }
     return this.functions.map(f => f.getHeader()).join(' | ');
   }
 

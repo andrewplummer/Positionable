@@ -168,17 +168,17 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(manager.getTransformHeader(element), 'matrix3d: 1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1');
   });
 
-  it('should not get transform headers for a null rotation box', function() {
+  it('should get headers for a null rotation box', function() {
     setupBox('null-rotate-box');
-    assert.equal(manager.getTransformHeader(element), '');
+    assert.equal(manager.getTransformHeader(element), 'r: 0deg');
   });
 
-  it('should not get transform headers for a null translate box', function() {
+  it('should get headers for a null translate box', function() {
     setupBox('null-translate-box');
-    assert.equal(manager.getTransformHeader(element), '');
+    assert.equal(manager.getTransformHeader(element), 't: 0px, 0px');
   });
 
-  it('should get transform headers when even one function exists', function() {
+  it('should get headers when even one function exists', function() {
     setupBox('null-rotate-with-translate-box');
     assert.equal(manager.getTransformHeader(element), 'r: 0deg | t: 20px, 20px');
   });

@@ -267,6 +267,12 @@ describe('PositionableElementManager', function() {
     assert.equal(manager.elements.length, 0);
   });
 
+  it('should ignore display: hidden boxes', function() {
+    appendBox('hidden-box');
+    manager.findElements();
+    assert.equal(manager.elements.length, 0);
+  });
+
   it('should be able to use an explicit selector to include', function() {
     appendBox('box-1');
     appendBox('box-2');
