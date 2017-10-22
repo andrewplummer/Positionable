@@ -607,8 +607,8 @@ input, select {
   position: absolute;
   width: 14px;
   height: 14px;
-  top: 15px;
-  left: 15px;
+  top: 11px;
+  left: 11px;
 }
 
 .help-area-drag-box--one {
@@ -638,7 +638,8 @@ input, select {
 
 
 .help-area-arrow-key-icon {
-  height: 10px;
+  height: 16px;
+  margin-top: 4px;
 }
 
 

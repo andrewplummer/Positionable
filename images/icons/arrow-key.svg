@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="34px" height="20px" viewBox="0 0 34 20" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="18px" height="18px" viewBox="0 0 18 18" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
-    <title>Shape</title>
+    <title>arrow-key</title>
     <desc>Created with Sketch.</desc>
     <defs></defs>
     <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
         <g id="arrow-key" fill-rule="nonzero" fill="#000000">
-            <polygon id="Shape" points="34 13 14 13 14 20 3.55271368e-15 10 14 0 14 7 34 7"></polygon>
+            <polygon id="Shape" transform="translate(9.000000, 8.794118) rotate(-270.000000) translate(-9.000000, -8.794118) " points="17 10 7 10 7 13.5 1 9 7 4.08823529 7 8 17 8"></polygon>
         </g>
     </g>
 </svg>
