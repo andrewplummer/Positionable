@@ -93,7 +93,7 @@ describe('CursorManager', function() {
     // Prevent it from actually trying to load the image.
     manager.render = function() {
       cursor = this.getActiveCursor();
-    }
+    };
     manager.setHoverCursor('foo', true);
     assert.equal(cursor, `url(${ShadowDomInjector.BASE_PATH}images/cursors/foo.png) 13 13, pointer`);
     manager.clearHoverCursor();

@@ -22,7 +22,7 @@
           fn(fakeResponse);
         }
       }
-    }
+    };
   }
 
   window.chromeMock = new ChromeMock();

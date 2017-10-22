@@ -7,12 +7,6 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - try different rotation configurations (negative, over 360?)
-// - resizing with rotated box and pre-existing translation
-// - pre-existing translationX or Y? how to handle?
-// - constraining from all directions
-// - weird bug when going crazy with mouse... div scrolling??
-// - different background positions... top right, percentages
 // - bug: go to zindex nudging and unfocus window, then focus back, move is rendered
 // - test "auto" values? what should happen here?
 // - add "8 spaces" to tab style list
@@ -7250,19 +7244,22 @@ class CSSRuleMatcher {
 
 class CSSProperty {
 
-  // Property Names
-  static get TOP()                 { return 'top';                }
-  static get BOTTOM()              { return 'bottom';             }
-  static get HEIGHT()              { return 'height';             }
+  static get TOP()    { return 'top';    }
+  static get LEFT()   { return 'left';   }
+  static get WIDTH()  { return 'width';  }
+  static get RIGHT()  { return 'right';  }
+  static get HEIGHT() { return 'height'; }
+  static get BOTTOM() { return 'bottom'; }
+  static get CENTER() { return 'center'; }
+
+  static get NONE()    { return 'none';    }
+  static get AUTO()    { return 'auto';    }
+  static get INITIAL() { return 'initial'; }
+
   static get TRANSFORM()           { return 'transform';          }
   static get TRANSFORM_ORIGIN()    { return 'transformOrigin';    }
   static get BACKGROUND_IMAGE()    { return 'backgroundImage';    }
   static get BACKGROUND_POSITION() { return 'backgroundPosition'; }
-
-  // Property Values
-  static get NONE()                { return 'none';    }
-  static get AUTO()                { return 'auto';    }
-  static get INITIAL()             { return 'initial'; }
 
   static get VAR_REG()             { return /var\(.+\)/; }
 
@@ -7293,47 +7290,22 @@ class CSSProperty {
   normalize() {
     // We need to normalize values here so that they can all be tested.
     // Force all "auto", "none", and "initial" values to empty strings,
-    // then remove the computed value if it can be ignored, as is the
-    // case for background-position (0% 0%) and transform-origin.
-    // Also remove matched CSS variables as they are unusable. Finally,
-    // set a matched background image to its computed value, as it does
-    // not contain the domain, which we need to detect cross domain images.
+    // then remove matched CSS variables as they are unusable. Set
+    // matched background images to their computed value, as they don't
+    // contain the domain, which we need to detect cross domain images.
+    // Finally handle positioning keywords like "top left" by replacing
+    // with percentages and removing the computed value.
     this.coerceInitialValues();
-    this.coerceComputedValue();
     this.coerceCSSVariable();
     this.coerceBackgroundImageValue();
+    this.coercePositionKeywordPairs();
   }
+
+  // --- Initial Values
 
   coerceInitialValues() {
     this.matchedValue  = this.coerceInitialValue(this.matchedValue);
     this.computedValue = this.coerceInitialValue(this.computedValue);
-  }
-
-  coerceComputedValue() {
-    if (this.ignoresComputedValue()) {
-      this.computedValue = '';
-    }
-  }
-
-  coerceCSSVariable() {
-    if (CSSProperty.VAR_REG.test(this.matchedValue)) {
-      this.matchedValue = this.computedValue;
-    }
-  }
-
-  coerceBackgroundImageValue() {
-    if (this.overwritesMatchedValue()) {
-      this.matchedValue = this.computedValue;
-    }
-  }
-
-  ignoresComputedValue() {
-    return this.name === CSSProperty.TRANSFORM_ORIGIN ||
-           this.name === CSSProperty.BACKGROUND_POSITION;
-  }
-
-  overwritesMatchedValue() {
-    return this.name === CSSProperty.BACKGROUND_IMAGE;
   }
 
   coerceInitialValue(val) {
@@ -7344,6 +7316,79 @@ class CSSProperty {
     return val === CSSProperty.AUTO ||
            val === CSSProperty.NONE ||
            val === CSSProperty.INITIAL;
+  }
+
+  // --- CSS Variables
+
+  coerceCSSVariable() {
+    if (CSSProperty.VAR_REG.test(this.matchedValue)) {
+      this.matchedValue = this.computedValue;
+    }
+  }
+
+  // --- Background Image
+
+  coerceBackgroundImageValue() {
+    if (this.name === CSSProperty.BACKGROUND_IMAGE) {
+      this.matchedValue = this.computedValue;
+    }
+  }
+
+  // --- CSS Positioning Keywords
+
+  coercePositionKeywordPairs() {
+    if (this.isPositioningPair()) {
+      this.matchedValue = this.replacePositionKeywords(this.matchedValue);
+      this.computedValue = '';
+    }
+  }
+
+  isPositioningPair() {
+    return this.name === CSSProperty.TRANSFORM_ORIGIN ||
+           this.name === CSSProperty.BACKGROUND_POSITION;
+  }
+
+  replacePositionKeywords(str) {
+    var split;
+
+    if (!str) {
+      return str;
+    }
+
+    split = str.split(' ');
+
+    // If there is only one value, then the other should be 50%.
+    if (split.length === 1) {
+      split.push('50%');
+    }
+
+    // Positions like "top left" are inverted, so flip them.
+    if (this.hasInvertedKeywords(split[0], split[1])) {
+      split.push(split.shift());
+    }
+
+    return split.map(val => {
+      switch (val) {
+        case CSSProperty.TOP:    return '0%';
+        case CSSProperty.LEFT:   return '0%';
+        case CSSProperty.RIGHT:  return '100%';
+        case CSSProperty.BOTTOM: return '100%';
+        case CSSProperty.CENTER: return '50%';
+        default:                 return val;
+      }
+    }).join(' ');
+  }
+
+  hasInvertedKeywords(first, second) {
+    return this.isVerticalKeyword(first) || this.isHorizontalKeyword(second);
+  }
+
+  isVerticalKeyword(str) {
+    return str === CSSProperty.TOP || str === CSSProperty.BOTTOM;
+  }
+
+  isHorizontalKeyword(str) {
+    return str === CSSProperty.LEFT || str === CSSProperty.RIGHT;
   }
 
 }
@@ -7601,48 +7646,22 @@ class CSSTransformFunction {
 
 class CSSTransformOrigin {
 
-  static get TOP()    { return 'top';    }
-  static get LEFT()   { return 'left';   }
-  static get RIGHT()  { return 'right';  }
-  static get BOTTOM() { return 'bottom'; }
-  static get CENTER() { return 'center'; }
-
   static fromMatcher(matcher) {
-    var prop, el, arg1, arg2, cssX, cssY;
+    var prop, el, cssX, cssY, split;
 
     prop = matcher.getProperty('transformOrigin');
     el   = matcher.el;
 
-    [arg1, arg2] = prop.getValue().split(' ');
-
-    if (this.isYProperty(arg1)) {
-      cssX = this.getCSSValue(arg2, prop, el, false);
-      cssY = this.getCSSValue(arg1, prop, el, true);
+    if (prop.isInitial()) {
+      cssX = CSSPercentValue.create(50, true, prop, el, false);
+      cssY = CSSPercentValue.create(50, true, prop, el, true);
     } else {
-      cssX = this.getCSSValue(arg1, prop, el, false);
-      cssY = this.getCSSValue(arg2, prop, el, true);
+      split = prop.getValue().split(' ');
+      cssX = CSSValue.parse(split[0], prop, el, false);
+      cssY = CSSValue.parse(split[1], prop, el, true);
     }
+
     return new CSSTransformOrigin(cssX, cssY);
-  }
-
-  static getCSSValue(str, prop, el, isVertical) {
-    if (!str || str === CSSTransformOrigin.INITIAL) {
-      str = '50%';
-    } else {
-      switch (str) {
-        case CSSTransformOrigin.TOP:    str = '0%';   break;
-        case CSSTransformOrigin.LEFT:   str = '0%';   break;
-        case CSSTransformOrigin.RIGHT:  str = '100%'; break;
-        case CSSTransformOrigin.BOTTOM: str = '100%'; break;
-        case CSSTransformOrigin.CENTER: str = '50%';  break;
-      }
-    }
-    return CSSValue.parse(str, prop, el, isVertical);
-  }
-
-  static isYProperty(prop) {
-    return prop === CSSTransformOrigin.TOP ||
-           prop === CSSTransformOrigin.BOTTOM;
   }
 
   constructor(cssX, cssY) {
@@ -7681,7 +7700,7 @@ class CSSValue {
 
     switch (unit) {
 
-      case '%':  return CSSPercentValue.create(val, initial, prop, el, img, isVertical);
+      case '%':  return CSSPercentValue.create(val, initial, prop, el, isVertical, img);
       case 'px': return CSSPixelValue.create(val, initial, prop);
       case 'em': return CSSEmValue.create(val, initial, el);
 
@@ -7916,7 +7935,7 @@ class CSSIntegerValue extends CSSValue {
 
 class CSSPercentValue extends CSSValue {
 
-  static create(val, initial, prop, el, img, isVertical) {
+  static create(val, initial, prop, el, isVertical, img) {
 
     var offsetElement = this.isElementRelative(prop) ? el : el.offsetParent;
     var isFixed       = this.isFixed(offsetElement);
@@ -8135,28 +8154,22 @@ class CSSBackgroundImage {
   }
 
   static getPosition(matcher, img) {
-    var prop, position, values, cssLeft, cssTop;
+    var prop, cssLeft, cssTop, values;
 
-    prop     = matcher.getProperty('backgroundPosition');
-    position = prop.getValue();
+    prop = matcher.getProperty('backgroundPosition');
 
-    // To prevent errors on multiple background images,
-    // just take the first position in the list.
-    values  = position.split(',')[0].split(' ');
-    cssLeft = this.getPositionValue(values[0], prop, matcher, false, img);
-    cssTop  = this.getPositionValue(values[1], prop, matcher, true, img);
+    if (prop.isInitial()) {
+      cssLeft = new CSSPixelValue(0, true);
+      cssTop  = new CSSPixelValue(0, true);
+    } else {
+      // To prevent errors on multiple background images,
+      // just take the first position in the list.
+      values  = prop.getValue().split(',')[0].split(' ');
+      cssLeft = CSSValue.parse(values[0], prop, matcher.el, false, img);
+      cssTop  = CSSValue.parse(values[1], prop, matcher.el, true, img);
+    }
 
     return [cssLeft, cssTop];
-  }
-
-  static getPositionValue(str, prop, matcher, isVertical, img) {
-    var cssValue;
-    if (str) {
-      cssValue = CSSValue.parse(str, prop, matcher.el, isVertical, img);
-    } else {
-      cssValue = new CSSPixelValue(0, true);
-    }
-    return cssValue;
   }
 
   static fetchDomainSafeUrl(url) {

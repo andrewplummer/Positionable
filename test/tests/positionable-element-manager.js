@@ -729,21 +729,39 @@ describe('PositionableElementManager', function() {
   });
 
   it('should move background using percent values', function() {
-    setupBackgroundBox('background-percent-box');
+    setupBackgroundBox('background-box background-percent-box');
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.backgroundPosition,  '78.19% 103.19%');
   });
 
   it('should move a big background using percent values', function() {
-    setupBackgroundBox('background-big-percent-box');
+    setupBackgroundBox('background-big-box background-percent-box');
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.backgroundPosition,  '-25% 0%');
   });
 
-  it('should not be able to move the background image when its size is the same as its element', function() {
-    setupBackgroundBox('big-box background-big-percent-box');
+  it('should not work when using percentages and image size is same as element', function() {
+    setupBackgroundBox('big-box background-big-box background-percent-box');
     ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
     assert.equal(el.style.backgroundPosition,  '0% 0%');
+  });
+
+  it('should allow top left background position', function() {
+    setupBackgroundBox('background-box background-tl-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '53.19% 53.19%');
+  });
+
+  it('should allow bottom right background position', function() {
+    setupBackgroundBox('background-box background-br-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '153.19% 153.19%');
+  });
+
+  it('should allow right center background position', function() {
+    setupBackgroundBox('background-box background-rc-box');
+    ctrlDragElement(getUiElement(el, '.position-handle'), 150, 150, 200, 200);
+    assert.equal(el.style.backgroundPosition,  '153.19% 103.19%');
   });
 
   // --- Resize
@@ -1005,6 +1023,13 @@ describe('PositionableElementManager', function() {
     assertBoxTranslation(-71, 29.41);
   });
 
+  it('should stay anchored when using explicit initial transform origin', function() {
+    setupBox('rotate-initial-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, 321);
+    assertInvertedBoxDimensions('', '', '171px', '171px');
+    assertBoxTranslation(-35.5, 14.7);
+  });
+
   // --- Resizing multiple elements
 
   it('should resize multiple elements from se handle', function() {
@@ -1197,7 +1222,7 @@ describe('PositionableElementManager', function() {
   });
 
   it('should snap to first sprite using percent value', function() {
-    setupBackgroundBox('background-percent-box');
+    setupBackgroundBox('background-box background-percent-box');
     fireDoubleClick(getUiElement(el, '.position-handle'), 125, 148);
     assert.equal(el.style.left,   '125px');
     assert.equal(el.style.top,    '148px');
@@ -1207,7 +1232,7 @@ describe('PositionableElementManager', function() {
   });
 
   it('should snap to second sprite using percent value', function() {
-    setupBackgroundBox('background-percent-box');
+    setupBackgroundBox('background-box background-percent-box');
     fireDoubleClick(getUiElement(el, '.position-handle'), 127, 150);
     assert.equal(el.style.left,   '127px');
     assert.equal(el.style.top,    '150px');
@@ -1405,13 +1430,13 @@ describe('PositionableElementManager', function() {
   });
 
   it('should update initial background position when moving', function() {
-    setupBackgroundBox('background-initial-box');
+    setupBackgroundBox('background-box background-initial-box');
     ctrlDragElement(getUiElement(el, '.position-handle'), 100, 100, 150, 160);
     assert.equal(el.style.backgroundPosition, '50px 60px');
   });
 
   it('should update initial background position when snapping', function() {
-    setupBackgroundBox('background-initial-box');
+    setupBackgroundBox('background-box background-initial-box');
     fireDoubleClick(getUiElement(el, '.position-handle'), 101, 101);
     assert.equal(el.style.backgroundPosition, '-1px -1px');
   });

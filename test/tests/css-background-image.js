@@ -79,14 +79,14 @@ describe('CSSBackgroundImage', function() {
   });
 
   it('should get the correct position for a percentage', function() {
-    setupBackgroundImage('background-percent-box');
+    setupBackgroundImage('background-box background-percent-box');
     var p = backgroundImage.getPosition();
     assert.equal(p.x, 23.5);
     assert.equal(p.y, 47);
   });
 
   it('should set the correct position for a percentage', function() {
-    setupBackgroundImage('background-percent-box');
+    setupBackgroundImage('background-box background-percent-box');
     backgroundImage.setPosition(94, 94);
     assert.equal(backgroundImage.getPositionString(), '100% 100%');
   });
@@ -121,7 +121,7 @@ describe('CSSBackgroundImage', function() {
   });
 
   it('should update its position when percentages are used and dimensions have changed', function() {
-    setupBackgroundImage('background-percent-box');
+    setupBackgroundImage('background-box background-percent-box');
     el.style.width  = '200px';
     el.style.height = '200px';
     backgroundImage.update();

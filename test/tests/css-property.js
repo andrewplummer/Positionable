@@ -81,8 +81,26 @@ describe('CSSProperty', function() {
     assertVertical('transformOrigin',    '',     '0px 0px', false);
   });
 
+  // --- Other
+
+  it('should replace positioning keywords in transformOrigin and backgroundPosition', function() {
+    assertValue('backgroundPosition', 'left top',      '0% 0%',   '0% 0%');
+    assertValue('backgroundPosition', 'right bottom',  '0% 0%',   '100% 100%');
+    assertValue('backgroundPosition', 'center center', '0% 0%',   '50% 50%');
+    assertValue('transformOrigin',    'left top',      '5px 5px', '0% 0%');
+    assertValue('transformOrigin',    'right bottom',  '5px 5px', '100% 100%');
+    assertValue('transformOrigin',    'center center', '5px 5px', '50% 50%');
+  });
+
+  it('should replace reversed positioning keywords', function() {
+    assertValue('backgroundPosition', 'bottom left',  '0% 0%',  '0% 100%');
+    assertValue('backgroundPosition', 'top right',    '0% 0%',  '100% 0%');
+    assertValue('backgroundPosition', 'center right', '0% 0%', '100% 50%');
+  });
+
   it('should not fail on css variables', function() {
     assertValue('left', 'var(--foo)', '10px', '10px');
     assertInitial('left', 'var(--foo)', '10px', false);
   });
+
 });

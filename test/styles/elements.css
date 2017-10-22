@@ -147,6 +147,11 @@
   transform: rotate(45deg);
 }
 
+.rotate-initial-box {
+  transform-origin: initial;
+  transform: rotate(45deg);
+}
+
 .rotate-fixed-box {
   transform-origin: 20px 30px;
   transform: rotate(45deg);
@@ -260,12 +265,6 @@
   background-repeat: no-repeat;
 }
 
-.background-big-percent-box {
-  background-image: var(--big-image);
-  background-position: 25% 50%;
-  background-repeat: no-repeat;
-}
-
 .background-multiple-box {
   background-image: var(--small-image), var(--big-image);
   background-position: 20px 40px, 50px 50px;
@@ -273,13 +272,23 @@
 }
 
 .background-percent-box {
-  background-image: var(--small-image);
   background-position: 25% 50%;
 }
 
 .background-initial-box {
-  background-image: var(--small-image);
   background-position: initial;
+}
+
+.background-tl-box {
+  background-position: top left;
+}
+
+.background-br-box {
+  background-position: bottom right;
+}
+
+.background-rc-box {
+  background-position: right center;
 }
 
 .background-x-domain-box {
