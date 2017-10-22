@@ -103,4 +103,11 @@ describe('CSSProperty', function() {
     assertInitial('left', 'var(--foo)', '10px', false);
   });
 
+  it('should coerce linear gradient urls', function() {
+    var standard = 'linear-gradient(red 0%, black 100%)';
+    var webkit   = '-webkit-linear-gradient(red 0%, black 100%)';
+    assertValue('backgroundImage', '',   standard, '');
+    assertValue('backgroundImage', '',   webkit,   '');
+  });
+
 });

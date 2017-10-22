@@ -7426,7 +7426,8 @@ class CSSProperty {
   static get BACKGROUND_IMAGE()    { return 'backgroundImage';    }
   static get BACKGROUND_POSITION() { return 'backgroundPosition'; }
 
-  static get VAR_REG()             { return /var\(.+\)/; }
+  static get VAR_REG()             { return /var\(.+\)/;       }
+  static get LINEAR_GRADIENT_REG() { return /linear-gradient/; }
 
   constructor(name, matchedValue, computedValue) {
     this.name          = name;
@@ -7458,8 +7459,10 @@ class CSSProperty {
     // then remove matched CSS variables as they are unusable. Set
     // matched background images to their computed value, as they don't
     // contain the domain, which we need to detect cross domain images.
-    // Finally handle positioning keywords like "top left" by replacing
-    // with percentages and removing the computed value.
+    // They also may contain linear-gradient values which need to be
+    // coerced as well. Finally handle positioning keywords like
+    // "top left" by replacing with percentages and removing the computed
+    // value.
     this.coerceInitialValues();
     this.coerceCSSVariable();
     this.coerceBackgroundImageValue();
@@ -7495,7 +7498,12 @@ class CSSProperty {
 
   coerceBackgroundImageValue() {
     if (this.name === CSSProperty.BACKGROUND_IMAGE) {
-      this.matchedValue = this.computedValue;
+      if (CSSProperty.LINEAR_GRADIENT_REG.test(this.computedValue)) {
+        this.matchedValue  = '';
+        this.computedValue = '';
+      } else {
+        this.matchedValue = this.computedValue;
+      }
     }
   }
 
