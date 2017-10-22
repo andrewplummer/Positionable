@@ -7,9 +7,7 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - add "8 spaces" to tab style list
 // - test command key on windows
-// - test finding elements after settings update
 // - test what happens if extension button hit twice
 // - test with animations?
 // - cursors working ok??
@@ -615,7 +613,6 @@ class ShadowDomInjector {
     }
   }
 
-
   constructor(parent, expand) {
     this.parent = parent;
     this.expand = expand;
@@ -688,8 +685,15 @@ class ShadowDomInjector {
     root.innerHTML = templateHtml.replace(ShadowDomInjector.EXTENSION_RELATIVE_PATH_REG, ShadowDomInjector.BASE_PATH);
 
     this.parent.insertBefore(container, this.parent.firstChild);
+    this.container = container;
 
     return root;
+  }
+
+  destroy() {
+    if (this.container) {
+      this.container.remove();
+    }
   }
 
 }
@@ -1695,12 +1699,10 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   injectInterface() {
-    var injector = new ShadowDomInjector(this.el, true);
-    injector.setTemplate('element.html');
-    injector.setStylesheet('element.css');
-    // TODO: can listeners be applied instead of binding everything? If not,
-    // then at least clean up binding ahead of time vs binding inline
-    injector.run(this.onInterfaceInjected.bind(this));
+    this.injector = new ShadowDomInjector(this.el, true);
+    this.injector.setTemplate('element.html');
+    this.injector.setStylesheet('element.css');
+    this.injector.run(this.onInterfaceInjected.bind(this));
   }
 
   onInterfaceInjected(root) {
@@ -2539,23 +2541,6 @@ class PositionableElement extends BrowserEventTarget {
     return this.style.position !== 'static';
   }
 
-  // --- Teardown
-
-  destroy() {
-    this.positionHandle.destroy();
-    this.rotationHandle.destroy();
-    this.handles.nw.destroy();
-    this.handles.ne.destroy();
-    this.handles.se.destroy();
-    this.handles.sw.destroy();
-    this.handles.n.destroy();
-    this.handles.e.destroy();
-    this.handles.s.destroy();
-    this.handles.w.destroy();
-    this.removeAllListeners();
-    this.clearOverrides();
-  }
-
   getCSSDeclarations() {
     return this.getCSSDeclarationsForAttributes(
       this.cssBox,
@@ -2599,6 +2584,14 @@ class PositionableElement extends BrowserEventTarget {
     cssBackgroundImage.appendCSSDeclaration(declarations);
     cssTransform.appendCSSDeclaration(declarations);
     return declarations;
+  }
+
+  // --- Teardown
+
+  destroy() {
+    this.injector.destroy();
+    this.removeAllListeners();
+    this.clearOverrides();
   }
 
 }
@@ -3393,7 +3386,7 @@ class AppController {
   }
 
   onSelectorUpdated() {
-    this.elementManager.destroyAll();
+    this.elementManager.releaseAll();
     this.loadingAnimation.show();
   }
 
@@ -3802,7 +3795,7 @@ class AppController {
     for (let i = 0, el; el = els[i]; i++) {
       el.remove();
     }
-    this.elementManager.destroyAll();
+    this.elementManager.releaseAll();
   }
 
 }
@@ -4581,8 +4574,10 @@ class PositionableElementManager {
 
   */
 
-  destroyAll() {
+  releaseAll() {
     this.elements.forEach(el => el.destroy());
+    this.elements = [];
+    this.focusedElements = [];
   }
 
 }

@@ -480,20 +480,12 @@ describe('PositionableElement', function() {
     assert.equalWithTolerance(listener.lastEventRotation.abs, 45, .01);
   });
 
-  it('should not remove the element on destroy', function() {
+  it('should not remove the ui only on destroy', function() {
     setupBox();
     element.destroy();
     assert.isTrue(!!el.parentNode);
     assert.equal(Object.keys(element.listeners).length, 0);
-    assert.equal(getUiElement(el, '.position-handle'), null);
-    assert.equal(getUiElement(el, '.resize-handle-n'), null);
-    assert.equal(getUiElement(el, '.resize-handle-s'), null);
-    assert.equal(getUiElement(el, '.resize-handle-e'), null);
-    assert.equal(getUiElement(el, '.resize-handle-w'), null);
-    assert.equal(getUiElement(el, '.resize-handle-nw'), null);
-    assert.equal(getUiElement(el, '.resize-handle-ne'), null);
-    assert.equal(getUiElement(el, '.resize-handle-se'), null);
-    assert.equal(getUiElement(el, '.resize-handle-sw'), null);
+    assert.equal(el.querySelector('.positionable-extension-ui'), null);
   });
 
   it('should not fail on a box using CSS variables', function() {

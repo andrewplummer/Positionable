@@ -1504,4 +1504,14 @@ describe('PositionableElementManager', function() {
     assert.equal(el.style.transform,   'translate(-17.5px, 7.25px) rotate(45deg)');
   });
 
+  it('should no longer have any elements after releasing', function() {
+    setupMultiple();
+    manager.focusAll();
+    assert.equal(manager.elements.length, 2);
+    assert.equal(manager.focusedElements.length, 2);
+    manager.releaseAll();
+    assert.equal(manager.elements.length, 0);
+    assert.equal(manager.focusedElements.length, 0);
+  });
+
 });
