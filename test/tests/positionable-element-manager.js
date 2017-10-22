@@ -724,7 +724,6 @@ describe('PositionableElementManager', function() {
 
   });
 
-
   // --- Background Positioning
 
   it('should not move background image when none exists', function() {

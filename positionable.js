@@ -7,8 +7,6 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - bug: select multiple then drag fixed with scroll... others jump way down
-// - bug: undo after align doesn't seem to work??
 // - bug: it should clear all it's rendered styles off when it's destroyed
 
 // - TODO: the mode indicator should maybe only be for nudging, as it's confusing to see it change on hover
@@ -30,6 +28,8 @@
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
+// TODO: select multiple and scroll, if you release the meta key and don't drag any more, it will lose a couple of the elements
+// ... probably need to use a key manager to handle this.
 // - cursors working ok??
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
@@ -1019,6 +1019,7 @@ class DragTarget extends BrowserEventTarget {
   }
 
   onScroll() {
+
     // Elements that are relative to the page (not fixed) should also be dragged
     // while scrolling, as this will affect their positioning, so need to force
     // a mousemove event here. Note that there is no way to set pageX/Y on
@@ -3221,8 +3222,8 @@ class AlignmentManager {
 
   executeElementMoves(elementMoves, edge) {
     elementMoves.forEach(em => {
+      em.element.pushState();
       if (em.target !== em.current) {
-        em.element.pushState();
         if (this.isHorizontalEdge(edge)) {
           em.element.move(em.target - em.current, 0);
         } else {
@@ -3629,7 +3630,7 @@ class AppController {
         break;
       case KeyManager.Z_KEY:
         this.elementManager.undo();
-        this.renderElementArea();
+        this.renderActiveControlPanel();
         break;
     }
   }

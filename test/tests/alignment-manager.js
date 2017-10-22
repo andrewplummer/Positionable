@@ -89,4 +89,14 @@ describe('AlignmentManager', function() {
     assert.equal(els[3].el.style.top, '356px');
   });
 
+  // --- Other
+
+  it('should push all states so that they can undo together', function() {
+    manager.align(els, 'left');
+    assert.equal(els[0].states.length, 1);
+    assert.equal(els[1].states.length, 1);
+    assert.equal(els[2].states.length, 1);
+    assert.equal(els[3].states.length, 1);
+  });
+
 });
