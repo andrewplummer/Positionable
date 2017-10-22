@@ -7,14 +7,8 @@
  * ---------------------------- */
 
 // TODO: test with:
-// - bug: go to zindex nudging and unfocus window, then focus back, move is rendered
-// - test "auto" values? what should happen here?
 // - add "8 spaces" to tab style list
-// - test background-image: none
-// - resize while flipping between sizing modes (jumps?)
-// - make sure static elements are changed to absolute
 // - test command key on windows
-// - test undefined top/left/width/height values
 // - test z-index on overlapping elements when dragging
 // - test on elements with transitions
 // - should it work on absolute elements with no left/right/top/bottom properties?
@@ -27,6 +21,8 @@
 // - bug: select multiple then drag fixed with scroll... others jump way down
 // - bug: undo after align doesn't seem to work??
 
+// - TODO: the mode indicator should maybe only be for nudging, as it's confusing to see it change on hover
+//  .... the cursors should be indicator enough.... ie cursors for dragging, and the panel for nudging, no?
 // - TODO: if I rotate back to 0, the transform should maybe not be copied? what about other properties?
 // - TODO: more rotate icon increments for smoother transition?
 // - TODO: can we not handle percents in transforms??
@@ -36,6 +32,9 @@
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: do we really want to throw errors to halt??
 // - TODO: rotated box won't reflect
+// - TODO: check stackoverflow and mozilla!
+// - TODO: localStorage doesn't seem to be what we want... it doesn't share settings across pages
+// - TODO: need to test display: none divs as well! they fail...
 
 // TODO: allow bottom/right position properties??
 // TODO: validate query selectors! and also re-get elements on query selector change
@@ -66,13 +65,10 @@ function roundWithPrecision(n, precision) {
   return Math.round(n * mult) / mult;
 }
 
-function throwError(str, halt) {
-  var msg = 'Positionable: ' + str;
-  if (halt === false) {
-    console.error(msg);
-  } else {
-    throw new Error(msg);
-  }
+function logError() {
+  var args = Array.from(arguments);
+  args.unshift('Positionable:');
+  console.error.apply(null, args);
 }
 
 /*-------------------------] NudgeManager [--------------------------*/
@@ -4144,7 +4140,7 @@ class PositionableElementManager {
       els = document.body.querySelectorAll(query);
 
     } catch(e) {
-      throwError(e.message, false);
+      logError(e.message);
     }
 
     for(let i = 0, el; el = els[i]; i++) {
@@ -7687,16 +7683,22 @@ class CSSValue {
   static get SUBPIXEL_PRECISION() { return 2; }
 
   static parse(str, prop, el, isVertical, img) {
+    var initial, match, val, unit;
 
-    var initial = prop.isInitial();
+    initial = prop.isInitial();
 
     if (isVertical === undefined) {
       isVertical = prop.isVertical();
     }
 
-    var match = str.match(/([-\d.]+)(px|%|em|deg|g?rad|turn|v(?:w|h|min|max))?$/);
-    var val   = parseFloat(match[1]);
-    var unit  = match[2] || '';
+    match = str.match(/([-\d.]+)(px|%|em|deg|g?rad|turn|v(?:w|h|min|max))?$/);
+
+    if (!match) {
+      return new CSSPixelValue(0, true);
+    }
+
+    val   = parseFloat(match[1]);
+    unit  = match[2] || '';
 
     switch (unit) {
 
@@ -7716,8 +7718,6 @@ class CSSValue {
       case 'turn': return new CSSTurnValue(val, initial);
       case '':     return new CSSIntegerValue(val, initial);
 
-      default:
-        throwError('UHOHOHOHHO', val, unit);
     }
   }
 

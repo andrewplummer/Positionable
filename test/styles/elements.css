@@ -75,6 +75,14 @@
   height: 0;
 }
 
+.hidden-box {
+  display: none;
+  top: auto;
+  left: auto;
+  width: auto;
+  height: auto;
+}
+
 /*---------------------------] Z-Index [-----------------------*/
 
 .z-box {
@@ -269,6 +277,10 @@
   background-image: var(--small-image), var(--big-image);
   background-position: 20px 40px, 50px 50px;
   background-repeat: no-repeat;
+}
+
+.background-none-box {
+  background-image: none;
 }
 
 .background-percent-box {

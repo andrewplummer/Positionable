@@ -529,4 +529,30 @@ describe('PositionableElement', function() {
     assert.equal(el.style.height, '200px');
   });
 
+  it('should not error on unsupported values', function() {
+    el = appendBox();
+    el.style.width = 'max-content';
+    p = new PositionableElement(el, listener);
+    assert.equal(p.cssBox.cssWidth.px, 0);
+  });
+
+  it('should not error on unsupported units', function() {
+    el = appendBox();
+    el.style.width = '3cm';
+    p = new PositionableElement(el, listener);
+    assert.equal(p.cssBox.cssWidth.px, 0);
+  });
+
+  it('should use computed properties on an incomplete box', function() {
+    el = appendBox('incomplete-box');
+    p = new PositionableElement(el, listener);
+    assert.equal(p.cssBox.cssHeight.px, 0);
+  });
+
+  it('should not error when positioning values are auto', function() {
+    el = appendBox('hidden-box');
+    p = new PositionableElement(el, listener);
+    assert.equal(p.cssBox.cssWidth.px, 0);
+  });
+
 });
