@@ -3316,10 +3316,10 @@ class AppController {
   }
 
   onFocusedElementsChanged() {
-    this.renderFocusedControlPanel();
+    this.renderActiveControlPanel();
   }
 
-  renderFocusedControlPanel() {
+  renderActiveControlPanel() {
     var elements = this.elementManager.getFocusedElements();
     if (elements.length > 1) {
       this.renderAlignArea(elements);
@@ -3338,11 +3338,11 @@ class AppController {
 
   onGettingStartedSkip() {
     this.settings.setBoolean(Settings.SKIP_GETTING_STARTED, true);
-    this.renderFocusedControlPanel();
+    this.renderActiveControlPanel();
   }
 
   onSettingsUpdated() {
-    this.renderFocusedControlPanel();
+    this.renderActiveControlPanel();
   }
 
   onAlignButtonClicked(edge) {
