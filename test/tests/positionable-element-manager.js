@@ -1546,9 +1546,9 @@ describe('PositionableElementManager', function() {
     manager.undo();
 
     assert.equal(el.style.top,    '0px');
-    assert.equal(el.style.left,   'auto');
+    assert.equal(el.style.left,   '');
     assert.equal(el.style.width,  '100px');
-    assert.equal(el.style.height, 'auto');
+    assert.equal(el.style.height, '');
     assert.equal(el.style.zIndex, '');
     assert.equal(el.style.backgroundPosition, '');
   });

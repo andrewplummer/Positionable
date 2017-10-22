@@ -109,6 +109,7 @@ input, select {
   transition: height 300ms ease-in-out, width 300ms ease-in-out, opacity 300ms linear;
   color: #222;
   font-family: "Open Sans", sans-serif;
+  line-height: normal;
 }
 
 .control-panel--active {

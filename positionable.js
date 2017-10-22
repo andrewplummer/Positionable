@@ -6,13 +6,7 @@
  *
  * ---------------------------- */
 
-// - TODO: check that each class only knows about itself to as much a degree as possible
-// - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
-// - TODO: do we really want to throw errors to halt??
 // - TODO: rotated box won't reflect
-// - TODO: check stackoverflow and mozilla!
-// - TODO: localStorage doesn't seem to be what we want... it doesn't share settings across pages
-// - TODO: need to test display: none divs as well! they fail...
 // - TODO: command z on initial!
 // - TODO: command z on multiple goes back to single
 
@@ -21,6 +15,9 @@
 // TODO: select multiple and scroll, if you release the meta key and don't drag any more, it will lose a couple of the elements
 // ... probably need to use a key manager to handle this.
 // - cursors working ok??
+// - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
+// - TODO: cleanup!!
+// - TODO: check that each class only knows about itself to as much a degree as possible
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 const PLATFORM_IS_MAC    = /mac/i.test(navigator.platform);
@@ -6726,7 +6723,7 @@ class CSSPositioningProperty {
   }
 
   render(style) {
-    style[this.prop] = this.cssValue.isInitial() ? 'auto': this.cssValue;
+    style[this.prop] = this.cssValue.isInitial() ? '': this.cssValue;
   }
 
   add(px) {
@@ -7081,7 +7078,7 @@ class CSSBox {
       cssPos.px -= cssDim.px;
     }
     cssPos.render(style);
-    style[dimProp] = cssDim.isInitial() ? 'auto' : cssDim;
+    style[dimProp] = cssDim.isInitial() ? '' : cssDim;
   }
 
   isInvertedEdge(prop) {
