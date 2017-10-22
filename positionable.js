@@ -9,8 +9,6 @@
 // TODO: test with:
 // - add "8 spaces" to tab style list
 // - test command key on windows
-// - should it work on absolute elements with no left/right/top/bottom properties?
-// - test after save should go back to element area
 // - test finding elements after settings update
 // - test what happens if extension button hit twice
 // - test with animations?
@@ -3318,12 +3316,14 @@ class AppController {
   }
 
   onFocusedElementsChanged() {
+    this.renderFocusedControlPanel();
+  }
+
+  renderFocusedControlPanel() {
     var elements = this.elementManager.getFocusedElements();
     if (elements.length > 1) {
       this.renderAlignArea(elements);
-      this.controlPanel.showAlignArea();
     } else if (elements.length === 1) {
-      this.controlPanel.showElementArea();
       this.renderElementArea();
     } else {
       this.controlPanel.showDefaultArea();
@@ -3338,11 +3338,11 @@ class AppController {
 
   onGettingStartedSkip() {
     this.settings.setBoolean(Settings.SKIP_GETTING_STARTED, true);
-    this.controlPanel.showDefaultArea();
+    this.renderFocusedControlPanel();
   }
 
   onSettingsUpdated() {
-    this.controlPanel.showDefaultArea();
+    this.renderFocusedControlPanel();
   }
 
   onAlignButtonClicked(edge) {
@@ -3667,7 +3667,13 @@ class AppController {
 
   // --- Control Panel Element Rendering
 
+  renderAlignArea(elements) {
+    this.controlPanel.showAlignArea();
+    this.controlPanel.renderMultipleSelected(elements.length);
+  }
+
   renderElementArea() {
+    this.controlPanel.showElementArea();
     this.renderFocusedSelector();
     this.renderFocusedPosition();
     this.renderFocusedDimensions();
@@ -3720,11 +3726,6 @@ class AppController {
   }
 
   // --- Control Panel Align Rendering
-
-  // TODO: me!
-  renderAlignArea(elements) {
-    this.controlPanel.renderMultipleSelected(elements.length);
-  }
 
   /*
   // TODO: can this just use listeners?
