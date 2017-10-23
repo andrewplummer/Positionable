@@ -435,68 +435,40 @@ describe('PositionableElementManager', function() {
 
     positionHandle1 = getUiElement(els[0], '.position-handle');
 
-    // Meta key depressed before drag start
-    fireMetaMouseDown(positionHandle1, 150, 150);
-    fireDocumentMetaMouseMove(175, 175);
-    fireDocumentMetaMouseMove(200, 200);
-    fireDocumentMetaMouseUp(200, 200);
+    // Meta key depressed throughout
+    dragElementWithMetaKeyChange(positionHandle1, [
+      [150, 150, true],
+      [175, 175, true],
+      [200, 200, true]
+    ]);
 
     assert.equal(els[0].style.top,  '150px');
     assert.equal(els[0].style.left, '150px');
     assert.equal(els[1].style.top,  '');
     assert.equal(els[1].style.left, '');
 
-    // Normal drag to 225
-    fireMouseDown(positionHandle1, 200, 200);
-    fireDocumentMouseMove(225, 225);
+    // Meta key depressed in the middle of the move
+    dragElementWithMetaKeyChange(positionHandle1, [
+      [200, 200, false],
+      [225, 225, false],
+      [250, 250, true],
+      [300, 300, true]
+    ]);
 
-    // Meta key depressed at this point. This will
-    // reset the drag and start a new drag boundary.
-    // The mousemove fired in the line below will
-    // never complete, so the element will have
-    // moved only 25px. A mouseup will be fired
-    // using the previous event, as well as a
-    // mousedown and mousemove with the new one,
-    // simulating a stop and restart of the drag.
-    fireDocumentMetaMouseMove(250, 250);
-    assert.equal(els[0].style.top,  '175px');
-    assert.equal(els[0].style.left, '175px');
-    assert.equal(els[1].style.top,  '125px');
-    assert.equal(els[1].style.left, '125px');
-
-    // Continuing on with the meta key depressed.
-    // From this point we should be only moving the
-    // first element again from a point at 250, so
-    // it should be moved 50px and the second element
-    // should remaing where it is.
-    fireDocumentMetaMouseMove(300, 300);
-    fireDocumentMetaMouseUp(300, 300);
-    assert.equal(els[0].style.top,  '225px');
-    assert.equal(els[0].style.left, '225px');
-    assert.equal(els[1].style.top,  '125px');
-    assert.equal(els[1].style.left, '125px');
-
-    // From here we start dragging again with the
-    // meta key down, moving only the one element.
-    fireMetaMouseDown(positionHandle1, 300, 300);
-    fireDocumentMetaMouseMove(325, 325);
     assert.equal(els[0].style.top,  '250px');
     assert.equal(els[0].style.left, '250px');
     assert.equal(els[1].style.top,  '125px');
     assert.equal(els[1].style.left, '125px');
 
-    // At this point we release the meta key, going
-    // back to all focused elements moving. Once
-    // again, the line below demarcates the drag,
-    // so previous to this only the first element
-    // should have moved 25px, then both move for
-    // another 50px.
-    fireDocumentMouseMove(325, 325);
-    fireDocumentMouseMove(375, 375);
-    fireDocumentMouseUp(375, 375);
+    // Meta key released in the middle of the move
+    dragElementWithMetaKeyChange(positionHandle1, [
+      [300, 300, true],
+      [325, 325, true],
+      [375, 375, false]
+    ]);
 
-    assert.equal(els[0].style.top,  '300px');
-    assert.equal(els[0].style.left, '300px');
+    assert.equal(els[0].style.top,  '325px');
+    assert.equal(els[0].style.left, '325px');
     assert.equal(els[1].style.top,  '175px');
     assert.equal(els[1].style.left, '175px');
 
@@ -510,39 +482,42 @@ describe('PositionableElementManager', function() {
 
     resizeHandle1 = getUiElement(els[0], '.resize-handle-se');
 
-    // Meta key depressed before resize start
-    fireMetaMouseDown(resizeHandle1, 200, 200);
-    fireDocumentMetaMouseMove(225, 225);
-    fireDocumentMetaMouseMove(250, 250);
-    fireDocumentMetaMouseUp(250, 250);
+    // Meta key depressed throughout
+    dragElementWithMetaKeyChange(resizeHandle1, [
+      [200, 200, true],
+      [225, 225, true],
+      [250, 250, true]
+    ]);
 
     assert.equal(els[0].style.width,  '150px');
     assert.equal(els[0].style.height, '150px');
     assert.equal(els[1].style.width,  '');
     assert.equal(els[1].style.height, '');
 
-    // Meta key depressed during resize move
-    fireMouseDown(resizeHandle1, 250, 250);
-    fireDocumentMouseMove(275, 275);
-    fireDocumentMetaMouseMove(300, 300);
-    fireDocumentMetaMouseUp(300, 300);
+    // Meta key depressed in the middle of the move
+    dragElementWithMetaKeyChange(resizeHandle1, [
+      [250, 250, false],
+      [275, 275, false],
+      [300, 300, true]
+    ]);
 
-    assert.equal(els[0].style.width,  '175px');
-    assert.equal(els[0].style.height, '175px');
+    assert.equal(els[0].style.width,  '200px');
+    assert.equal(els[0].style.height, '200px');
     assert.equal(els[1].style.width,  '125px');
     assert.equal(els[1].style.height, '125px');
 
-    // Meta key released during drag move
-    fireMetaMouseDown(resizeHandle1, 300, 300);
-    fireDocumentMetaMouseMove(325, 325);
-    fireDocumentMouseMove(350, 350);
-    fireDocumentMouseMove(375, 375);
-    fireDocumentMouseUp(375, 375);
+    // Meta key released in the middle of the move
+    dragElementWithMetaKeyChange(resizeHandle1, [
+      [300, 300, true],
+      [325, 325, true],
+      [350, 350, false],
+      [375, 375, false]
+    ]);
 
-    assert.equal(els[0].style.width,  '225px');
-    assert.equal(els[0].style.height, '225px');
-    assert.equal(els[1].style.width,  '150px');
-    assert.equal(els[1].style.height, '150px');
+    assert.equal(els[0].style.width,  '275px');
+    assert.equal(els[0].style.height, '275px');
+    assert.equal(els[1].style.width,  '175px');
+    assert.equal(els[1].style.height, '175px');
 
   });
 
@@ -555,41 +530,38 @@ describe('PositionableElementManager', function() {
     rotationHandle1 = getUiElement(els[0], '.rotation-handle');
 
     // Dragging se -> s -> sw
-    // Meta key depressed before rotate start
-    fireMouseOver(rotationHandle1, 200, 200);
-    fireMetaMouseDown(rotationHandle1, 200, 200);
-    fireDocumentMetaMouseMove(200, 200);
-    fireDocumentMetaMouseMove(150, 221);
-    fireDocumentMetaMouseMove(100, 200);
-    fireDocumentMetaMouseUp(100, 200);
+    // Meta key depressed throughout
+    dragElementWithMetaKeyChange(rotationHandle1, [
+      [200, 200, true],
+      [150, 221, true],
+      [100, 200, true]
+    ]);
 
     assert.equal(els[0].style.transform,  'rotate(90deg)');
     assert.equal(els[1].style.transform,  '');
 
     // Dragging sw -> w -> nw
     // Meta key depressed during rotate move
-    fireMouseDown(rotationHandle1, 100, 200);
-    fireDocumentMouseMove(100, 200);
-    fireDocumentMouseMove(79, 150);
-    fireDocumentMetaMouseMove(79, 150);
-    fireDocumentMetaMouseMove(100, 100);
-    fireDocumentMetaMouseUp(100, 100);
+    dragElementWithMetaKeyChange(rotationHandle1, [
+      [100, 200, false],
+      [79,  150, false],
+      [100, 100, true]
+    ]);
 
     assert.equal(els[0].style.transform,  'rotate(180deg)');
     assert.equal(els[1].style.transform,  'rotate(45deg)');
 
-    // Dragging nw -> n -> ne
+    // Dragging nw -> n -> ne -> se
     // Meta key released during rotate move
-    fireMetaMouseDown(rotationHandle1, 100, 100);
-    fireDocumentMetaMouseMove(100, 100);
-    fireDocumentMetaMouseMove(150, 79);
-    fireDocumentMouseMove(150, 79);
-    fireDocumentMouseMove(200, 100);
-    fireDocumentMouseUp(200, 100);
-    fireMouseOut(rotationHandle1, 200, 200);
+    dragElementWithMetaKeyChange(rotationHandle1, [
+      [100, 100, true],
+      [150, 79,  true],
+      [200, 100, false],
+      [200, 200, false]
+    ]);
 
-    assert.equal(els[0].style.transform,  'rotate(270deg)');
-    assert.equal(els[1].style.transform,  'rotate(90deg)');
+    assert.equal(els[0].style.transform,  'rotate(360deg)');
+    assert.equal(els[1].style.transform,  'rotate(180deg)');
 
   });
 
@@ -717,15 +689,14 @@ describe('PositionableElementManager', function() {
 
     whileFakeScrolled(500, () => {
       setupBox();
-
-      fireMouseDown(getUiElement(el, '.position-handle'), 150, 150);
-      fireDocumentMouseMove(150, 150);
-      fireDocumentMouseMove(200, 200);
-      fireDocumentMetaMouseMove(220, 220);
-      fireDocumentMetaMouseMove(250, 250);
-      fireDocumentMouseUp(250, 250);
-      assert.equal(el.style.left, '180px');
-      assert.equal(el.style.top,  '180px');
+      dragElementWithMetaKeyChange(getUiElement(el, '.position-handle'), [
+        [150, 150, false],
+        [200, 200, false],
+        [220, 220, true],
+        [250, 250, true]
+      ]);
+      assert.equal(el.style.left, '200px');
+      assert.equal(el.style.top,  '200px');
     });
 
   });
@@ -749,32 +720,34 @@ describe('PositionableElementManager', function() {
   it('should shift to background move after normal move', function() {
     setupBackgroundBox();
 
-    fireMouseDown(getUiElement(el, '.position-handle'), 150, 150);
-    fireDocumentMouseMove(200, 150);
-    fireDocumentMouseMove(250, 150);
-    fireDocumentCtrlMouseMove(300, 150);
-    fireDocumentCtrlMouseMove(330, 150);
-    fireDocumentCtrlMouseUp(330, 150);
+    dragElementWithCtrlKeyChange(getUiElement(el, '.position-handle'), [
+      [150, 150, false],
+      [200, 150, false],
+      [250, 150, false],
+      [300, 150, true],
+      [330, 150, true]
+    ]);
 
     assert.equal(el.style.top,   '100px');
     assert.equal(el.style.left,  '200px');
-    assert.equal(el.style.backgroundPosition,  '50px 40px');
+    assert.equal(el.style.backgroundPosition,  '100px 40px');
 
   });
 
   it('should shift to background move after resize move', function() {
     setupBackgroundBox();
 
-    fireMouseDown(getUiElement(el, '.resize-handle-se'), 200, 200);
-    fireDocumentMouseMove(250, 250);
-    fireDocumentMouseMove(300, 300);
-    fireDocumentCtrlMouseMove(350, 350);
-    fireDocumentCtrlMouseMove(400, 400);
-    fireDocumentCtrlMouseUp(400, 400);
+    dragElementWithCtrlKeyChange(getUiElement(el, '.resize-handle-se'), [
+      [200, 200, false],
+      [250, 250, false],
+      [300, 300, false],
+      [350, 350, true],
+      [400, 400, true]
+    ]);
 
     assert.equal(el.style.width,   '200px');
     assert.equal(el.style.height,  '200px');
-    assert.equal(el.style.backgroundPosition,  '70px 90px');
+    assert.equal(el.style.backgroundPosition,  '120px 140px');
 
   });
 

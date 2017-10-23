@@ -37,6 +37,28 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(panel.el.style.bottom, '400px');
   });
 
+  it('should not error when or ctrl key depressed', function() {
+    fireMouseDown(panel.el, 20, 780);
+    fireDocumentMetaKeyDown(KeyManager.META_KEY);
+    fireDocumentCtrlKeyDown(KeyManager.CTRL_KEY);
+    fireDocumentMetaMouseMove(400, 400);
+    fireDocumentMetaMouseUp(400, 400);
+    assert.equal(panel.el.style.left, '400px');
+    assert.equal(panel.el.style.bottom, '400px');
+  });
+
+  it('should be stay fixed while scrolling during drag', function() {
+
+    fireMouseDown(panel.el, 20, 780);
+    fireDocumentMouseMove(20, 580);
+    whileFakeScrolled(500, () => {
+      panel.onScroll();
+    });
+    fireDocumentMouseUp(20, 580);
+    assert.equal(panel.el.style.left, '20px');
+    assert.equal(panel.el.style.bottom, '220px');
+  });
+
   it('should return to original position after double click', function() {
     dragElement(panel.el, 20, 780, 400, 400);
     fireDoubleClick(panel.el);

@@ -7,9 +7,7 @@
  * ---------------------------- */
 
 // - TODO: rotated box won't reflect
-// - TODO: select multiple and scroll, if you release the meta key and don't drag any more, it will lose a couple of the elements
-// ... probably need to use a key manager to handle this.
-// - cursors working ok??
+// - TODO: cursors working ok??
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: more stress testing!
@@ -858,63 +856,66 @@ class DragTarget extends BrowserEventTarget {
 
   constructor(el) {
     super(el);
-    this.setupDragEvents();
     this.dragging = false;
     this.hovering = false;
+    this.setupDragEvents();
   }
 
   // --- Setup
 
+  setupDragIntents() {
+    this.setupDragIntentEvents();
+  }
+
   setupCtrlKeyReset() {
-    this.ctrlKeyReset = true;
+    this.setupKeyEvents();
+    this.resetsOnCtrlKey = true;
   }
 
   setupMetaKeyReset() {
-    this.metaKeyReset = true;
+    this.setupKeyEvents();
+    this.resetsOnMetaKey = true;
   }
 
-  allowDoubleClick() {
+  setupDoubleClick() {
     this.bindEvent('dblclick', this.onDoubleClick);
     this.bindEvent('contextmenu', this.onContextMenu);
   }
 
-  disableEventsForInteractiveElements() {
+  setupInteractiveElements() {
     var els = this.el.querySelectorAll(DragTarget.INTERACTIVE_ELEMENTS_SELECTOR);
-    els.forEach(el => {
+    for (let i = 0, el; el = els[i]; i++) {
       el.addEventListener('mousedown', this.stopEventPropagation);
       el.addEventListener('click', this.stopEventPropagation);
-    });
+    }
   }
 
-  setupDragIntents() {
-    this.bindEvent('mouseover', this.onMouseOver);
-    this.bindEvent('mouseout', this.onMouseOut);
+  // --- Class Defined Events (to override)
+
+  onClick()           {}
+  onDoubleClick()     {}
+  onDragIntentStart() {}
+  onDragIntentStop()  {}
+
+  onDragStart() {
+    this.ctrlDoubleClickTimer = null;
+    this.disableUserSelect();
   }
 
-  setupDragEvents() {
-    this.bindEvent('mousedown', this.onMouseDown);
-    this.bindEvent('click',     this.onNativeClick);
-    this.bindEvent('dragstart', this.onNativeDragStart);
-
-    // These two events are actually on the document, so bind manually.
-    this.onMouseMove = this.onMouseMove.bind(this);
-    this.onMouseUp   = this.onMouseUp.bind(this);
-
-    this.onScroll    = this.onScroll.bind(this);
+  onDragMove(evt)  {
+    this.setDragData(evt);
   }
 
-  onNativeDragStart(evt) {
-    // Image elements that are children to a
-    // drag target should not be draggable.
-    evt.preventDefault();
+  onDragStop(evt)  {
+    this.clearUserSelect();
+    this.checkDragIntentStopped(evt);
   }
 
-  onNativeClick(evt) {
-    // Draggable links should not be followed when clicked.
-    evt.preventDefault();
-  }
 
-  // --- Events
+  // --- Private
+
+
+  // --- Native Events
 
   onMouseOver(evt) {
     evt.stopPropagation();
@@ -944,37 +945,11 @@ class DragTarget extends BrowserEventTarget {
       clientY:  evt.clientY
     };
 
-    //this.resetTarget = null;
-
-    document.documentElement.addEventListener('mousemove', this.onMouseMove);
-    document.documentElement.addEventListener('mouseup', this.onMouseUp);
-    document.addEventListener('scroll', this.onScroll);
+    this.attachDocumentListeners();
+    this.attachOptionalKeyListeners();
   }
 
   onMouseMove(evt) {
-
-    if (this.canResetDrag(evt)) {
-      this.resetDrag(evt);
-      return;
-    }
-
-    /*
-    // TODO: better way to handle this?
-    if (this.resetTarget) {
-      // Setting the reset target flags this element for a
-      // reset. In practice this means that a canceling key
-      // (such as ctrl) has interrupted the flow and is telling
-      // the drag to reset itself, so call a mouseup and mousedown
-      // here. However, since we're leveraging the mousemove event
-      // to do this, the actual event may be on a child element
-      // so resetTarget so that it can be picked up and used later
-      // if needed.
-      evt.resetTarget = this.resetTarget;
-      this.onMouseUp(evt);
-      this.onMouseDown(evt);
-    }
-    */
-
     this.lastMouseEvent = evt;
 
     if (!this.dragging) {
@@ -993,46 +968,66 @@ class DragTarget extends BrowserEventTarget {
     }
     this.dragOrigin = null;
     this.lastMouseEvent = null;
+    this.removeDocumentListeners();
+    this.removeOptionalKeyListeners();
+  }
+
+  onScroll() {
+    this.fireScrolledMouseMove();
+  }
+
+  onKeyDown(evt) {
+    this.checkDragReset(evt);
+  }
+
+  onKeyUp(evt) {
+    this.checkDragReset(evt);
+  }
+
+  onNativeDragStart(evt) {
+    // Image elements that are children to a
+    // drag target should not be draggable.
+    evt.preventDefault();
+  }
+
+  onNativeClick(evt) {
+    // Draggable links should not be followed when clicked.
+    evt.preventDefault();
+  }
+
+  onContextMenu(evt) {
+    if (evt.ctrlKey) {
+      evt.preventDefault();
+      this.handleCtrlDoubleClick(evt);
+    }
+  }
+
+  // --- Dragging
+
+  setupDragEvents() {
+    this.bindEvent('mousedown', this.onMouseDown);
+    this.bindEvent('click',     this.onNativeClick);
+    this.bindEvent('dragstart', this.onNativeDragStart);
+
+    // These two events are actually on the document, so bind manually.
+    this.onMouseMove = this.onMouseMove.bind(this);
+    this.onMouseUp   = this.onMouseUp.bind(this);
+    this.onScroll    = this.onScroll.bind(this);
+  }
+
+  attachDocumentListeners() {
+    document.documentElement.addEventListener('mousemove', this.onMouseMove);
+    document.documentElement.addEventListener('mouseup', this.onMouseUp);
+    document.addEventListener('scroll', this.onScroll);
+  }
+
+  removeDocumentListeners() {
     document.documentElement.removeEventListener('mousemove', this.onMouseMove);
     document.documentElement.removeEventListener('mouseup', this.onMouseUp);
     document.removeEventListener('scroll', this.onScroll);
   }
 
-  onScroll() {
-
-    // Elements that are relative to the page (not fixed) should also be dragged
-    // while scrolling, as this will affect their positioning, so need to force
-    // a mousemove event here. Note that there is no way to set pageX/Y on
-    // triggered events, so we can't use dispatchEvent.
-    //
-    // Also very random note here that my Logitech Performance MX mouse has a
-    // bug where it fires alternating mousedown/mouseup events while using the
-    // mousewheel to scroll, so don't expect this to work with it!
-    this.onMouseMove({
-      clientX:  this.lastMouseEvent.clientX,
-      clientY:  this.lastMouseEvent.clientY,
-      pageX:    this.lastMouseEvent.clientX + window.scrollX,
-      pageY:    this.lastMouseEvent.clientY + window.scrollY,
-      shiftKey: this.lastMouseEvent.shiftKey,
-      metaKey:  this.lastMouseEvent.metaKey,
-      ctrlKey:  this.lastMouseEvent.ctrlKey,
-      altKey:   this.lastMouseEvent.altKey
-    });
-  }
-
-  /*
-  onKeyDown(evt) {
-    this.resetDrag();
-  }
-
-  onKeyUp(evt) {
-    this.resetDrag();
-  }
-  */
-
-  // --- Data
-
-  setEventDrag(evt) {
+  setDragData(evt) {
     if (!evt.drag) {
 
       // The page and client positions are for the most part
@@ -1060,78 +1055,11 @@ class DragTarget extends BrowserEventTarget {
     }
   }
 
-  onContextMenu(evt) {
-    if (evt.ctrlKey) {
-      evt.preventDefault();
-      this.handleCtrlDoubleClick(evt);
-    }
-  }
+  // --- Drag Intents
 
-  // --- Overrides
-
-  onClick() {}
-  onDoubleClick() {}
-
-  onDragIntentStart() {}
-  onDragIntentStop()  {}
-
-  onDragStart() {
-    this.ctrlDoubleClickTimer = null;
-    this.disableUserSelect();
-  }
-
-  onDragMove(evt)  {
-    this.setEventDrag(evt);
-  }
-
-  onDragStop(evt)  {
-    this.clearUserSelect();
-    this.checkDragIntentStopped(evt);
-  }
-
-  // --- Private
-
-  canResetDrag(evt) {
-    return (this.ctrlKeyReset && evt.ctrlKey !== this.lastMouseEvent.ctrlKey) ||
-           (this.metaKeyReset && evt.metaKey !== this.lastMouseEvent.metaKey);
-
-  }
-
-  resetDrag(evt) {
-    if (this.dragging) {
-      // Certain drag targets require a change in keys to reset the drag.
-      // We can accomplish this by firing mouseup, mousedown, and mousemove
-      // events in to simulate the drag being stopped and restarted again.
-      // The current mouse move will not continue on, so refire it to be
-      // sure that we remain in a dragging state, as the first mousedown
-      // will not yet trigger the actual drag.
-      this.onMouseUp(this.lastMouseEvent);
-      this.onMouseDown(evt);
-      this.onMouseMove(evt);
-    }
-  }
-
-  getUpdatedMouseEvent(type, keyEvt, posEvt) {
-    return new MouseEvent(type, {
-      altKey:   keyEvt.altKey,
-      metaKey:  keyEvt.metaKey,
-      ctrlKey:  keyEvt.ctrlKey,
-      shiftKey: keyEvt.shiftKey,
-
-      button:  posEvt.button,
-      screenX: posEvt.screenX,
-      screenY: posEvt.screenY,
-      clientX: posEvt.clientX,
-      clientY: posEvt.clientY
-    });
-  }
-
-  disableUserSelect() {
-    document.documentElement.style.userSelect = 'none';
-  }
-
-  clearUserSelect() {
-    document.documentElement.style.userSelect = '';
+  setupDragIntentEvents() {
+    this.bindEvent('mouseover', this.onMouseOver);
+    this.bindEvent('mouseout', this.onMouseOut);
   }
 
   checkDragIntentStarted(evt) {
@@ -1146,6 +1074,108 @@ class DragTarget extends BrowserEventTarget {
     }
   }
 
+  // --- Key Resetting
+
+  setupKeyEvents() {
+    if (!this.hasKeyReset()) {
+      this.onKeyDown = this.onKeyDown.bind(this);
+      this.onKeyUp   = this.onKeyUp.bind(this);
+    }
+  }
+
+  hasKeyReset() {
+    return this.resetsOnMetaKey || this.resetsOnCtrlKey;
+  }
+
+  attachOptionalKeyListeners() {
+    if (this.hasKeyReset()) {
+      document.documentElement.addEventListener('keydown', this.onKeyDown);
+      document.documentElement.addEventListener('keyup', this.onKeyUp);
+    }
+  }
+
+  removeOptionalKeyListeners() {
+    if (this.hasKeyReset()) {
+      document.documentElement.removeEventListener('keydown', this.onKeyDown);
+      document.documentElement.removeEventListener('keyup', this.onKeyUp);
+    }
+  }
+
+  metaKeysChanged(keyEvt) {
+    return (this.resetsOnCtrlKey && keyEvt.ctrlKey !== this.lastMouseEvent.ctrlKey) ||
+           (this.resetsOnMetaKey && keyEvt.metaKey !== this.lastMouseEvent.metaKey);
+
+  }
+
+  checkDragReset(keyEvt) {
+    if (this.metaKeysChanged(keyEvt)) {
+      // Certain drag targets require a change in keys to reset the drag.
+      // We can accomplish this by capturing the keys and firing mouseup,
+      // mousedown, and mousemove events in order to simulate the drag being
+      // stopped and restarted again. The firing of mousemove is to ensure
+      // that the target remains in a "dragging" state. To represent the
+      // current state of the drag correctly, the mouseup event should be
+      // fired with the last mouse event object, and the new drag should
+      // be started with a merged object that represents the position that
+      // the mouse moved last with the current depressed keys from the
+      // key events we've just received.
+      var evt = this.getMergedKeyEvent(keyEvt, this.lastMouseEvent);
+      this.onMouseUp(this.lastMouseEvent);
+      this.onMouseDown(evt);
+      this.onMouseMove(evt);
+    }
+  }
+
+  getMergedKeyEvent(keyEvt, posEvt) {
+    return {
+      altKey:   keyEvt.altKey,
+      metaKey:  keyEvt.metaKey,
+      ctrlKey:  keyEvt.ctrlKey,
+      shiftKey: keyEvt.shiftKey,
+
+      pageX:   posEvt.pageX,
+      pageY:   posEvt.pageY,
+      clientX: posEvt.clientX,
+      clientY: posEvt.clientY,
+      button:  posEvt.button
+    };
+  }
+
+  // --- Scrolling
+
+  fireScrolledMouseMove() {
+    // Elements that are relative to the page (not fixed) should also be dragged
+    // while scrolling, as this will affect their positioning, so need to force
+    // a mousemove event here. Note that there is no way to set pageX/Y on
+    // triggered events, so we can't use dispatchEvent. Instead create a fake
+    // event object and hand off to onMouseMove.
+    //
+    // Also very random note here that my Logitech Performance MX mouse has a
+    // bug where it fires alternating mousedown/mouseup events while using the
+    // mousewheel to scroll, so don't expect this to work with it!
+    this.onMouseMove({
+      clientX:  this.lastMouseEvent.clientX,
+      clientY:  this.lastMouseEvent.clientY,
+      pageX:    this.lastMouseEvent.clientX + window.scrollX,
+      pageY:    this.lastMouseEvent.clientY + window.scrollY,
+      shiftKey: this.lastMouseEvent.shiftKey,
+      metaKey:  this.lastMouseEvent.metaKey,
+      ctrlKey:  this.lastMouseEvent.ctrlKey,
+      altKey:   this.lastMouseEvent.altKey,
+      button:   this.lastMouseEvent.button
+    });
+  }
+
+  // --- Other
+
+  disableUserSelect() {
+    document.documentElement.style.userSelect = 'none';
+  }
+
+  clearUserSelect() {
+    document.documentElement.style.userSelect = '';
+  }
+
   handleCtrlDoubleClick(evt) {
     if (this.ctrlDoubleClickTimer) {
       this.onDoubleClick(evt);
@@ -1154,13 +1184,6 @@ class DragTarget extends BrowserEventTarget {
       this.ctrlDoubleClickTimer = null;
     }, DragTarget.CTRL_DOUBLE_CLICK_TIMEOUT);
   }
-
-  /*
-  // TODO: can this be removed?
-  dragReset(evt) {
-    this.resetTarget = this.el;
-  }
-  */
 
 }
 
@@ -1171,9 +1194,10 @@ class DraggableElement extends DragTarget {
   //static get DRAGGABLE_CLASS()       { return 'draggable-element'; }
   //static get DRAGGING_ACTIVE_CLASS() { return 'draggable-element--active'; }
 
-  constructor(el) {
+  constructor(el, isFixed) {
     super(el);
     this.setupPosition();
+    this.isFixed = isFixed;
   }
 
   setupPosition() {
@@ -1220,8 +1244,8 @@ class DraggableElement extends DragTarget {
     super.onDragMove(evt);
     this.cssH = this.dragStartH.clone();
     this.cssV = this.dragStartV.clone();
-    this.cssH.add(evt.drag.x);
-    this.cssV.add(evt.drag.y);
+    this.cssH.add(this.isFixed ? evt.drag.clientX : evt.drag.pageX);
+    this.cssV.add(this.isFixed ? evt.drag.clientY : evt.drag.pageY);
     this.render();
   }
 
@@ -1316,10 +1340,10 @@ class PositionHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, listener) {
     super(root.getElementById('position-handle'));
-    this.allowDoubleClick();
+    this.setupDoubleClick();
     this.setupDragIntents();
-    this.setupMetaKeyReset();
     this.setupCtrlKeyReset();
+    this.setupMetaKeyReset();
 
     this.listener = listener;
     /*
@@ -1381,10 +1405,10 @@ class ResizeHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, dir, listener) {
     super(root.getElementById('resize-handle-' + dir));
-    this.allowDoubleClick();
+    this.setupDoubleClick();
     this.setupDragIntents();
-    this.setupMetaKeyReset();
     this.setupCtrlKeyReset();
+    this.setupMetaKeyReset();
 
     this.dir = dir;
     this.listener = listener;
@@ -2470,20 +2494,6 @@ class PositionableElement extends BrowserEventTarget {
     var handle = this.getHandleForSide(side);
     return handle.getPosition()[this.getAxisForSide(side)];
  }
-
-  /*
-  resetDrag(evt) {
-    this.handles.n.resetDrag(evt);
-    this.handles.e.resetDrag(evt);
-    this.handles.s.resetDrag(evt);
-    this.handles.w.resetDrag(evt);
-    this.handles.ne.resetDrag(evt);
-    this.handles.se.resetDrag(evt);
-    this.handles.sw.resetDrag(evt);
-    this.handles.nw.resetDrag(evt);
-    this.positionHandle.resetDrag(evt);
-  }
-  */
 
   /*
   getCenterAlignValue(type) {
@@ -4677,8 +4687,8 @@ class ControlPanel extends DraggableElement {
   static get LONG_SELECTOR_CLASS()  { return 'element-area-selector--long'; }
 
   constructor(root, listener) {
-    super(root.getElementById('control-panel'));
-    this.disableEventsForInteractiveElements();
+    super(root.getElementById('control-panel'), true);
+    this.setupInteractiveElements();
 
     this.listener = listener;
 
@@ -4689,7 +4699,7 @@ class ControlPanel extends DraggableElement {
     this.setupUiEvents(root);
     this.setupRenderedElements(root);
     this.setupWindows();
-    this.allowDoubleClick();
+    this.setupDoubleClick();
   }
 
   setupAreas(root) {

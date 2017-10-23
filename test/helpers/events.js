@@ -26,14 +26,6 @@
     fireMouseEvent('mouseup', el, x, y, opt);
   }
 
-  function fireClick(el, x, y, opt) {
-    fireMouseEvent('click', el, x, y, opt);
-  }
-
-  function fireDoubleClick(el, x, y, opt) {
-    fireMouseEvent('dblclick', el, x, y, opt);
-  }
-
   function fireMouseOver(el, x, y, opt) {
     fireMouseEvent('mouseover', el, x, y, opt);
   }
@@ -50,60 +42,19 @@
     fireMouseEvent('mouseleave', el, x, y, opt);
   }
 
-  function fireMetaMouseDown(el, x, y) {
-    fireMouseDown(el, x, y, { metaKey: true });
-  }
-
   function fireContextMenu(el, x, y, opt) {
     fireMouseEvent('contextmenu', el, x, y, opt);
   }
 
-  /*-------------------------] Drag Events [--------------------------*/
-
-  function fireDragElement(el, coords, opt) {
-    var x, y;
-    for (let i = 0; i < coords.length; i += 2) {
-      x = coords[i];
-      y = coords[i + 1];
-      if (i === 0) {
-        fireMouseOver(el, x, y, opt);
-        fireMouseDown(el, x, y, opt);
-        fireDocumentMouseMove(x, y, opt);
-      } else {
-        fireDocumentMouseMove(x, y, opt);
-      }
-    }
-    fireDocumentMouseUp(x, y, opt);
-    if (opt.ctrlKey) {
-      fireContextMenu(el, x, y, opt);
-    }
-    fireMouseOut(el, x, y, opt);
+  function fireClick(el, x, y, opt) {
+    fireMouseEvent('click', el, x, y, opt);
   }
 
-  function dragElement(el) {
-    var coords = Array.prototype.slice.call(arguments, 1);
-    fireDragElement(el, coords, {});
+  function fireDoubleClick(el, x, y, opt) {
+    fireMouseEvent('dblclick', el, x, y, opt);
   }
 
-  function shiftDragElement(el) {
-    var coords = Array.prototype.slice.call(arguments, 1);
-    fireDragElement(el, coords, { shiftKey: true });
-  }
-
-  function ctrlDragElement(el) {
-    var coords = Array.prototype.slice.call(arguments, 1);
-    fireDragElement(el, coords, { ctrlKey: true });
-  }
-
-  function metaDragElement(el) {
-    var coords = Array.prototype.slice.call(arguments, 1);
-    fireDragElement(el, coords, { metaKey: true });
-  }
-
-  function shiftCtrlDragElement(el) {
-    var coords = Array.prototype.slice.call(arguments, 1);
-    fireDragElement(el, coords, { shiftKey: true, ctrlKey: true });
-  }
+  /*-------------------------] Document Mouse Events [--------------------------*/
 
   function fireDocumentMouseMove(x, y, opt) {
     fireMouseMove(document.documentElement, x, y, opt);
@@ -113,28 +64,12 @@
     fireMouseUp(document.documentElement, x, y, opt);
   }
 
-  function fireDocumentShiftMouseMove(x, y) {
-    fireDocumentMouseMove(x, y, { shiftKey: true });
-  }
-
-  function fireDocumentShiftMouseUp(x, y) {
-    fireDocumentMouseUp(x, y, { shiftKey: true });
-  }
-
   function fireDocumentMetaMouseMove(x, y) {
-    fireDocumentMouseMove(x, y, { metaKey: true });
+    fireMouseMove(document.documentElement, x, y, { metaKey: true });
   }
 
   function fireDocumentMetaMouseUp(x, y) {
-    fireDocumentMouseUp(x, y, { metaKey: true });
-  }
-
-  function fireDocumentCtrlMouseMove(x, y) {
-    fireDocumentMouseMove(x, y, { ctrlKey: true });
-  }
-
-  function fireDocumentCtrlMouseUp(x, y) {
-    fireDocumentMouseUp(x, y, { ctrlKey: true });
+    fireMouseUp(document.documentElement, x, y, { metaKey: true });
   }
 
   /*-------------------------] Click Events [--------------------------*/
@@ -152,6 +87,91 @@
   function ctrlClickElement(el) {
     clickElement(el, { ctrlKey: true });
     fireContextMenu(el, 0, 0, { ctrlKey: true });
+  }
+
+  /*-------------------------] Drag Events [--------------------------*/
+
+  function dragElement(el) {
+    executeElementDrag(el, getCoordsForSimpleDrag(arguments));
+  }
+
+  function ctrlDragElement(el) {
+    executeElementDrag(el, getCoordsForSimpleDrag(arguments, { ctrlKey: true }));
+  }
+
+  function metaDragElement(el) {
+    executeElementDrag(el, getCoordsForSimpleDrag(arguments, { metaKey: true }));
+  }
+
+  function shiftDragElement(el) {
+    executeElementDrag(el, getCoordsForSimpleDrag(arguments, { shiftKey: true }));
+  }
+
+  function shiftCtrlDragElement(el) {
+    executeElementDrag(el, getCoordsForSimpleDrag(arguments, { shiftKey: true, ctrlKey: true }));
+  }
+
+  function dragElementWithCtrlKeyChange(el, coords) {
+    executeElementDrag(el, getCoordsForDetailedDrag(coords, 'ctrlKey'));
+  }
+
+  function dragElementWithMetaKeyChange(el, coords) {
+    executeElementDrag(el, getCoordsForDetailedDrag(coords, 'metaKey'));
+  }
+
+  // --- Private
+
+  function executeElementDrag(el, points) {
+    var x, y, opt;
+    for (let i = 0, point; point = points[i]; i++) {
+      checkDragKeysChanged(point[2], opt);
+      x   = point[0];
+      y   = point[1];
+      opt = point[2];
+      if (i === 0) {
+        fireMouseOver(el, x, y, opt);
+        fireMouseDown(el, x, y, opt);
+      }
+      fireDocumentMouseMove(x, y, opt);
+    }
+    fireDocumentMouseUp(x, y, opt);
+    if (opt.ctrlKey) {
+      fireContextMenu(el, x, y, opt);
+    }
+    fireMouseOut(el, x, y, opt);
+  }
+
+  function checkDragKeysChanged(opt, lastOpt) {
+    lastOpt = lastOpt || {};
+    checkKeyChangeAndFire(opt.altKey,   lastOpt.altKey,   'Alt', opt);
+    checkKeyChangeAndFire(opt.metaKey,  lastOpt.metaKey,  'Meta', opt);
+    checkKeyChangeAndFire(opt.shiftKey, lastOpt.shiftKey, 'Shift', opt);
+    checkKeyChangeAndFire(opt.ctrlKey,  lastOpt.ctrlKey,  'Control', opt);
+  }
+
+  function checkKeyChangeAndFire(down, wasDown, name, opt) {
+    if (down && !wasDown) {
+      fireDocumentKeyDown(name, opt);
+    } else if (!down && wasDown) {
+      fireDocumentKeyUp(name, opt);
+    }
+  }
+
+  function getCoordsForSimpleDrag(args, opt) {
+    // Passing in arguments de-optimizes the function, but
+    // we're not really concerned about this for testing.
+    var flat = Array.prototype.slice.call(args, 1), coords = [];
+    for (let i = 0; i < flat.length; i += 2) {
+      coords.push([flat[i], flat[i + 1], opt || {}]);
+    }
+    return coords;
+  }
+
+  function getCoordsForDetailedDrag(coords, name) {
+    coords.forEach(c => {
+      c[2] = { [name]: c[2] };
+    });
+    return coords;
   }
 
   /*-------------------------] Key Events [--------------------------*/
@@ -215,36 +235,32 @@
 
   /*-------------------------] Export [--------------------------*/
 
-  window.fireMouseDown     = fireMouseDown;
-  window.fireMouseMove     = fireMouseMove;
-  window.fireMouseUp       = fireMouseUp;
-  window.fireMouseOver     = fireMouseOver;
-  window.fireMouseOut      = fireMouseOut;
-  window.fireMouseEnter    = fireMouseEnter;
-  window.fireMouseLeave    = fireMouseLeave;
-  window.fireMetaMouseDown = fireMetaMouseDown;
-
-  window.fireDocumentMouseMove      = fireDocumentMouseMove;
-  window.fireDocumentMouseUp        = fireDocumentMouseUp;
-  window.fireDocumentShiftMouseMove = fireDocumentShiftMouseMove;
-  window.fireDocumentShiftMouseUp   = fireDocumentShiftMouseUp;
-  window.fireDocumentMetaMouseMove  = fireDocumentMetaMouseMove;
-  window.fireDocumentMetaMouseUp    = fireDocumentMetaMouseUp;
-  window.fireDocumentCtrlMouseMove  = fireDocumentCtrlMouseMove;
-  window.fireDocumentCtrlMouseUp    = fireDocumentCtrlMouseUp;
-
+  window.fireMouseDown   = fireMouseDown;
+  window.fireMouseMove   = fireMouseMove;
+  window.fireMouseUp     = fireMouseUp;
+  window.fireMouseOver   = fireMouseOver;
+  window.fireMouseOut    = fireMouseOut;
+  window.fireMouseEnter  = fireMouseEnter;
+  window.fireMouseLeave  = fireMouseLeave;
   window.fireDoubleClick = fireDoubleClick;
   window.fireContextMenu = fireContextMenu;
 
-  window.dragElement          = dragElement;
-  window.metaDragElement      = metaDragElement;
-  window.ctrlDragElement      = ctrlDragElement;
-  window.shiftDragElement     = shiftDragElement;
-  window.shiftCtrlDragElement = shiftCtrlDragElement;
+  window.fireDocumentMouseMove     = fireDocumentMouseMove;
+  window.fireDocumentMouseUp       = fireDocumentMouseUp;
+  window.fireDocumentMetaMouseMove = fireDocumentMetaMouseMove;
+  window.fireDocumentMetaMouseUp   = fireDocumentMetaMouseUp;
 
   window.clickElement      = clickElement;
   window.ctrlClickElement  = ctrlClickElement;
   window.shiftClickElement = shiftClickElement;
+
+  window.dragElement                  = dragElement;
+  window.metaDragElement              = metaDragElement;
+  window.ctrlDragElement              = ctrlDragElement;
+  window.shiftDragElement             = shiftDragElement;
+  window.shiftCtrlDragElement         = shiftCtrlDragElement;
+  window.dragElementWithCtrlKeyChange = dragElementWithCtrlKeyChange;
+  window.dragElementWithMetaKeyChange = dragElementWithMetaKeyChange;
 
   window.fireDocumentKeyDown      = fireDocumentKeyDown;
   window.fireDocumentShiftKeyDown = fireDocumentShiftKeyDown;

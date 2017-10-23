@@ -96,15 +96,13 @@ describe('DragTarget', function() {
 
     whileScrolled(500, () => {
       setupAbsolute();
-      fireMouseDown(el, 50, 50);
-      fireDocumentMouseMove(50, 100);
+      dragElement(el, 50, 50, 50, 100);
       assert.equal(target.lastDragEvent.drag.x, 0);
       assert.equal(target.lastDragEvent.drag.y, 50);
       assert.equal(target.lastDragEvent.drag.origin.pageX, 50);
       assert.equal(target.lastDragEvent.drag.origin.pageY, 550);
       assert.equal(target.lastDragEvent.drag.origin.clientX, 50);
       assert.equal(target.lastDragEvent.drag.origin.clientY, 50);
-      fireDocumentMouseUp(50, 100);
     });
 
   });
@@ -201,7 +199,7 @@ describe('DragTarget', function() {
     var select = appendByTag(el, 'select');
 
     target = new Target(el);
-    target.disableEventsForInteractiveElements();
+    target.setupInteractiveElements();
 
     dragElement(p,      0, 0, 50, 50);
     dragElement(h1,     0, 0, 50, 50);
@@ -236,10 +234,12 @@ describe('DragTarget', function() {
     target = new Target(el);
     target.setupCtrlKeyReset();
 
-    fireMouseDown(el, 50, 50);
-    fireDocumentMouseMove(50, 100);
-    fireDocumentCtrlMouseMove(50, 150);
-    fireDocumentCtrlMouseUp(50, 100);
+    dragElementWithCtrlKeyChange(el, [
+      [50, 50,  false],
+      [50, 100, false],
+      [50, 150, true],
+      [50, 100, true]
+    ]);
 
     assert.equal(target.dragStarts, 2);
     assert.equal(target.dragStops, 2);
@@ -250,25 +250,43 @@ describe('DragTarget', function() {
     target = new Target(el);
     target.setupMetaKeyReset();
 
-    fireMouseDown(el, 50, 50);
-    fireDocumentMouseMove(50, 100);
-    fireDocumentMetaMouseMove(50, 150);
-    fireDocumentMetaMouseUp(50, 100);
+    dragElementWithMetaKeyChange(el, [
+      [50, 50,  false],
+      [50, 100, false],
+      [50, 150, true],
+      [50, 100, true]
+    ]);
 
     assert.equal(target.dragStarts, 2);
     assert.equal(target.dragStops, 2);
   });
 
+  it('should reset the drag when meta key depressed after scroll', function() {
+    setupAbsolute();
+    target.setupMetaKeyReset();
+
+    fireMouseDown(el, 50, 50);
+    whileFakeScrolled(500, () => {
+      target.onScroll();
+    });
+    fireDocumentMetaKeyDown(KeyManager.META_KEY);
+    fireDocumentMetaMouseMove(100, 600);
+    fireDocumentMetaMouseUp(100, 600);
+
+    assert.equal(target.lastDragEvent.drag.x, 50);
+    assert.equal(target.lastDragEvent.drag.y, 50);
+  });
+
   it('should trigger double click', function() {
     setupStatic();
-    target.allowDoubleClick();
+    target.setupDoubleClick();
     fireDoubleClick(el, 100, 100);
     assert.equal(target.doubleClicked, true);
   });
 
   it('should trigger double click with ctrl key', function() {
     setupStatic();
-    target.allowDoubleClick();
+    target.setupDoubleClick();
     ctrlClickElement(el, 100, 100);
     ctrlClickElement(el, 100, 100);
     assert.equal(target.doubleClicked, true);
@@ -276,7 +294,7 @@ describe('DragTarget', function() {
 
   it('should not trigger double click after drag started', function() {
     setupStatic();
-    target.allowDoubleClick();
+    target.setupDoubleClick();
     ctrlDragElement(el, 100, 100, 200, 200);
     ctrlDragElement(el, 100, 100, 200, 200);
     assert.equal(target.doubleClicked, false);
