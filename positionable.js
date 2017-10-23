@@ -8,8 +8,8 @@
 
 // - TODO: cleanup!!
 // - TODO: more stress testing!
+// - TODO: selector for multiple elements?
 // - TODO: check that each class only knows about itself to as much a degree as possible
-// - TODO: check control panel output when reflecting (nudging?)
 // - TODO: clean these constants up by moving them into AppController
 // - TODO: rotated box won't reflect
 // - TODO: release!
@@ -4420,6 +4420,7 @@ class PositionableElementManager {
     this.focusedElements.forEach(el => {
       el.resize(x, y, dir);
     });
+    this.listener.onPositionUpdated();
     this.listener.onDimensionsUpdated();
   }
 
