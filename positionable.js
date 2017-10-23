@@ -6,18 +6,16 @@
  *
  * ---------------------------- */
 
-// - TODO: rotated box won't reflect
-// - TODO: cursors working ok??
 // - TODO: cleanup!!
-// - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: more stress testing!
-// - TODO: release!
+// - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: check control panel output when reflecting (nudging?)
+// - TODO: clean these constants up by moving them into AppController
+// - TODO: rotated box won't reflect
+// - TODO: release!
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 const PLATFORM_IS_MAC    = /mac/i.test(navigator.platform);
-
-// TODO: clean these up by moving them into AppController
 
 
 /*-------------------------] Utilities [--------------------------*/
@@ -908,7 +906,6 @@ class DragTarget extends BrowserEventTarget {
 
   onDragStop(evt)  {
     this.clearUserSelect();
-    this.checkDragIntentStopped(evt);
   }
 
 
@@ -919,14 +916,18 @@ class DragTarget extends BrowserEventTarget {
 
   onMouseOver(evt) {
     evt.stopPropagation();
-    this.checkDragIntentStarted(evt);
+    if (!this.hovering) {
+      this.onDragIntentStart(evt);
+    }
     this.hovering = true;
   }
 
   onMouseOut(evt) {
     evt.stopPropagation();
+    if (this.hovering) {
+      this.onDragIntentStop(evt);
+    }
     this.hovering = false;
-    this.checkDragIntentStopped(evt);
   }
 
   onMouseDown(evt) {
@@ -1060,18 +1061,6 @@ class DragTarget extends BrowserEventTarget {
   setupDragIntentEvents() {
     this.bindEvent('mouseover', this.onMouseOver);
     this.bindEvent('mouseout', this.onMouseOut);
-  }
-
-  checkDragIntentStarted(evt) {
-    if (!this.dragging && !this.hovering) {
-      this.onDragIntentStart(evt);
-    }
-  }
-
-  checkDragIntentStopped(evt) {
-    if (!this.dragging && !this.hovering) {
-      this.onDragIntentStop(evt);
-    }
   }
 
   // --- Key Resetting
@@ -1337,6 +1326,8 @@ class Handle extends DragTarget {
 
 class PositionHandle extends DragTarget {
 
+  static get CURSOR() { return 'move'; }
+
   // TODO: arg order?
   constructor(root, listener) {
     super(root.getElementById('position-handle'));
@@ -1353,6 +1344,14 @@ class PositionHandle extends DragTarget {
     this.xDir  = !xProp ? 0 : xProp === 'left' ? -1 : 1;
     this.yDir  = !yProp ? 0 : yProp === 'top'  ? -1 : 1;
     */
+  }
+
+  hasImageCursor() {
+    return false;
+  }
+
+  getCursor() {
+    return PositionHandle.CURSOR;
   }
 
   // --- Setup
@@ -1431,9 +1430,15 @@ class ResizeHandle extends DragTarget {
   }
   */
 
-  getCursorForRotation(rotation) {
+  hasImageCursor() {
+    return false;
+  }
+
+  getCursor(rotation) {
+    var cursors = ResizeHandle.CURSORS;
     var index   = ResizeHandle.DIRECTIONS.indexOf(this.dir);
-    var cursor  = ResizeHandle.CURSORS[(((rotation + 22.5) / 45 | 0) + index) % 8];
+    var offset  = Math.round(rotation / (360 / cursors.length));
+    var cursor  = ResizeHandle.CURSORS.slice((index + offset) % cursors.length)[0];
     return cursor + '-resize';
   }
 
@@ -1582,7 +1587,11 @@ class RotationHandle extends DragTarget {
     this.origin = origin;
   }
 
-  getCursorForRotation(rotation) {
+  hasImageCursor() {
+    return true;
+  }
+
+  getCursor(rotation) {
     var grad = Point.degToGrad(rotation, true);
     var per  = RotationHandle.GRADS_PER_CURSOR;
     // Step the cursor into one of 25 cursors and ensure that 400 is 0.
@@ -3419,94 +3428,98 @@ class AppController {
 
   // --- Position Drag Events
 
-  onPositionDragIntentStart() {
-    console.info('POSITION DRAG INTENT START');
-    this.cursorManager.setHoverCursor('move');
+  onPositionDragIntentStart(evt, handle) {
+    this.setHoverCursor(handle);
   }
 
   onPositionDragIntentStop() {
-    console.info('POSITION DRAG INTENT STOP');
-    this.cursorManager.clearHoverCursor();
+    this.clearHoverCursor();
   }
 
-  onPositionDragStart() {
-    console.info('POSITION DRAG START');
-    this.cursorManager.setDragCursor('move');
+  onPositionDragStart(evt, handle) {
+    this.setDragCursor(handle);
   }
 
   onPositionDragMove() {
-    console.info('POSITION DRAG MOVE');
   }
 
   onPositionDragStop() {
-    console.info('POSITION DRAG STOP');
-    this.cursorManager.clearDragCursor();
+    this.clearDragCursor();
   }
 
   // --- Resize Drag Events
 
   onResizeDragIntentStart(evt, handle, element) {
-    console.info('RESIZE DRAG INTENT START');
-    this.cursorManager.setHoverCursor(handle.getCursorForRotation(element.getRotation()));
+    this.setHoverCursor(handle, element.getRotation());
+    this.currentFocusedHandle = handle;
   }
 
   onResizeDragIntentStop() {
-    console.info('RESIZE DRAG INTENT STOP');
     this.cursorManager.clearHoverCursor();
+    this.currentFocusedHandle = null;
   }
 
   onResizeDragStart(evt, handle, element) {
-    console.info('RESIZE DRAG START');
-    if (evt.ctrlKey) {
-      this.cursorManager.setDragCursor('move');
-    } else {
-      this.isResizing = true;
-      this.cursorManager.setDragCursor(handle.getCursorForRotation(element.getRotation()));
-    }
+    this.isResizing = !evt.ctrlKey;
+    this.setDragCursor(handle, element.getRotation());
   }
 
   onResizeDragMove() {
-    console.info('RESIZE DRAG MOVE');
   }
 
   onResizeDragStop() {
-    console.info('RESIZE DRAG STOP');
-    this.cursorManager.clearDragCursor();
+    this.clearDragCursor();
     this.isResizing = false;
   }
 
   // --- Rotation Drag Events
 
   onRotationDragIntentStart(evt, handle, element) {
-    console.info('ROTATION DRAG INTENT START');
-    this.cursorManager.setHoverCursor(handle.getCursorForRotation(element.getRotation()), true);
+    this.setHoverCursor(handle, element.getRotation());
+    this.currentFocusedHandle = handle;
   }
 
   onRotationDragIntentStop() {
-    console.info('ROTATION DRAG INTENT STOP');
-    this.cursorManager.clearHoverCursor();
+    this.clearHoverCursor();
+    this.currentFocusedHandle = null;
   }
 
   onRotationDragStart(evt, handle, element) {
-    console.info('ROTATION DRAG START');
     this.isRotating = true;
-    this.setRotationCursor(handle.getCursorForRotation(element.getRotation()));
   }
 
   onRotationDragMove(evt, handle) {
-    console.info('ROTATION DRAG MOVE');
-    this.setRotationCursor(handle.getCursorForRotation(evt.rotation.abs));
+    this.setDragCursor(handle, evt.rotation.abs);
   }
 
-  onRotationDragStop() {
-    console.info('ROTATION DRAG STOP');
+  onRotationDragStop(evt, handle, element) {
     this.isRotating = false;
-    this.cursorManager.clearDragCursor();
+    this.clearDragCursor();
+    if (this.currentFocusedHandle) {
+      this.setHoverCursor(this.currentFocusedHandle, element.getRotation());
+    }
   }
 
-  setRotationCursor(name) {
-    this.cursorManager.setHoverCursor(name, true);
-    this.cursorManager.setDragCursor(name, true);
+  // --- Cursors
+
+  setHoverCursor(handle, rotation) {
+    var img = handle.hasImageCursor();
+    var cursor = handle.getCursor(rotation);
+    this.cursorManager.setHoverCursor(cursor, img);
+  }
+
+  setDragCursor(handle, rotation) {
+    var img = handle.hasImageCursor();
+    var cursor = handle.getCursor(rotation);
+    this.cursorManager.setDragCursor(cursor, img);
+  }
+
+  clearHoverCursor() {
+    this.cursorManager.clearHoverCursor();
+  }
+
+  clearDragCursor() {
+    this.cursorManager.clearDragCursor();
   }
 
   // --- Background Image Events
@@ -3772,20 +3785,6 @@ class AppController {
 
   // --- Control Panel Align Rendering
 
-  /*
-  // TODO: can this just use listeners?
-  bindEvents(uiRoot) {
-    var els = uiRoot.querySelectorAll('[click]');
-    for (let i = 0, el; el = els[i]; i++) {
-      let action = el.getAttribute('click');
-      el.addEventListener('click', (evt) => {
-        evt.stopPropagation();
-        console.info('TODO something about me');
-        this[action]();
-      });
-    }
-  }
-  */
   destroy() {
     var els = document.querySelectorAll('.' + UI_HOST_CLASS_NAME);
     for (let i = 0, el; el = els[i]; i++) {
@@ -4036,7 +4035,6 @@ class PositionableElementManager {
 
   /*
   onRotationHandleIntentStart(evt, element) {
-    console.info(evt);
     this.listener.onRotationHandleIntentStart(evt.rotation.abs);
   }
 
@@ -4049,12 +4047,10 @@ class PositionableElementManager {
 
 
   onHandleIntentStart(evt) {
-    //console.info('handle intent start pem');
     //this.listener.onHandleIntentStart(evt.rotation.abs);
   }
 
   onHandleIntentStop(evt) {
-    //console.info('handle intent stop pem');
   }
   */
 
@@ -5829,7 +5825,6 @@ class ControlPanelComponent extends Element {
     var link = new Element(this.el, 'a', this.getClassName(className));
     link.html(str);
     link.addEventListener('click', function(evt) {
-      console.info('NEIN', evt, this);
       panel[actionName].call(panel);
     });
     //area.addLinkAction("Don't Show", 'skip', 'skipStartArea');
@@ -7182,12 +7177,10 @@ class CSSBox {
       // If we are setting the same side as the box's
       // origin, then update the position first, then
       // calculate the dimension from the difference;
-      //console.info('hermmm', axis, this.cssPosition[axis], this.cssPosition.getPixelValueForXY(px, axis), px);
 //
       //this.cssPosition.addXYAxis(px, axis);
       ////this.cssPosition[axis] = px;
       //dim.px = this.cssPosition[axis] - this.cssPosition.getPixelValueForXY(px, axis);
-      //console.info('now', dim.px);
     }
   }
   */

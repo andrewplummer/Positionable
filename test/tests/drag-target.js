@@ -144,6 +144,10 @@ describe('DragTarget', function() {
   it('should correctly receive drag intent events', function() {
     setupStatic();
 
+    // This has changed to not take dragging into account.
+    // Only the mouseover/mouseout events should be taken
+    // into account here, so asserting that.
+
     // Once through the element, in and out.
     // 1 start and 1 stop event should be triggered here.
     fireMouseOver(el, 200, 200);
@@ -169,8 +173,8 @@ describe('DragTarget', function() {
     // 1 stop event fired here.
     fireDocumentMouseUp(300, 300);
 
-    assert.equal(target.startIntents, 2);
-    assert.equal(target.stopIntents, 2);
+    assert.equal(target.startIntents, 3);
+    assert.equal(target.stopIntents, 3);
   });
 
   it('should not follow links on click', function() {

@@ -43,7 +43,7 @@ describe('ResizeHandle', function() {
 
   function assertCursor(dir, rotation, expected) {
     var handle = createHandle(dir);
-    assert.equal(handle.getCursorForRotation(rotation), expected);
+    assert.equal(handle.getCursor(rotation), expected);
   }
 
   it('should fire resize handle events', function() {

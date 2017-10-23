@@ -47,7 +47,7 @@ describe('RotationHandle', function() {
     }
     // Convert grads to degrees
     deg = grad * 360 / 400;
-    assert.equal(handle.getCursorForRotation(deg), expected);
+    assert.equal(handle.getCursor(deg), expected);
   }
 
   it('should fire rotation handle events', function() {
