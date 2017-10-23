@@ -877,6 +877,13 @@ describe('PositionableElementManager', function() {
     assertInvertedBoxDimensions('2420px', '1580px', '500px', '500px');
   });
 
+  xit('should allow a box to be reflected even if rotated', function() {
+    setupBox('rotate-box');
+    dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, -62);
+    assertBoxDimensions(el, '0px', '0px', '100px', '100px');
+    assertBoxTranslation(100.11, -49.89);
+  });
+
   // --- Resize Constraining - Basics
 
   it('should constrain resize', function() {

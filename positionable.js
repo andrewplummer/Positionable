@@ -10,14 +10,16 @@
 // - TODO: select multiple and scroll, if you release the meta key and don't drag any more, it will lose a couple of the elements
 // ... probably need to use a key manager to handle this.
 // - cursors working ok??
-// - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: more stress testing!
 // - TODO: release!
+// - TODO: check control panel output when reflecting (nudging?)
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 const PLATFORM_IS_MAC    = /mac/i.test(navigator.platform);
+
+// TODO: clean these up by moving them into AppController
 
 
 /*-------------------------] Utilities [--------------------------*/
@@ -2017,8 +2019,8 @@ class PositionableElement extends BrowserEventTarget {
     this.cssBox = nextBox;
     this.renderBox();
 
-    this.cssTransform = this.cssTransform.clone();
-    this.cssBackgroundImage = this.cssBackgroundImage.clone();
+    this.cssTransform = lastState.cssTransform.clone();
+    this.cssBackgroundImage = lastState.cssBackgroundImage.clone();
 
     // When the box is resized, both the background image and
     // transform (origin and percentage translations) may change,
@@ -4469,6 +4471,9 @@ class PositionableElementManager {
     this.draggingElements.forEach(el => {
       el.resize(vector.x, vector.y, handle.dir, evt.drag.constrained);
     });
+    // Position may also shift as the result of dragging a box's
+    // nw corner, or in the case of reflecting.
+    this.listener.onPositionUpdated();
     this.listener.onDimensionsUpdated();
   }
 
@@ -7069,13 +7074,13 @@ class CSSBox {
     this.renderAxis(style, this.cssV, this.cssHeight, 'height');
   }
 
-  renderAxis(style, cssPos, cssDim, dimProp) {
-    if (cssDim.px < 0) {
-      cssDim.px = -cssDim.px;
-      cssPos.px -= cssDim.px;
+  renderAxis(style, pos, dim, prop) {
+    if (dim.px < 0) {
+      dim.px = -dim.px;
+      pos.px -= dim.px;
     }
-    cssPos.render(style);
-    style[dimProp] = cssDim.isInitial() ? '' : cssDim;
+    pos.render(style);
+    style[prop] = dim.isInitial() ? '' : dim;
   }
 
   isInvertedEdge(prop) {
