@@ -1,7 +1,7 @@
 
 describe('Settings', function(uiRoot) {
 
-  var listener, storage, settings;
+  var listener, settings;
 
   class Listener {
 
@@ -89,7 +89,7 @@ describe('Settings', function(uiRoot) {
       [Settings.INCLUDE_SELECTOR]:   'p',
       [Settings.EXCLUDE_SELECTOR]:   'h2',
       [Settings.OUTPUT_CHANGED_ONLY]: true,
-      [Settings.OUTPUT_UNIQUE_ONLY]:  true,
+      [Settings.OUTPUT_UNIQUE_ONLY]:  true
     });
     setupSettings();
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'bar.css');
@@ -110,7 +110,7 @@ describe('Settings', function(uiRoot) {
       [Settings.INCLUDE_SELECTOR]:   'p',
       [Settings.EXCLUDE_SELECTOR]:   'h2',
       [Settings.OUTPUT_CHANGED_ONLY]: true,
-      [Settings.OUTPUT_UNIQUE_ONLY]:  true,
+      [Settings.OUTPUT_UNIQUE_ONLY]:  true
     });
     setupSettings();
     assert.equal(form.elements[Settings.SAVE_FILENAME].value,       'bar.css');

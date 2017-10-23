@@ -13,6 +13,8 @@
 // - TODO: can we get away with not cloning everything by using the drag vectors instead of the offset?
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
+// - TODO: more stress testing!
+// - TODO: release!
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
 const PLATFORM_IS_MAC    = /mac/i.test(navigator.platform);
@@ -40,12 +42,6 @@ function hashIntersect(obj1, obj2) {
 function roundWithPrecision(n, precision) {
   var mult = Math.pow(10, precision);
   return Math.round(n * mult) / mult;
-}
-
-function logError() {
-  var args = Array.from(arguments);
-  args.unshift('Positionable:');
-  console.error.apply(null, args);
 }
 
 /*-------------------------] NudgeManager [--------------------------*/
@@ -5993,7 +5989,7 @@ class Form extends BrowserEventTarget {
     }
   }
 
-  validate(fn) {
+  validate() {
     var validState = true;
     this.validations.forEach(v => {
       v.fields.forEach(name => {
@@ -6072,7 +6068,7 @@ class Settings {
     return this.data[name];
   }
 
-  set(name, val, immediate) {
+  set(name, val) {
     var data = Object.assign({}, this.data, { [name]: val });
     this.pushData(data);
   }
@@ -6100,10 +6096,10 @@ class Settings {
   }
 
   onFormSubmit(evt, form) {
-    this.pushData(this.form.getData());
+    this.pushData(form.getData());
   }
 
-  onFormReset(evt, form) {
+  onFormReset() {
     this.clearData();
   }
 
