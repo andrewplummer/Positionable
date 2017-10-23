@@ -5,7 +5,7 @@ p {
   margin: 0;
 }
 
-h1,h2,h3 {
+h1,h2,h3,h4 {
   margin: 0;
   font-weight: 300;
   font-family: "Open Sans", sans-serif;
@@ -268,16 +268,17 @@ input, select {
 /*---------------------------] Alignment Area [-----------------------*/
 
 .control-panel--align-active {
-  width: 350px;
-  height: 110px;
+  width: 480px;
+  height: 150px;
 }
 
 .align-area-button-frame {
   white-space: nowrap;
+  margin: 5px 0;
 }
 
 .align-area-header {
-  font-size: 16px;
+  font-size: 22px;
   margin-bottom: .3em;
   white-space: nowrap;
 }
@@ -298,6 +299,70 @@ input, select {
   width: 1px;
   margin-left: 4px;
   margin-right: 4px;
+}
+
+.align-area-highlight-buttons {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  max-height: 70px;
+  overflow-y: auto;
+}
+
+.align-area-highlight-button {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+  padding: 0 2px 2px 0;
+}
+
+.align-area-highlight-button:after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,.08);
+  border: 1px solid rgba(0,0,0,.3);
+  box-sizing: border-box;
+}
+
+.align-area-highlight-selector {
+  margin-top: .2em;
+  font-size: 18px;
+}
+
+/* Many of highlight buttons */
+
+.control-panel--align-many {
+  width: 480px;
+  height: 165px;
+}
+
+/* Lots of highlight buttons */
+
+.control-panel--align-lots {
+  width: 480px;
+  height: 180px;
+}
+
+.control-panel--align-lots .align-area-highlight-button {
+  width: 18px;
+  height: 18px;
+  padding: 0 1px 1px 0;
+}
+
+/* Tons of highlight buttons */
+
+.control-panel--align-tons {
+  width: 480px;
+  height: 190px;
+}
+
+.control-panel--align-tons .align-area-highlight-button {
+  width: 16px;
+  height: 16px;
+  padding: 0 1px 1px 0;
 }
 
 /*---------------------------] Default Area [-----------------------*/

@@ -23,6 +23,12 @@ describe('ControlPanel', function(uiRoot) {
     panel.el.style.bottom = '';
   });
 
+  function getMockElements(count) {
+    // The control panel is only checking the count of the array and making an
+    // association on the index, so we can just mock these with null.
+    return new Array(count).fill(null);
+  }
+
   // --- Helpers
 
   it('should have auto dimensions', function() {
@@ -143,13 +149,16 @@ describe('ControlPanel', function(uiRoot) {
   // --- Rendering Align Area
 
   it('should render multiple selected', function() {
-    panel.renderMultipleSelected(5);
+    var elements = getMockElements(5);
+    panel.renderMultipleSelected(elements);
     assert.equal(getUiElement(document.documentElement, '#align-area-header').textContent, '5 elements selected');
     assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, '');
+    assert.equal(getUiElement(document.documentElement, '#align-area-highlight-buttons').children.length, 5);
   });
 
   it('should not render distribute buttons with only 2 elements selected', function() {
-    panel.renderMultipleSelected(2);
+    var elements = getMockElements(2);
+    panel.renderMultipleSelected(elements);
     assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, 'none');
   });
 

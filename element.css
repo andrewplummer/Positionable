@@ -1,4 +1,11 @@
 
+/*---------------------------] Highlighting [-----------------------*/
+
+.ui--highlight .resize-handle,
+.ui--highlight .position-handle {
+  background: rgba(255,255,0,.4);
+}
+
 /*---------------------------] Position Handle [-----------------------*/
 
 .position-handle {

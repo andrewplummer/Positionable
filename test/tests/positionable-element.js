@@ -547,4 +547,12 @@ describe('PositionableElement', function() {
     assert.equal(el.style.top, '100px');
   });
 
+  it('should be able to set a highlight mode', function() {
+    setupBox();
+    element.setHighlightMode(true);
+    assert.isTrue(getUiElement(el, '#ui').classList.contains('ui--highlight'));
+    element.setHighlightMode(false);
+    assert.isFalse(getUiElement(el, '#ui').classList.contains('ui--highlight'));
+  });
+
 });

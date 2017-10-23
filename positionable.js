@@ -6,11 +6,11 @@
  *
  * ---------------------------- */
 
+// - TODO: rename align to "multiple"
 // - TODO: cleanup!!
-// - TODO: more stress testing!
-// - TODO: selector for multiple elements?
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: clean these constants up by moving them into AppController
+// - TODO: todos!
 // - TODO: rotated box won't reflect
 // - TODO: release!
 
@@ -1687,10 +1687,11 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Constants
 
-  static get UI_FOCUSED_CLASS()   { return 'ui--focused'; }
-  static get PEEKING_DIMENSIONS() { return 500;           }
-  static get ROTATION_SNAPPING()  { return 22.5;          }
-  static get TOP_Z_INDEX()        { return 9999995;       }
+  static get UI_FOCUSED_CLASS()   { return 'ui--focused';   }
+  static get UI_HIGHLIGHT_CLASS() { return 'ui--highlight'; }
+  static get PEEKING_DIMENSIONS() { return 500;             }
+  static get ROTATION_SNAPPING()  { return 22.5;            }
+  static get TOP_Z_INDEX()        { return 9999995;         }
 
   constructor(el, listener) {
     super(el);
@@ -1700,6 +1701,14 @@ class PositionableElement extends BrowserEventTarget {
     this.setup();
     //this.addClass('positioned-element');
 
+  }
+
+  setHighlightMode(on) {
+    if (on) {
+      this.ui.addClass(PositionableElement.UI_HIGHLIGHT_CLASS);
+    } else {
+      this.ui.removeClass(PositionableElement.UI_HIGHLIGHT_CLASS);
+    }
   }
 
   // --- Setup
@@ -3727,7 +3736,7 @@ class AppController {
 
   renderAlignArea(elements) {
     this.controlPanel.showAlignArea();
-    this.controlPanel.renderMultipleSelected(elements.length);
+    this.controlPanel.renderMultipleSelected(elements);
   }
 
   renderElementArea() {
@@ -3781,6 +3790,25 @@ class AppController {
     if (focusedElements.length === 1) {
       fn(focusedElements[0]);
     }
+  }
+
+  onElementHighlightMouseOver(index) {
+    var element = this.elementManager.focusedElements[index], selector;
+    selector = this.outputManager.getSelectorWithDefault(element);
+    this.controlPanel.renderAlignHeader(selector);
+    element.setHighlightMode(true);
+  }
+
+  onElementHighlightMouseOut(index) {
+    var element = this.elementManager.focusedElements[index];
+    element.setHighlightMode(false);
+    this.controlPanel.renderAlignHeader();
+  }
+
+  onElementHighlightClick(index) {
+    var element = this.elementManager.focusedElements[index];
+    element.setHighlightMode(false);
+    this.elementManager.setFocused([element]);
   }
 
   // --- Control Panel Align Rendering
@@ -4674,14 +4702,24 @@ class DragSelection extends DragTarget {
 
 class ControlPanel extends DraggableElement {
 
-  static get ACTIVE_CLASS()  { return 'control-panel--active'; }
-  static get WINDOWS_CLASS() { return 'control-panel--win';    }
+  static get ACTIVE_CLASS()     { return 'control-panel--active'; }
+  static get WINDOWS_CLASS()    { return 'control-panel--win';    }
+
 
   static get TRANSFORM_ACTIVE_CLASS()  { return 'control-panel--element-transform-active'; }
   static get BACKGROUND_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
 
   static get LONG_SELECTOR_LENGTH() { return 30; }
   static get LONG_SELECTOR_CLASS()  { return 'element-area-selector--long'; }
+
+  static get HIGHLIGHT_BUTTON_CLASS()    { return 'align-area-highlight-button';     }
+
+  static get ALIGN_MANY_CLASS()     { return 'control-panel--align-many';  }
+  static get ALIGN_LOTS_CLASS()     { return 'control-panel--align-lots';  }
+  static get ALIGN_TONS_CLASS()     { return 'control-panel--align-tons';  }
+  static get ALIGN_MANY_THRESHOLD() { return 18; }
+  static get ALIGN_LOTS_THRESHOLD() { return 32; }
+  static get ALIGN_TONS_THRESHOLD() { return 60; }
 
   constructor(root, listener) {
     super(root.getElementById('control-panel'), true);
@@ -4697,6 +4735,7 @@ class ControlPanel extends DraggableElement {
     this.setupRenderedElements(root);
     this.setupWindows();
     this.setupDoubleClick();
+    this.setupHighlightButtons();
   }
 
   setupAreas(root) {
@@ -4725,6 +4764,7 @@ class ControlPanel extends DraggableElement {
   setupRenderedElements(root) {
     this.renderedElements = {
       'multiple':           new Element(root.getElementById('align-area-header')),
+      'highlightButtons':   new Element(root.getElementById('align-area-highlight-buttons')),
       'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
       'modePosition':       new Element(root.getElementById('mode-position')),
       'modeResizeSe':       new Element(root.getElementById('mode-resize-se')),
@@ -4740,6 +4780,60 @@ class ControlPanel extends DraggableElement {
       'transform':          new Element(root.getElementById('element-area-transform')),
       'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
     };
+  }
+
+  setupHighlightButtons() {
+    var el = this.renderedElements.highlightButtons.el;
+    el.addEventListener('mouseover', this.onHighlightButtonMouseOver.bind(this));
+    el.addEventListener('mouseout', this.onHighlightButtonMouseOut.bind(this));
+    el.addEventListener('click', this.onHighlightButtonClick.bind(this));
+  }
+
+  onHighlightButtonMouseOver(evt) {
+    this.fireFromHighlightEvent(evt, 'onElementHighlightMouseOver');
+  }
+
+  onHighlightButtonMouseOut(evt) {
+    this.fireFromHighlightEvent(evt, 'onElementHighlightMouseOut');
+  }
+
+  onHighlightButtonClick(evt) {
+    this.fireFromHighlightEvent(evt, 'onElementHighlightClick');
+  }
+
+  fireFromHighlightEvent(evt, name) {
+    var index = evt.target.dataset.index;
+    if (index && this.activeArea === this.alignArea) {
+      this.listener[name](index);
+    }
+  }
+
+  renderAlignHeader(str) {
+    str = str || this.highlightedCount + ' elements selected';
+    this.renderedElements.multiple.text(str);
+  }
+
+  clearHighlightButtonClasses() {
+    this.removeClass(ControlPanel.ALIGN_MANY_CLASS);
+    this.removeClass(ControlPanel.ALIGN_LOTS_CLASS);
+    this.removeClass(ControlPanel.ALIGN_TONS_CLASS);
+  }
+
+  renderHighlightButtons(elements) {
+    var container = this.renderedElements.highlightButtons.el, html, className;
+    className = ControlPanel.HIGHLIGHT_BUTTON_CLASS;
+    html = elements.map((el, i) => {
+      return `<div data-index="${i}"class="${className}"></div>`;
+    }).join('');
+    container.innerHTML = html;
+    this.clearHighlightButtonClasses();
+    if (elements.length > ControlPanel.ALIGN_TONS_THRESHOLD) {
+      this.addClass(ControlPanel.ALIGN_TONS_CLASS);
+    } else if (elements.length > ControlPanel.ALIGN_LOTS_THRESHOLD) {
+      this.addClass(ControlPanel.ALIGN_LOTS_CLASS);
+    } else if (elements.length > ControlPanel.ALIGN_MANY_THRESHOLD) {
+      this.addClass(ControlPanel.ALIGN_MANY_CLASS);
+    }
   }
 
   setupWindows() {
@@ -4825,6 +4919,9 @@ class ControlPanel extends DraggableElement {
       this.removeClass(ControlPanel.TRANSFORM_ACTIVE_CLASS);
       this.removeClass(ControlPanel.BACKGROUND_ACTIVE_CLASS);
     }
+    if (area !== this.alignArea) {
+      this.clearHighlightButtonClasses();
+    }
     this.addClass(this.getAreaActiveClassName(area));
     area.show();
     this.activeArea = area;
@@ -4859,13 +4956,15 @@ class ControlPanel extends DraggableElement {
 
   // --- Rendering
 
-  renderMultipleSelected(count) {
-    this.renderedElements.multiple.text(count + ' elements selected');
-    if (count > 2) {
+  renderMultipleSelected(elements) {
+    this.highlightedCount = elements.length;
+    if (this.highlightedCount > 2) {
       this.renderedElements.distributeButtons.unhide();
     } else {
       this.renderedElements.distributeButtons.hide();
     }
+    this.renderHighlightButtons(elements);
+    this.renderAlignHeader();
   }
 
   renderElementSelector(selector) {
