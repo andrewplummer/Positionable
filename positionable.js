@@ -117,9 +117,9 @@ class NudgeManager {
   dispatchNudge(x, y) {
     var evt = new CustomEvent('nudge');
     if (this.isMode(NudgeManager.RESIZE_NW_MODE)) {
-      evt.dir = 'nw';
+      evt.corner = 'nw';
     } else if (this.isMode(NudgeManager.RESIZE_SE_MODE)) {
-      evt.dir = 'se';
+      evt.corner = 'se';
     }
     this.vector.x += x;
     this.vector.y += y;
@@ -904,7 +904,7 @@ class DragTarget extends BrowserEventTarget {
     this.setDragData(evt);
   }
 
-  onDragStop(evt)  {
+  onDragStop()  {
     this.clearUserSelect();
   }
 
@@ -1398,27 +1398,19 @@ class PositionHandle extends DragTarget {
 
 class ResizeHandle extends DragTarget {
 
-  static get DIRECTIONS() { return ['se','s','sw','w','nw','n','ne','e'];             }
-  static get CURSORS()    { return ['nwse','ns','nesw','ew','nwse','ns','nesw','ew']; }
+  static get CORNERS() { return ['se','s','sw','w','nw','n','ne','e'];             }
+  static get CURSORS() { return ['nwse','ns','nesw','ew','nwse','ns','nesw','ew']; }
 
   // TODO: arg order?
-  constructor(root, dir, listener) {
-    super(root.getElementById('resize-handle-' + dir));
+  constructor(root, corner, listener) {
+    super(root.getElementById('resize-handle-' + corner));
     this.setupDoubleClick();
     this.setupDragIntents();
     this.setupCtrlKeyReset();
     this.setupMetaKeyReset();
 
-    this.dir = dir;
+    this.corner = corner;
     this.listener = listener;
-
-    /*
-    //this.setup(target, name);
-    this.addClass('sizing-handle');
-    this.handle = new Element(listener.el, 'div', 'handle-border handle-' + name + '-border');
-    this.xDir  = !xProp ? 0 : xProp === 'left' ? -1 : 1;
-    this.yDir  = !yProp ? 0 : yProp === 'top'  ? -1 : 1;
-    */
   }
 
   // --- Setup
@@ -1436,7 +1428,7 @@ class ResizeHandle extends DragTarget {
 
   getCursor(rotation) {
     var cursors = ResizeHandle.CURSORS;
-    var index   = ResizeHandle.DIRECTIONS.indexOf(this.dir);
+    var index   = ResizeHandle.CORNERS.indexOf(this.corner);
     var offset  = Math.round(rotation / (360 / cursors.length));
     var cursor  = ResizeHandle.CURSORS.slice((index + offset) % cursors.length)[0];
     return cursor + '-resize';
@@ -2042,18 +2034,17 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  resize(x, y, dir, constrain) {
-    var rotation, lastState, lastBox, nextBox;
+  resize(x, y, corner, constrain) {
+    var lastState, lastBox, nextBox;
 
-    rotation  = this.getRotation();
     lastState = this.getLastState();
     lastBox   = lastState.cssBox;
     nextBox   = lastBox.clone();
 
-    nextBox.moveEdges(x, y, dir);
+    nextBox.resize(x, y, corner);
 
     if (constrain) {
-      nextBox.constrain(lastBox.getRatio(), dir);
+      nextBox.constrain(lastBox.getRatio(), corner);
     }
 
     // Render the box first so that percentage values can update
@@ -2070,98 +2061,36 @@ class PositionableElement extends BrowserEventTarget {
     this.cssTransform.update();
     this.cssBackgroundImage.update();
 
-    if (rotation || this.cssTransform.hasPercentTranslation()) {
+    if (this.cssTransform.getRotation() || this.cssTransform.hasPercentTranslation()) {
       // If a box is rotated or its transform has a translate using percent
       // values, then the anchor positions will shift as the box is resized,
       // so update the translation here to keep them aligned.
-      this.alignBoxAnchors(dir, lastState, this, rotation);
+      this.alignAnchors(corner, lastState, this);
     }
 
   }
 
-  alignBoxAnchors(dir, lastState, nextState, rotation) {
-    var anchorOffset = this.getAnchorOffset(dir, lastState, nextState, rotation);
-    this.cssTransform.addTranslation(anchorOffset);
-    this.renderTransform();
-  }
-
-  getAnchorOffset(dir, lastState, nextState, rotation) {
-    var lastAnchorPos = this.getAnchorPosition(dir, lastState, rotation);
-    var nextAnchorPos = this.getAnchorPosition(dir, nextState, rotation);
-    return lastAnchorPos.subtract(nextAnchorPos);
-  }
-
-  getAnchorPosition(dir, state, rotation) {
-    var origin, translation, dimensions, boxXYOffset, boxDirection, anchorCoords;
-
-    origin       = state.cssTransform.getOrigin();
-    translation  = state.cssTransform.getTranslation();
-    dimensions   = state.cssBox.getDimensions();
-    boxXYOffset  = state.cssBox.getXYOffset();
-    boxDirection = state.cssBox.getDirectionVector();
-
-    // The coordinates of the anchor are the result of getting
-    // the non-rotated anchor position, rotating it around the
-    // transform origin, and adding the origin back to arrive
-    // at the final position.
-    anchorCoords = this.getAnchorNormal(dir)
-      .multiply(dimensions)
-      .subtract(origin)
-      .rotate(rotation)
-      .add(origin);
-
-    // The returned value is the box's offset in x/y space plus
-    // the anchor coords and translation. If the box is inverted,
-    // it needs to take this into account by adding the amount
-    // that its dimensions expand into x/y space and flipping its
-    // direction vectors. Note that the return value is not an
-    // actual position, but can be used to calculate offsets to
-    // determine how much an anchor has moved.
-    return state.cssBox.getOffsetPosition()
-      .add(boxXYOffset)
-      .multiply(boxDirection)
-      .add(anchorCoords)
-      .add(translation);
-  }
-
-  getAnchorNormal(dir) {
-    // The anchor normal represents the normalized offset of an
-    // anchor point opposite the given handle direction. These
-    // These are given in a normal x/y coordinate system.
-    switch (dir) {
-      case 'n':  return new Point(.5, 1);
-      case 's':  return new Point(.5, 0);
-      case 'w':  return new Point( 1,.5);
-      case 'e':  return new Point( 0,.5);
-      case 'sw': return new Point( 1, 0);
-      case 'nw': return new Point( 1, 1);
-      case 'ne': return new Point( 0, 1);
-      case 'se': return new Point( 0, 0);
+  alignAnchors(corner, lastState, nextState) {
+    var anchorOffset = this.getAnchorShift(corner, lastState, nextState);
+    if (anchorOffset.x || anchorOffset.y) {
+      this.cssTransform.addTranslation(anchorOffset.multiply(-1));
+      this.renderTransform();
     }
   }
 
-  /*
-  constrainRatio(lastBox, handle) {
-    var box      = this.box;
-    var anchor   = this.getHandleAnchor(handle.name);
-    var oldRatio = lastBox.getRatio();
-    var newRatio = this.box.getRatio();
-
-    if (newRatio < oldRatio) {
-      box[handle.vSide] = box[anchor.vSide] + box.width / oldRatio * handle.yDir;
-    } else if (newRatio > oldRatio) {
-      box[handle.hSide] = box[anchor.hSide] + box.height * oldRatio * handle.xDir;
-    }
+  getAnchorShift(corner, lastState, nextState) {
+    var lastAnchorPos = this.getAnchorPositionForState(corner, lastState);
+    var nextAnchorPos = this.getAnchorPositionForState(corner, nextState);
+    return nextAnchorPos.subtract(lastAnchorPos);
   }
 
-  toggleHandles(on) {
-    if (on) {
-      this.removeClass('handles-hidden');
-    } else {
-      this.addClass('handles-hidden');
-    }
+  getAnchorPositionForState(corner, state) {
+    var rotation       = state.cssTransform.getRotation();
+    var translation    = state.cssTransform.getTranslation();
+    var rotationOrigin = state.cssTransform.getOrigin();
+    var anchorPosition = state.cssBox.getAnchorPosition(corner, rotation, rotationOrigin);
+    return anchorPosition.add(translation);
   }
-  */
 
   // --- Rotation
 
@@ -2179,7 +2108,7 @@ class PositionableElement extends BrowserEventTarget {
   move(x, y, constrain) {
     var p = this.getConstrainedMovePosition(x, y, constrain);
     this.cssBox = this.getLastState().cssBox.clone();
-    this.cssBox.addOffsetPosition(p.x, p.y);
+    this.cssBox.move(p.x, p.y);
     this.renderBox();
   }
 
@@ -2295,6 +2224,7 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Scrolling
 
+  /*
   checkScrollBounds() {
     var dim = this.getAbsoluteDimensions(), boundary;
     if (dim.top < window.scrollY) {
@@ -2312,6 +2242,7 @@ class PositionableElement extends BrowserEventTarget {
       window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
     }
   }
+  */
 
 
 
@@ -3493,7 +3424,7 @@ class AppController {
     this.currentFocusedHandle = null;
   }
 
-  onRotationDragStart(evt, handle, element) {
+  onRotationDragStart() {
     this.isRotating = true;
   }
 
@@ -3681,7 +3612,7 @@ class AppController {
         break;
       case NudgeManager.RESIZE_SE_MODE:
       case NudgeManager.RESIZE_NW_MODE:
-        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.dir);
+        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.corner);
         break;
       case NudgeManager.BACKGROUND_MODE:
         this.elementManager.applyBackgroundNudge(evt.x, evt.y);
@@ -4444,9 +4375,9 @@ class PositionableElementManager {
     this.listener.onPositionUpdated();
   }
 
-  applyResizeNudge(x, y, dir) {
+  applyResizeNudge(x, y, corner) {
     this.focusedElements.forEach(el => {
-      el.resize(x, y, dir);
+      el.resize(x, y, corner);
     });
     this.listener.onPositionUpdated();
     this.listener.onDimensionsUpdated();
@@ -4504,7 +4435,7 @@ class PositionableElementManager {
     }
 
     this.draggingElements.forEach(el => {
-      el.resize(vector.x, vector.y, handle.dir, evt.drag.constrained);
+      el.resize(vector.x, vector.y, handle.corner, evt.drag.constrained);
     });
     // Position may also shift as the result of dragging a box's
     // nw corner, or in the case of reflecting.
@@ -4646,7 +4577,7 @@ class DragSelection extends DragTarget {
     super.onDragMove(evt);
 
     this.cssBox = this.dragStartBox.clone();
-    this.cssBox.moveEdges(evt.drag.x, evt.drag.y, 'se');
+    this.cssBox.resize(evt.drag.x, evt.drag.y, 'se');
     this.render();
     // TODO: consolidate this listener model with other things that
     // are just binding an instances methods onto their own... which is better?
@@ -6582,15 +6513,9 @@ class Point {
   }
 
   constructor(x, y) {
-    this.x = x || 0;
-    this.y = y || 0;
+    this.x = x;
+    this.y = y;
   }
-
-/*
-  static vector(deg, len) {
-
-  }
-  */
 
   add(p) {
     return new Point(this.x + p.x, this.y + p.y);
@@ -6642,10 +6567,6 @@ class Point {
 
   round() {
     return new Point(Math.round(this.x), Math.round(this.y));
-  }
-
-  getRatio() {
-    return this.y === 0 ? 0 : Math.abs(this.x) / Math.abs(this.y);
   }
 
 /*
@@ -6958,7 +6879,6 @@ class CSSPosition {
 
 /*-------------------------] CSSBox [--------------------------*/
 
-// TODO: can this supersede rectangle?
 class CSSBox {
 
   static fromPixelValues(left, top, width, height) {
@@ -6973,30 +6893,15 @@ class CSSBox {
   static fromMatcher(matcher) {
     var cssH      = CSSPositioningProperty.horizontalFromMatcher(matcher);
     var cssV      = CSSPositioningProperty.verticalFromMatcher(matcher);
-    var cssWidth  = this.getDimension(matcher, 'width');
-    var cssHeight = this.getDimension(matcher, 'height');
+    var cssWidth  = this.getCSSDimension(matcher, 'width');
+    var cssHeight = this.getCSSDimension(matcher, 'height');
     return new CSSBox(cssH, cssV, cssWidth, cssHeight);
   }
 
-  static getDimension(matcher, name) {
+  static getCSSDimension(matcher, name) {
     var prop = matcher.getProperty(name);
     return CSSValue.parse(prop.getValue(), prop, matcher.el);
   }
-
-  /*
-
-  static fromElement(el) {
-    return CSSBox.fromMatcher(new CSSRuleMatcher(el));
-  }
-
-  static fromMatcher(matcher) {
-    var cssH = CSSPositioningProperty.horizontalFromMatcher(matcher);
-    var cssV = CSSPositioningProperty.verticalFromMatcher(matcher);
-    var cssWidth  = matcher.getCSSValue('width');
-    var cssHeight = matcher.getCSSValue('height');
-    return new CSSBox(cssH, cssV, cssWidth, cssHeight);
-  }
-  */
 
   constructor(cssH, cssV, cssWidth, cssHeight) {
     this.cssH      = cssH;
@@ -7005,30 +6910,112 @@ class CSSBox {
     this.cssHeight = cssHeight;
   }
 
-  moveEdges(x, y, dir) {
-    this.moveEdge(x, this.cssH, this.cssWidth,  this.getEdgeForDir(dir, 'h'));
-    this.moveEdge(y, this.cssV, this.cssHeight, this.getEdgeForDir(dir, 'v'));
+  // --- Manipulation
+
+  move(x, y) {
+    this.cssH.add(x);
+    this.cssV.add(y);
   }
 
-  getDirectionVector() {
-    // A normalized vector describing the directions into which the
-    // box expands. If the box has inverted axes, then it will expand
-    // into a negative direction, otherwise positive.
-    return new Point(
-      this.hasInvertedAxis('h') ? -1 : 1,
-      this.hasInvertedAxis('v') ? -1 : 1
+  resize(x, y, corner) {
+    this.moveEdge(x, this.cssH, this.cssWidth,  this.getEdgeForCorner(corner, 'h'));
+    this.moveEdge(y, this.cssV, this.cssHeight, this.getEdgeForCorner(corner, 'v'));
+  }
+
+  constrain(newRatio, corner) {
+    this.applyConstraint(newRatio, corner);
+  }
+
+  // --- Dimensions
+
+  getDimensions() {
+    return new Point(this.cssWidth.px, this.cssHeight.px);
+  }
+
+  setDimensions(x, y) {
+    this.cssWidth.px  = x;
+    this.cssHeight.px = y;
+  }
+
+  // --- Anchors
+
+  // Returns the final position of an anchor opposite the
+  // provided corner in an x/y frame, taking into account any
+  // rotation. Note that this point is not necessarily the same
+  // as the rendered position, as the box may be inverted, in
+  // which case it will which case it will extend negatively
+  // from a 0,0 origin.
+  getAnchorPosition(corner, rotation, rotationOrigin) {
+    var xyPosition, anchorOffset;
+
+    xyPosition   = this.getXYPosition();
+    anchorOffset = this.getAnchorOffset(corner);
+
+    if (rotation) {
+      anchorOffset = anchorOffset
+        .subtract(rotationOrigin)
+        .rotate(rotation)
+        .add(rotationOrigin);
+    }
+
+    return xyPosition.add(anchorOffset);
+  }
+
+  // --- Headers
+
+  getPositionHeader() {
+    return this.getRenderablePosition().join(', ');
+  }
+
+  getDimensionsHeader() {
+    return this.getRenderableDimensions().join(', ');
+  }
+
+  // --- Rendering
+
+  render(style) {
+    this.renderAxis(style, this.cssH, this.cssWidth,  'width');
+    this.renderAxis(style, this.cssV, this.cssHeight, 'height');
+  }
+
+  // --- CSS
+
+  appendCSSDeclarations(declarations) {
+    var cssH, cssV, cssWidth, cssHeight;
+
+    [cssH, cssV]          = this.getRenderablePosition();
+    [cssWidth, cssHeight] = this.getRenderableDimensions();
+
+    cssV.appendCSSDeclaration(declarations);
+    cssH.appendCSSDeclaration(declarations);
+    cssWidth.appendCSSDeclaration('width', declarations);
+    cssHeight.appendCSSDeclaration('height', declarations);
+  }
+
+  // --- Other
+
+  getRatio() {
+    var x = this.cssWidth.px;
+    var y = this.cssHeight.px;
+    return y === 0 ? 0 : Math.abs(x) / Math.abs(y);
+  }
+
+  clone() {
+    return new CSSBox(
+      this.cssH.clone(),
+      this.cssV.clone(),
+      this.cssWidth.clone(),
+      this.cssHeight.clone()
     );
   }
 
-  getXYOffset() {
-    // A vector that represents the offset into x/y space that the box
-    // expands into. A normal box will not affect this as it expands
-    // down/right. However an inverted box will move into x/y space.
-    return new Point(
-      this.hasInvertedAxis('h') ? this.cssWidth.px  : 0,
-      this.hasInvertedAxis('v') ? this.cssHeight.px : 0
-    );
-  }
+
+  // ---------------
+  //     Private
+  // ---------------
+
+
+  // --- Manipulation
 
   moveEdge(offset, cssPos, cssDim, edge) {
     var ppx, dpx;
@@ -7063,408 +7050,208 @@ class CSSBox {
     cssDim.px = dpx;
   }
 
-  getEdgeForDir(dir, axis) {
-    if (axis === 'h') {
-      switch(dir.slice(-1)) {
-        case 'w': return 'left';
-        case 'e': return 'right';
-      }
-    } else {
-      switch(dir.charAt(0)) {
-        case 'n': return 'top';
-        case 's': return 'bottom';
-      }
-    }
-  }
+  applyConstraint(targetRatio, corner) {
+    var hEdge, vEdge, currentRatio;
+    var w, h, absW, absH, targetW, targetH, offsetW, offsetH;
 
-  constrain(newRatio, dir) {
-    var oldRatio, px;
+    hEdge = this.getEdgeForCorner(corner, 'h');
+    vEdge = this.getEdgeForCorner(corner, 'v');
 
-    var hEdge = this.getEdgeForDir(dir, 'h');
-    var vEdge = this.getEdgeForDir(dir, 'v');
+    currentRatio = this.getRatio();
 
-    if (!hEdge || !vEdge) {
+    if (!hEdge || !vEdge || currentRatio === targetRatio) {
       // Both edges are required to allow constraining,
-      // so abort if either is not passed.
+      // so abort if either is not passed, or if the ratios
+      // are the same.
       return;
     }
 
-    oldRatio = this.getRatio();
+    w = this.cssWidth.px;
+    h = this.cssHeight.px;
 
-    if (oldRatio === 0 || newRatio === 0) {
-      // If either the old ratio or the new ratio are zero, then
-      // the entire box must have no dimensions, as both setting
-      // to and multiplying by zero result in 0, so just set both
-      // dimensions here.
-      this.cssWidth.px  = 0;
-      this.cssHeight.px = 0;
-    } else if (oldRatio < newRatio) {
-      if (this.isInvertedEdge(vEdge)) {
-        px = this.cssWidth.px / newRatio - this.cssHeight.px;
-      } else {
-        px = this.cssHeight.px - this.cssWidth.px / newRatio;
+    absW = Math.abs(w);
+    absH = Math.abs(h);
+
+    if (currentRatio === 0 || targetRatio === 0) {
+      absW = 0;
+      absH = 0;
+    } else if (currentRatio > targetRatio) {
+      absW = absH * targetRatio;
+    } else if (currentRatio < targetRatio) {
+      absH = absW / targetRatio;
+    }
+
+    targetW = Math.min(Math.max(w, -absW), absW);
+    targetH = Math.min(Math.max(h, -absH), absH);
+
+    offsetW = this.isInvertedEdge(hEdge) ? targetW - w : w - targetW;
+    offsetH = this.isInvertedEdge(vEdge) ? targetH - h : h - targetH;
+
+    this.moveEdge(offsetW, this.cssH, this.cssWidth,  hEdge);
+    this.moveEdge(offsetH, this.cssV, this.cssHeight, vEdge);
+  }
+
+  // --- Edges
+
+  getEdgeForCorner(corner, axis) {
+    var normal = this.getCornerNormal(corner);
+    if (axis === 'h') {
+      switch(normal.x) {
+        case -1: return 'left';
+        case  1: return 'right';
       }
-      this.moveEdge(px, this.cssV, this.cssHeight, vEdge);
     } else {
-      if (this.isInvertedEdge(hEdge)) {
-        px = this.cssHeight.px * newRatio - this.cssWidth.px;
-      } else {
-        px = this.cssWidth.px - this.cssHeight.px * newRatio;
+      switch(normal.y) {
+        case -1: return 'top';
+        case  1: return 'bottom';
       }
-      this.moveEdge(px, this.cssH, this.cssWidth, hEdge);
     }
-  }
-
-  /*
-  getCenter() {
-    // Note that the center position may have inverted properties,
-    // and cannot be used in calculations relative to the viewport/page.
-    return new Point(this.cssH.px + this.cssWidth.px / 2, this.cssV.px + this.cssHeight.px / 2);
-  }
-  */
-
-  hasInvertedAxis(axis) {
-    var cssPos = axis === 'h' ? this.cssH : this.cssV;
-    return cssPos.isInverted();
-  }
-
-  getOffsetPosition() {
-    return new Point(this.cssH.px, this.cssV.px);
-  }
-
-  addOffsetPosition(x, y) {
-    this.cssH.add(x);
-    this.cssV.add(y);
-  }
-
-  getDimensions() {
-    return new Point(this.cssWidth.px, this.cssHeight.px);
-  }
-
-  setDimensions(x, y) {
-    this.cssWidth.px  = x;
-    this.cssHeight.px = y;
-  }
-
-  /*
-  getCenterOffsetForDir(dir) {
-    var w = cssBox.cssWidth.px  / 2;
-    var h = cssBox.cssHeight.px / 2;
-    switch (dir) {
-      case 's':  return new Point(0, -h);
-      case 'n':  return new Point(0,  h);
-      case 'w':  return new Point(w,  0);
-      case 'e':  return new Point(-w, 0);
-      case 'sw': return new Point(w,  -h);
-      case 'nw': return new Point(w,   h);
-      case 'ne': return new Point(-w,  h);
-      case 'se': return new Point(-w, -h);
-    }
-  }
-  */
-
-  getRatio() {
-    return new Point(this.cssWidth.px, this.cssHeight.px).getRatio();
-  }
-
-  clone() {
-    return new CSSBox(this.cssH.clone(),
-                      this.cssV.clone(),
-                      this.cssWidth.clone(),
-                      this.cssHeight.clone());
-  }
-
-  render(style) {
-    this.renderAxis(style, this.cssH, this.cssWidth,  'width');
-    this.renderAxis(style, this.cssV, this.cssHeight, 'height');
-  }
-
-  renderAxis(style, pos, dim, prop) {
-    if (dim.px < 0) {
-      dim.px = -dim.px;
-      pos.px -= dim.px;
-    }
-    pos.render(style);
-    style[prop] = dim.isInitial() ? '' : dim;
   }
 
   isInvertedEdge(prop) {
     return prop === 'right' || prop === 'bottom';
   }
 
-  // --- Headers
+  // --- Normals
 
-  getPositionHeader() {
-    return [this.cssH, this.cssV].join(', ');
-  }
-
-  getDimensionsHeader() {
-    return [this.cssWidth, this.cssHeight].join(', ');
-  }
-
-  // --- CSS Declarations
-
-  appendCSSDeclarations(declarations) {
-    this.cssV.appendCSSDeclaration(declarations);
-    this.cssH.appendCSSDeclaration(declarations);
-    this.cssWidth.appendCSSDeclaration('width', declarations);
-    this.cssHeight.appendCSSDeclaration('height', declarations);
-  }
-
-  destroy(style) {
-    this.cssH.destroy(style);
-    this.cssV.destroy(style);
-    style.width  = '';
-    style.height = '';
-  }
-  /*
-  getDimensionForAxis(axis) {
-    return axis === 'h' ? this.cssWidth : this.cssHeight;
-  }
-
-  get top() {
-    return this.getSide('v', false);
-  }
-
-  get left() {
-    return this.getSide('h', false);
-  }
-
-  get bottom() {
-    return this.getSide('v', true);
-  }
-
-  get right() {
-    return this.getSide('h', true);
-  }
-
-  set top(px) {
-    this.setSide(px, 'v', false);
-    //this.cssHeight.px += this.cssY.px - px;
-    //this.cssY.px = px;
-  }
-
-  set left(px) {
-    this.setSide(px, 'h', false);
-    //this.cssWidth.px += this.cssX.px - px;
-    //this.cssX.px = px;
-  }
-
-  set bottom(px) {
-    this.setSide(px, 'v', true);
-  }
-
-  set right(px) {
-    this.setSide(px, 'h', true);
-  }
-
-  getSide(axis, inverted) {
-    var px  = this.cssPosition[axis];
-    var dim = this.getDimensionForAxis(axis);
-    if (inverted != this.cssPosition.hasInvertedAxis(axis)) {
-      px += dim.px;
-    }
-    return px;
-  }
-
-  setSide(px, axis, inverted) {
-    var dim = this.getDimensionForAxis(axis);
-    if (this.isOppositeSide(axis, inverted)) {
-      // If we are setting the opposite side of the
-      // box's origin, then simply update the dimensions.
-      dim.px = px - this.cssPosition[axis];
-    } else {
-      // If we are setting the same side as the box's
-      // origin, then update the position first, then
-      // calculate the dimension from the difference;
-//
-      //this.cssPosition.addXYAxis(px, axis);
-      ////this.cssPosition[axis] = px;
-      //dim.px = this.cssPosition[axis] - this.cssPosition.getPixelValueForXY(px, axis);
-    }
-  }
-  */
-
-  /*
-  constructor(cssX, cssY, cssWidth, cssHeight) {
-    this.cssX   = cssX;
-    this.cssY    = cssY;
-    this.cssWidth  = cssWidth;
-    this.cssHeight = cssHeight;
-  }
-
-  // Property accessors
-
-  get width () {
-    return this.cssWidth.px;
-  }
-
-  set width (px) {
-    this.cssWidth.px = px;
-  }
-
-  get height () {
-    return this.cssHeight.px;
-  }
-
-  set height (px) {
-    this.cssHeight.px = px;
-  }
-
-  // Computed accessors
-
-  get right() {
-    return this.left + this.width;
-  }
-
-  set right(px) {
-    this.width = px - this.left;
-  }
-
-  get bottom() {
-    return this.top + this.height;
-  }
-
-  set bottom(px) {
-    this.height = px - this.top;
-  }
-
-  get hcenter() {
-    return this.left + this.width / 2;
-  }
-
-  get vcenter() {
-    return this.top + this.height / 2;
-  }
-
-  ensureValidBox() {
-    if (this.width < 0) {
-      this.cssX.px += this.cssWidth.px;
-      this.cssWidth.px = -this.cssWidth.px;
-    }
-    if (this.height < 0) {
-      this.cssY.px += this.cssHeight.px;
-      this.cssHeight.px = -this.cssHeight.px;
-    }
-  }
-
-  // TODO: cleanup
-  render(style) {
-    this.ensureValidBox();
-    style.left   = this.cssX;
-    style.top    = this.cssY;
-    style.width  = this.cssWidth;
-    style.height = this.cssHeight;
-  }
-
-  getPosition() {
-    return new Point(this.left, this.top);
-  }
-
-  setPosition(vector) {
-    this.cssX.px = vector.x;
-    this.cssY.px  = vector.y;
-  }
-
-  addPosition(vector) {
-    this.cssX.add(vector.x);
-    this.cssY.add(vector.y);
-  }
-
-  getCoords(p, rotation) {
-    var center;
-
-    p = p.subtract(this.getPosition());
-
-    if (rotation) {
-      center = this.getCenter();
-      p = p.subtract(center).rotate(-potation).add(center);
-    }
-
-    return p;
-  }
-
-  getCenterCoords() {
-    return new Point(this.width / 2, this.height / 2);
-  }
-
-  getCenterPosition() {
-    return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
-  }
-
-  // TODO: vague
-  getCenter() {
-    return new Point(this.left + (this.width / 2), this.top + (this.height / 2));
-  }
-
-  /*
-  // TODO: rename??
-  calculateRotationOffset() {
-    if (!this.rotation) {
-      return;
-    }
-
-    var pos = this.getPosition();
-    var center = new Point(this.width / 2, this.height / 2);
-    var rotatedCoords = center.rotate(this.rotation);
-    var rotatedPos = pos.subtract(rotatedCoords.subtract(center));
-    this.setPosition(rotatedPos);
-
-    var offsetX  = this.box.width / 2;
-    var offsetY  = this.box.height / 2;
-    var toCenter = anchor.offsetToCenter(offsetX, offsetY).rotate(this.box.rotation);
-    var toCorner = new Point(-offsetX, -offsetY);
-    return anchor.startPosition.add(toCenter).add(toCorner);
-  }
-  */
-
-  /*
-  // Returns coordinates in the box's XY coordinate
-  // frame for a given non-rotated XY position.
-  getCoordsForPosition(pos) {
-    if (!this.rotation) return pos;
-    var center = this.getCenter();
-    return pos.subtract(center).rotate(this.rotation).add(center);
-  }
-
-  getRatio() {
-    return this.width / this.height;
-  }
-
-  // TODO: better name for this?
-  /*
-  adjustSide(prop, amount) {
-    if (!prop || !amount) {
-      return;
-    }
-
-    amount = this.constrainProperty(prop, this[prop] + amount);
-
-    // If the side is "left" or "top", then
-    if (prop === 'left') {
-    }
-
-    this[prop] = amount;
-  }
-
-  constrainProperty(prop, amount) {
-    switch(prop) {
-      case 'left':   return Math.min(amount, this.right - 1);
-      case 'right':  return Math.max(amount, this.left + 1);
-      case 'top':    return Math.min(amount, this.bottom - 1);
-      case 'bottom': return Math.max(amount, this.top + 1);
-    }
-  }
-
-  clone() {
-    return new CSSBox(
-      this.cssX.clone(),
-      this.cssY.clone(),
-      this.cssWidth.clone(),
-      this.cssHeight.clone()
+  // Returns a normalized vector representing the
+  // direction that the box extends into x/y space.
+  getDirectionNormal() {
+    return new Point(
+      this.cssH.isInverted() ? -1 : 1,
+      this.cssV.isInverted() ? -1 : 1
     );
   }
-  */
+
+  // Returns a normalized vector representing the
+  // offset of a corner in x/y space.
+  getCornerNormal(corner) {
+    switch (corner) {
+      case 'n':  return new Point( 0, -1);
+      case 'e':  return new Point( 1,  0);
+      case 's':  return new Point( 0,  1);
+      case 'w':  return new Point(-1,  0);
+      case 'nw': return new Point(-1, -1);
+      case 'ne': return new Point( 1, -1);
+      case 'se': return new Point( 1,  1);
+      case 'sw': return new Point(-1,  1);
+    }
+  }
+
+  // Returns a normalized vector representing the offset
+  // of an anchor opposite the provided corner from the
+  // center of the box in an x/y frame.
+  getAnchorNormal(corner) {
+    var dim, normal;
+    dim    = this.getDimensions();
+    normal = this.getCornerNormal(corner);
+    return new Point(
+      -normal.x * (dim.x < 0 ? -1 : 1),
+      -normal.y * (dim.y < 0 ? -1 : 1)
+    );
+  }
+
+  // --- Anchors
+
+  // Returns the position of the box in an x/y frame.
+  // Note that boxes using right/bottom positioning are not
+  // relative to the viewport's width/height, but instead extend
+  // in a negative direction from a 0,0 origin. Boxes which are
+  // reflected (ie. those with negative dimensions) may also
+  // affect the final position, as they may extend negatively
+  // into the x/y frame. For example:
+  //
+  // top:     100px;
+  // left:    100px;
+  // width:  -200px;
+  // height: -200px;
+  //
+  // returns -100,-100
+  //
+  // right:  100px;
+  // bottom: 100px;
+  // width:  100px;
+  // height: 100px;
+  //
+  // returns -200,-200
+  //
+  // right:   100px;
+  // bottom:  100px;
+  // width:  -100px;
+  // height: -100px;
+  //
+  // returns 0,0
+  //
+  getXYPosition() {
+    var dir, xyPos, xyDim, xyOffset;
+
+    dir = this.getDirectionNormal();
+
+    xyPos = this.getPositionOffset().multiply(dir);
+    xyDim = this.getDimensions().multiply(dir);
+
+    xyOffset = new Point(
+      Math.min(0, xyDim.x),
+      Math.min(0, xyDim.y)
+    );
+
+    return xyPos.add(xyOffset);
+  }
+
+  getPositionOffset() {
+    return new Point(this.cssH.px, this.cssV.px);
+  }
+
+  // Returns the offset of an anchor opposite to the provided
+  // corner in an x/y frame. Note that in the case that the
+  // box is reflected, the points be flipped along the anchor
+  // point to account for this.
+  getAnchorOffset(corner) {
+    var center = new Point(
+      Math.abs(this.cssWidth.px  / 2),
+      Math.abs(this.cssHeight.px / 2)
+    );
+    return center.add(this.getAnchorNormal(corner).multiply(center));
+  }
+
+  // --- Rendering
+
+  renderAxis(style, pos, dim, prop) {
+    pos = this.getRenderablePositionValue(pos, dim);
+    dim = this.getRenderableDimensionValue(dim);
+    pos.render(style);
+    style[prop] = dim.isInitial() ? '' : dim;
+  }
+
+  getRenderablePosition() {
+    return [
+      this.getRenderablePositionValue(this.cssH, this.cssWidth),
+      this.getRenderablePositionValue(this.cssV, this.cssHeight)
+    ];
+  }
+
+  getRenderableDimensions() {
+    return [
+      this.getRenderableDimensionValue(this.cssWidth),
+      this.getRenderableDimensionValue(this.cssHeight)
+    ];
+  }
+
+  getRenderablePositionValue(pos, dim) {
+    if (dim.px < 0) {
+      pos = pos.clone();
+      pos.px += dim.px;
+    }
+    return pos;
+  }
+
+  getRenderableDimensionValue(dim) {
+    if (dim.px < 0) {
+      dim = dim.clone();
+      dim.px = -dim.px;
+    }
+    return dim;
+  }
 
 }
 
@@ -7472,10 +7259,12 @@ class CSSBox {
 
 class CSSRuleMatcher {
 
+  static get VAR_REG() { return /var\((.+)\)/; }
+
   constructor(el) {
     this.el = el;
-    this.computedStyles = window.getComputedStyle(el);
-    this.matchedRules = this.getMatchedRules(el);
+    this.computedStyle = window.getComputedStyle(el);
+    this.matchedRules  = this.getMatchedRules(el);
   }
 
   getProperty(name) {
@@ -7489,7 +7278,7 @@ class CSSRuleMatcher {
   }
 
   getComputedValue(name) {
-    return this.computedStyles[name];
+    return this.computedStyle[name];
   }
 
   // --- Private
@@ -7514,11 +7303,24 @@ class CSSRuleMatcher {
       for (var rules = this.matchedRules, i = rules.length - 1, rule; rule = rules[i]; i--) {
         val = rule.style[name];
         if (val) {
+          val = this.getRuleValue(val);
           break;
         }
       }
     }
 
+    return val;
+  }
+
+  getRuleValue(val) {
+    var match = val.match(CSSRuleMatcher.VAR_REG);
+    if (match) {
+      // Typically we don't want to fall back to computed styles to get a matched
+      // value, however in the case of CSS variables the original variable value
+      // only exists on the computed style object, so return it here. It seems
+      // this value may contain whitespace, so trim it before returning.
+      val = this.computedStyle.getPropertyValue(match[1]).trim();
+    }
     return val;
   }
 
@@ -7545,7 +7347,6 @@ class CSSProperty {
   static get BACKGROUND_IMAGE()    { return 'backgroundImage';    }
   static get BACKGROUND_POSITION() { return 'backgroundPosition'; }
 
-  static get VAR_REG()             { return /var\(.+\)/;       }
   static get LINEAR_GRADIENT_REG() { return /linear-gradient/; }
 
   constructor(name, matchedValue, computedValue) {
@@ -7575,15 +7376,13 @@ class CSSProperty {
   normalize() {
     // We need to normalize values here so that they can all be tested.
     // Force all "auto", "none", and "initial" values to empty strings,
-    // then remove matched CSS variables as they are unusable. Set
-    // matched background images to their computed value, as they don't
-    // contain the domain, which we need to detect cross domain images.
-    // They also may contain linear-gradient values which need to be
-    // coerced as well. Finally handle positioning keywords like
-    // "top left" by replacing with percentages and removing the computed
-    // value.
+    // then set matched background images to their computed value, as
+    // they don't contain the domain, which we need to detect cross
+    // domain images. They also may contain linear-gradient values which
+    // need to be coerced as well. Finally handle positioning keywords
+    // like "top left" by replacing with percentages and removing the
+    // computed value.
     this.coerceInitialValues();
-    this.coerceCSSVariable();
     this.coerceBackgroundImageValue();
     this.coercePositionKeywordPairs();
   }
@@ -7603,14 +7402,6 @@ class CSSProperty {
     return val === CSSProperty.AUTO ||
            val === CSSProperty.NONE ||
            val === CSSProperty.INITIAL;
-  }
-
-  // --- CSS Variables
-
-  coerceCSSVariable() {
-    if (CSSProperty.VAR_REG.test(this.matchedValue)) {
-      this.matchedValue = this.computedValue;
-    }
   }
 
   // --- Background Image

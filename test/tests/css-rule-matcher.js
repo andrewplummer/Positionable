@@ -43,4 +43,9 @@ describe('CSSRuleMatcher', function() {
     assertValue(matcher, 'left', '0px');
   });
 
+  it('should get CSS variables', function() {
+    setupMatcher('var-box');
+    assertValue(matcher, 'width', '100%');
+  });
+
 });

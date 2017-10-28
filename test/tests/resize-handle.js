@@ -37,12 +37,12 @@ describe('ResizeHandle', function() {
     fragment = new MockDocumentFragment();
   });
 
-  function createHandle(dir) {
-    return new ResizeHandle(fragment, dir, listener);
+  function createHandle(corner) {
+    return new ResizeHandle(fragment, corner, listener);
   }
 
-  function assertCursor(dir, rotation, expected) {
-    var handle = createHandle(dir);
+  function assertCursor(corner, rotation, expected) {
+    var handle = createHandle(corner);
     assert.equal(handle.getCursor(rotation), expected);
   }
 
@@ -51,7 +51,7 @@ describe('ResizeHandle', function() {
     dragElement(handle.el, 200, 200, 300, 250);
     assert.equal(listener.lastEventDrag.x, 100);
     assert.equal(listener.lastEventDrag.y, 50);
-    assert.equal(listener.lastEventHandle.dir, 'se');
+    assert.equal(listener.lastEventHandle.corner, 'se');
   });
 
   it('should be able to get the correct cursor for rotation', function() {

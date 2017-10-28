@@ -245,7 +245,6 @@ describe('PositionableElementManager', function() {
     assert.equalWithTolerance(matchedY, y, 0.01);
   }
 
-
   // --- Finding Elements
 
   it('should not find elements if they do not exist', function() {
@@ -850,11 +849,11 @@ describe('PositionableElementManager', function() {
     assertInvertedBoxDimensions('2420px', '1580px', '500px', '500px');
   });
 
-  xit('should allow a box to be reflected even if rotated', function() {
+  it('should allow a box to be reflected even if rotated', function() {
     setupBox('rotate-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 150, 221, 150, -62);
     assertBoxDimensions(el, '0px', '0px', '100px', '100px');
-    assertBoxTranslation(100.11, -49.89);
+    assertBoxTranslation(100.11, -41.47);
   });
 
   // --- Resize Constraining - Basics
@@ -1051,7 +1050,7 @@ describe('PositionableElementManager', function() {
     setupBox('rotate-tl-box');
     dragElement(getUiElement(el, '.resize-handle-se'), 100, 241, 100, 341);
     assertInvertedBoxDimensions('', '', '171px', '171px');
-    assertBoxTranslation(0, 0);
+    assert.equal(el.style.transform, '');
   });
 
   it('should stay anchored when resizing a rotated box with top right origin', function() {

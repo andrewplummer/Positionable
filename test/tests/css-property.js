@@ -98,11 +98,6 @@ describe('CSSProperty', function() {
     assertValue('backgroundPosition', 'center right', '0% 0%', '100% 50%');
   });
 
-  it('should not fail on css variables', function() {
-    assertValue('left', 'var(--foo)', '10px', '10px');
-    assertInitial('left', 'var(--foo)', '10px', false);
-  });
-
   it('should coerce linear gradient urls', function() {
     var standard = 'linear-gradient(red 0%, black 100%)';
     var webkit   = '-webkit-linear-gradient(red 0%, black 100%)';

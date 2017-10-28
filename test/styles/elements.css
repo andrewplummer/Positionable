@@ -413,7 +413,7 @@ body {
 }
 
 :root {
-  --mock-position: 200px;
+  --mock-position: 100%;
 
   /*
    * Data URI representing an image:

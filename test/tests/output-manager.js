@@ -120,7 +120,6 @@ describe('OutputManager', function(uiRoot) {
 
   it('should get correct headers for default box', function() {
     setupBox();
-
     assert.equal(manager.getPositionHeader(element), '100px, 100px');
     assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
     assert.equal(manager.getZIndexHeader(element), '');
@@ -181,6 +180,22 @@ describe('OutputManager', function(uiRoot) {
   it('should get headers when even one function exists', function() {
     setupBox('null-rotate-with-translate-box');
     assert.equal(manager.getTransformHeader(element), 'r: 0deg | t: 20px, 20px');
+  });
+
+  it('should get correct headers for a reflected box', function() {
+    setupBox();
+    element.cssBox.cssWidth.px = -100;
+    element.cssBox.cssHeight.px = -100;
+    assert.equal(manager.getPositionHeader(element), '0px, 0px');
+    assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
+  });
+
+  it('should get correct headers for a reflected inverted box', function() {
+    setupBox('inverted-box');
+    element.cssBox.cssWidth.px = -100;
+    element.cssBox.cssHeight.px = -100;
+    assert.equal(manager.getPositionHeader(element), '0px, 0px');
+    assert.equal(manager.getDimensionsHeader(element), '100px, 100px');
   });
 
   // --- Style Declarations
@@ -368,6 +383,22 @@ describe('OutputManager', function(uiRoot) {
         width: 100px;
         height: 100px;
         transform: rotate(0deg) translate(20px, 20px);
+      }
+
+    `);
+  });
+
+  it('should get correct styles for a reflected box', function() {
+    setupBox();
+    element.cssBox.cssWidth.px = -100;
+    element.cssBox.cssHeight.px = -100;
+    assert.equal(manager.getStyles([element]), dec`
+
+      #absolute-box {
+        top: 0px;
+        left: 0px;
+        width: 100px;
+        height: 100px;
       }
 
     `);

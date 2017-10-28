@@ -470,6 +470,29 @@ describe('PositionableElement', function() {
     assert.equal(decs.length, 2);
   });
 
+  // --- Anchors
+
+  it('should not have transfom after basic move', function() {
+    setupBox();
+    element.pushState();
+    element.move(100, 100);
+    assert.equal(el.style.transform, '');
+  });
+
+  it('should not have transform after basic resize', function() {
+    setupBox();
+    element.pushState();
+    element.resize(100, 100, 'se');
+    assert.equal(el.style.transform, '');
+  });
+
+  it('should have tranform after rotated resize', function() {
+    setupBox('rotate-box');
+    element.pushState();
+    element.resize(100, 100, 'se');
+    assert.equal(el.style.transform, 'translate(-50px, 20.71px) rotate(45deg)');
+  });
+
   // --- Other
 
   it('should receive correct rotation events after a move', function() {
@@ -491,10 +514,10 @@ describe('PositionableElement', function() {
   it('should not fail on a box using CSS variables', function() {
     setupBox('var-box');
     element.renderBox();
-    assert.equal(el.style.top,    '200px');
-    assert.equal(el.style.left,   '200px');
-    assert.equal(el.style.width,  '200px');
-    assert.equal(el.style.height, '200px');
+    assert.equal(el.style.top,    '100%');
+    assert.equal(el.style.left,   '100%');
+    assert.equal(el.style.width,  '100%');
+    assert.equal(el.style.height, '100%');
   });
 
   it('should not error on unsupported values', function() {
