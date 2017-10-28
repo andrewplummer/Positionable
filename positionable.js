@@ -7812,7 +7812,7 @@ class CSSValue {
       isVertical = prop.isVertical();
     }
 
-    match = str.match(/([-\d.]+)(px|%|em|deg|g?rad|turn|v(?:w|h|min|max))?$/);
+    match = str.match(/([-\d.]+)(px|%|r?em|deg|g?rad|turn|v(?:w|h|min|max))?$/);
 
     if (!match) {
       return new CSSPixelValue(0, true);
@@ -7823,21 +7823,22 @@ class CSSValue {
 
     switch (unit) {
 
-      case '%':  return CSSPercentValue.create(val, initial, prop, el, isVertical, img);
-      case 'px': return CSSPixelValue.create(val, initial, prop);
-      case 'em': return CSSEmValue.create(val, initial, el);
-
-      case 'vw':
-      case 'vh':
-      case 'vmin':
-      case 'vmax':
-        return new CSSViewportValue(val, initial, unit);
+      case '%':    return CSSPercentValue.create(val, initial, prop, el, isVertical, img);
+      case 'px':   return CSSPixelValue.create(val, initial, prop);
+      case 'em':   return CSSEmValue.create(val, initial, el);
+      case 'rem':  return CSSRemValue.create(val, initial);
 
       case 'deg':  return new CSSDegreeValue(val, initial);
       case 'rad':  return new CSSRadianValue(val, initial);
       case 'grad': return new CSSGradianValue(val, initial);
       case 'turn': return new CSSTurnValue(val, initial);
       case '':     return new CSSIntegerValue(val, initial);
+
+      case 'vw':
+      case 'vh':
+      case 'vmin':
+      case 'vmax':
+        return new CSSViewportValue(val, initial, unit);
 
     }
   }
@@ -7922,17 +7923,12 @@ class CSSPixelValue extends CSSValue {
 
 }
 
-/*-------------------------] CSSEmValue [--------------------------*/
+/*-------------------------] CSSFontSizeValue [--------------------------*/
 
-class CSSEmValue extends CSSValue {
+class CSSFontSizeValue extends CSSValue {
 
-  static create(val, initial, el) {
-    var fontSize = parseFloat(window.getComputedStyle(el).fontSize);
-    return new CSSEmValue(val, initial, fontSize);
-  }
-
-  constructor(val, initial, fontSize) {
-    super(val, initial, 'em', true);
+  constructor(val, initial, unit, fontSize) {
+    super(val, initial, unit, true);
     this.fontSize = fontSize;
   }
 
@@ -7944,8 +7940,43 @@ class CSSEmValue extends CSSValue {
     this.val = px / this.fontSize;
   }
 
+}
+
+/*-------------------------] CSSEmValue [--------------------------*/
+
+class CSSEmValue extends CSSFontSizeValue {
+
+  static create(val, initial, el) {
+    var fontSize = parseFloat(window.getComputedStyle(el).fontSize);
+    return new CSSEmValue(val, initial, fontSize);
+  }
+
+  constructor(val, initial, fontSize) {
+    super(val, initial, 'em', fontSize);
+  }
+
   clone() {
     return new CSSEmValue(this.val, this.initial, this.fontSize);
+  }
+
+}
+
+/*-------------------------] CSSRemValue [--------------------------*/
+
+class CSSRemValue extends CSSFontSizeValue {
+
+  static create(val, initial, el) {
+    var doc = document.documentElement;
+    var fontSize = parseFloat(window.getComputedStyle(doc).fontSize);
+    return new CSSRemValue(val, initial, fontSize);
+  }
+
+  constructor(val, initial, fontSize) {
+    super(val, initial, 'rem', fontSize);
+  }
+
+  clone() {
+    return new CSSRemValue(this.val, this.initial, this.fontSize);
   }
 
 }

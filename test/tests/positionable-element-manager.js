@@ -152,9 +152,21 @@ describe('PositionableElementManager', function() {
 
   function setupEmBox(left, top, width, height, fontSize) {
     el = appendBox();
-    setBoxPosition(left, top, width, height);
     el.style.fontSize = fontSize;
+    setBoxPosition(left, top, width, height);
     manager.findElements();
+  }
+
+  function setupRemBox(left, top, width, height, fontSize) {
+    el = appendBox();
+    el.style.fontSize = '100px';
+    document.documentElement.style.fontSize = fontSize;
+    setBoxPosition(left, top, width, height);
+    manager.findElements();
+  }
+
+  function releaseDocumentFontSize() {
+    document.documentElement.style.fontSize = '';
   }
 
   function setupInvertedBox(right, bottom, width, height) {
@@ -650,6 +662,14 @@ describe('PositionableElementManager', function() {
     dragElement(getUiElement(el, '.position-handle'), 100, 100, 300, 300);
     assert.equal(el.style.left, '13em');
     assert.equal(el.style.top,  '13em');
+  });
+
+  it('should move boxes positioned by rem', function() {
+    setupRemBox('6rem', '6rem', '6rem', '6rem', '20px');
+    dragElement(getUiElement(el, '.position-handle'), 100, 100, 300, 300);
+    assert.equal(el.style.left, '16rem');
+    assert.equal(el.style.top,  '16rem');
+    releaseDocumentFontSize();
   });
 
   it('should move a vw positioned element', function() {
