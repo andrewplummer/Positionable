@@ -137,8 +137,8 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(getUiElement(document.documentElement, '#mode-background').style.display, 'block');
   });
 
-  it('should render mode in alignment area', function() {
-    panel.showAlignArea();
+  it('should render mode in multiple area', function() {
+    panel.showMultipleArea();
     assert.equal(getUiElement(document.documentElement, '#mode-background').style.display, 'block');
     panel.setNudgeMode('position');
     var elementAreaPosition = getUiElement(document.documentElement, '#mode-position');
@@ -146,14 +146,14 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(display, 'block');
   });
 
-  // --- Rendering Align Area
+  // --- Rendering Multiple Area
 
   it('should render multiple selected', function() {
     var elements = getMockElements(5);
     panel.renderMultipleSelected(elements);
-    assert.equal(getUiElement(document.documentElement, '#align-area-header').textContent, '5 elements selected');
+    assert.equal(getUiElement(document.documentElement, '#multiple-area-header').textContent, '5 elements selected');
     assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, '');
-    assert.equal(getUiElement(document.documentElement, '#align-area-highlight-buttons').children.length, 5);
+    assert.equal(getUiElement(document.documentElement, '#highlight-buttons').children.length, 5);
   });
 
   it('should not render distribute buttons with only 2 elements selected', function() {

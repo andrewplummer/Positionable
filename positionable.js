@@ -6,7 +6,6 @@
  *
  * ---------------------------- */
 
-// - TODO: rename align to "multiple"
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: clean these constants up by moving them into AppController
@@ -3306,7 +3305,7 @@ class AppController {
   renderActiveControlPanel() {
     var elements = this.elementManager.getFocusedElements();
     if (elements.length > 1) {
-      this.renderAlignArea(elements);
+      this.renderMultipleArea(elements);
     } else if (elements.length === 1) {
       this.renderElementArea();
     } else {
@@ -3670,8 +3669,8 @@ class AppController {
 
   // --- Control Panel Element Rendering
 
-  renderAlignArea(elements) {
-    this.controlPanel.showAlignArea();
+  renderMultipleArea(elements) {
+    this.controlPanel.showMultipleArea();
     this.controlPanel.renderMultipleSelected(elements);
   }
 
@@ -3731,14 +3730,14 @@ class AppController {
   onElementHighlightMouseOver(index) {
     var element = this.elementManager.focusedElements[index], selector;
     selector = this.outputManager.getSelectorWithDefault(element);
-    this.controlPanel.renderAlignHeader(selector);
+    this.controlPanel.renderMultipleHeader(selector);
     element.setHighlightMode(true);
   }
 
   onElementHighlightMouseOut(index) {
     var element = this.elementManager.focusedElements[index];
     element.setHighlightMode(false);
-    this.controlPanel.renderAlignHeader();
+    this.controlPanel.renderMultipleHeader();
   }
 
   onElementHighlightClick(index) {
@@ -4643,21 +4642,20 @@ class ControlPanel extends DraggableElement {
   static get ACTIVE_CLASS()     { return 'control-panel--active'; }
   static get WINDOWS_CLASS()    { return 'control-panel--win';    }
 
-
   static get TRANSFORM_ACTIVE_CLASS()  { return 'control-panel--element-transform-active'; }
   static get BACKGROUND_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
 
   static get LONG_SELECTOR_LENGTH() { return 30; }
   static get LONG_SELECTOR_CLASS()  { return 'element-area-selector--long'; }
 
-  static get HIGHLIGHT_BUTTON_CLASS()    { return 'align-area-highlight-button';     }
+  static get HIGHLIGHT_BUTTON_CLASS() { return 'highlight-button'; }
 
-  static get ALIGN_MANY_CLASS()     { return 'control-panel--align-many';  }
-  static get ALIGN_LOTS_CLASS()     { return 'control-panel--align-lots';  }
-  static get ALIGN_TONS_CLASS()     { return 'control-panel--align-tons';  }
-  static get ALIGN_MANY_THRESHOLD() { return 18; }
-  static get ALIGN_LOTS_THRESHOLD() { return 32; }
-  static get ALIGN_TONS_THRESHOLD() { return 60; }
+  static get HIGHLIGHT_MANY_CLASS()     { return 'control-panel--highlight-many';  }
+  static get HIGHLIGHT_LOTS_CLASS()     { return 'control-panel--highlight-lots';  }
+  static get HIGHLIGHT_TONS_CLASS()     { return 'control-panel--highlight-tons';  }
+  static get HIGHLIGHT_MANY_THRESHOLD() { return 18; }
+  static get HIGHLIGHT_LOTS_THRESHOLD() { return 32; }
+  static get HIGHLIGHT_TONS_THRESHOLD() { return 60; }
 
   constructor(root, listener) {
     super(root.getElementById('control-panel'), true);
@@ -4678,9 +4676,9 @@ class ControlPanel extends DraggableElement {
 
   setupAreas(root) {
     this.helpArea           = new ControlPanelArea(root, 'help');
-    this.alignArea          = new ControlPanelArea(root, 'align');
     this.defaultArea        = new ControlPanelArea(root, 'default');
     this.elementArea        = new ControlPanelArea(root, 'element');
+    this.multipleArea       = new ControlPanelArea(root, 'multiple');
     this.settingsArea       = new ControlPanelArea(root, 'settings');
     this.gettingStartedArea = new ControlPanelArea(root, 'getting-started');
   }
@@ -4701,9 +4699,9 @@ class ControlPanel extends DraggableElement {
 
   setupRenderedElements(root) {
     this.renderedElements = {
-      'multiple':           new Element(root.getElementById('align-area-header')),
-      'highlightButtons':   new Element(root.getElementById('align-area-highlight-buttons')),
+      'multipleHeader':     new Element(root.getElementById('multiple-area-header')),
       'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
+      'highlightButtons':   new Element(root.getElementById('highlight-buttons')),
       'modePosition':       new Element(root.getElementById('mode-position')),
       'modeResizeSe':       new Element(root.getElementById('mode-resize-se')),
       'modeResizeNw':       new Element(root.getElementById('mode-resize-nw')),
@@ -4741,20 +4739,20 @@ class ControlPanel extends DraggableElement {
 
   fireFromHighlightEvent(evt, name) {
     var index = evt.target.dataset.index;
-    if (index && this.activeArea === this.alignArea) {
+    if (index && this.activeArea === this.multipleArea) {
       this.listener[name](index);
     }
   }
 
-  renderAlignHeader(str) {
+  renderMultipleHeader(str) {
     str = str || this.highlightedCount + ' elements selected';
-    this.renderedElements.multiple.text(str);
+    this.renderedElements.multipleHeader.text(str);
   }
 
   clearHighlightButtonClasses() {
-    this.removeClass(ControlPanel.ALIGN_MANY_CLASS);
-    this.removeClass(ControlPanel.ALIGN_LOTS_CLASS);
-    this.removeClass(ControlPanel.ALIGN_TONS_CLASS);
+    this.removeClass(ControlPanel.HIGHLIGHT_MANY_CLASS);
+    this.removeClass(ControlPanel.HIGHLIGHT_LOTS_CLASS);
+    this.removeClass(ControlPanel.HIGHLIGHT_TONS_CLASS);
   }
 
   renderHighlightButtons(elements) {
@@ -4765,12 +4763,12 @@ class ControlPanel extends DraggableElement {
     }).join('');
     container.innerHTML = html;
     this.clearHighlightButtonClasses();
-    if (elements.length > ControlPanel.ALIGN_TONS_THRESHOLD) {
-      this.addClass(ControlPanel.ALIGN_TONS_CLASS);
-    } else if (elements.length > ControlPanel.ALIGN_LOTS_THRESHOLD) {
-      this.addClass(ControlPanel.ALIGN_LOTS_CLASS);
-    } else if (elements.length > ControlPanel.ALIGN_MANY_THRESHOLD) {
-      this.addClass(ControlPanel.ALIGN_MANY_CLASS);
+    if (elements.length > ControlPanel.HIGHLIGHT_TONS_THRESHOLD) {
+      this.addClass(ControlPanel.HIGHLIGHT_TONS_CLASS);
+    } else if (elements.length > ControlPanel.HIGHLIGHT_LOTS_THRESHOLD) {
+      this.addClass(ControlPanel.HIGHLIGHT_LOTS_CLASS);
+    } else if (elements.length > ControlPanel.HIGHLIGHT_MANY_THRESHOLD) {
+      this.addClass(ControlPanel.HIGHLIGHT_MANY_CLASS);
     }
   }
 
@@ -4840,8 +4838,8 @@ class ControlPanel extends DraggableElement {
     this.showArea(this.settingsArea);
   }
 
-  showAlignArea() {
-    this.showArea(this.alignArea);
+  showMultipleArea() {
+    this.showArea(this.multipleArea);
   }
 
   getAreaActiveClassName(area) {
@@ -4857,7 +4855,7 @@ class ControlPanel extends DraggableElement {
       this.removeClass(ControlPanel.TRANSFORM_ACTIVE_CLASS);
       this.removeClass(ControlPanel.BACKGROUND_ACTIVE_CLASS);
     }
-    if (area !== this.alignArea) {
+    if (area !== this.multipleArea) {
       this.clearHighlightButtonClasses();
     }
     this.addClass(this.getAreaActiveClassName(area));
@@ -4902,7 +4900,7 @@ class ControlPanel extends DraggableElement {
       this.renderedElements.distributeButtons.hide();
     }
     this.renderHighlightButtons(elements);
-    this.renderAlignHeader();
+    this.renderMultipleHeader();
   }
 
   renderElementSelector(selector) {

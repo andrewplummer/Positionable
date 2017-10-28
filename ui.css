@@ -161,12 +161,12 @@ input, select {
   pointer-events: none;
 }
 
-.align-area,
-.element-area {
+.element-area,
+.multiple-area {
   margin-right: 60px;
 }
 
-.control-panel--align-active .mode-indicator,
+.control-panel--multiple-active .mode-indicator,
 .control-panel--element-active .mode-indicator {
   opacity: 1;
   pointer-events: auto;
@@ -265,25 +265,27 @@ input, select {
   max-height: 2.4em;
 }
 
-/*---------------------------] Alignment Area [-----------------------*/
+/*---------------------------] Multiple Area [-----------------------*/
 
-.control-panel--align-active {
+.control-panel--multiple-active {
   width: 480px;
   height: 150px;
 }
 
-.align-area-button-frame {
+.multiple-area-button-frame {
   white-space: nowrap;
   margin: 5px 0;
 }
 
-.align-area-header {
+.multiple-area-header {
   font-size: 22px;
   margin-bottom: .3em;
   white-space: nowrap;
 }
 
-.align-area-button {
+/* Align/Distribute Buttons */
+
+.align-button {
   display: inline-block;
   border: 1px solid #ccc;
   margin: -1px;
@@ -301,7 +303,9 @@ input, select {
   margin-right: 4px;
 }
 
-.align-area-highlight-buttons {
+/* Highlight Buttons */
+
+.highlight-buttons {
   margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
@@ -309,7 +313,7 @@ input, select {
   overflow-y: auto;
 }
 
-.align-area-highlight-button {
+.highlight-button {
   width: 20px;
   height: 20px;
   cursor: pointer;
@@ -317,7 +321,7 @@ input, select {
   padding: 0 2px 2px 0;
 }
 
-.align-area-highlight-button:after {
+.highlight-button:after {
   content: '';
   display: block;
   width: 100%;
@@ -327,26 +331,26 @@ input, select {
   box-sizing: border-box;
 }
 
-.align-area-highlight-selector {
+.highlight-selector {
   margin-top: .2em;
   font-size: 18px;
 }
 
-/* Many of highlight buttons */
+/* Many highlight buttons */
 
-.control-panel--align-many {
+.control-panel--highlight-many {
   width: 480px;
   height: 165px;
 }
 
 /* Lots of highlight buttons */
 
-.control-panel--align-lots {
+.control-panel--highlight-lots {
   width: 480px;
   height: 180px;
 }
 
-.control-panel--align-lots .align-area-highlight-button {
+.control-panel--highlight-lots .multiple-area-highlight-button {
   width: 18px;
   height: 18px;
   padding: 0 1px 1px 0;
@@ -354,12 +358,12 @@ input, select {
 
 /* Tons of highlight buttons */
 
-.control-panel--align-tons {
+.control-panel--highlight-tons {
   width: 480px;
   height: 190px;
 }
 
-.control-panel--align-tons .align-area-highlight-button {
+.control-panel--highlight-tons .multiple-area-highlight-button {
   width: 16px;
   height: 16px;
   padding: 0 1px 1px 0;
