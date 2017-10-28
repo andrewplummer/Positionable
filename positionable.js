@@ -5953,8 +5953,6 @@ class Form extends BrowserEventTarget {
     this.bindEvent('blur', this.onBlur, true);
 
     // Stop propagation on interactive events
-    this.bindEvent('mousedown', this.stopEventPropagation);
-    this.bindEvent('mouseup', this.stopEventPropagation);
     this.bindEvent('click', this.stopEventPropagation);
 
     this.validState = true;
