@@ -2534,6 +2534,7 @@ class PositionableElement extends BrowserEventTarget {
     // There may be cases where users want to set up their positioning
     // and then search for other elements as a workflow. The jump that
     // is caused when these elements are destroyed is also jarring.
+    this.unfocus();
     this.injector.destroy();
     this.removeAllListeners();
     this.clearOverrides();

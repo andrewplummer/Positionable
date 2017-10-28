@@ -585,4 +585,11 @@ describe('PositionableElement', function() {
     assert.isFalse(getUiElement(el, '#ui').classList.contains('ui--highlight'));
   });
 
+  it('should clear temporary z-index when destroyed', function() {
+    setupBox();
+    element.focus();
+    element.destroy();
+    assert.equal(el.style.zIndex, '');
+  });
+
 });
