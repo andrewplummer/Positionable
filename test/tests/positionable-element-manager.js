@@ -700,6 +700,14 @@ describe('PositionableElementManager', function() {
 
   });
 
+  it('should not error on unknown units', function() {
+    setupPositionedBox('5cm', '5cm', '5in', '5in');
+    assert.equal(el.style.left,   '5cm');
+    assert.equal(el.style.top,    '5cm');
+    assert.equal(el.style.width,  '5in');
+    assert.equal(el.style.height, '5in');
+  });
+
   // --- Background Positioning
 
   it('should not move background image when none exists', function() {
