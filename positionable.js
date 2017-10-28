@@ -6021,6 +6021,8 @@ class Form extends BrowserEventTarget {
     if (confirm(Form.CONFIRM_MESSAGE)) {
       this.listener.onFormReset(evt, this);
       this.blur();
+    } else {
+      evt.preventDefault();
     }
   }
 
