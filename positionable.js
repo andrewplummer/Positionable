@@ -848,7 +848,7 @@ class MouseEventTarget extends BrowserEventTarget {
 
 class DragTarget extends BrowserEventTarget {
 
-  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,form,label,select,code,pre,span'; }
+  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,label,select,code,pre,span'; }
   static get CTRL_DOUBLE_CLICK_TIMEOUT()     { return 500; }
 
   constructor(el) {

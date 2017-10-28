@@ -462,7 +462,6 @@ input, select {
 .settings-area-field {
   border: none;
   padding: 4px 0px;
-  white-space: nowrap;
   color: rgba(0,0,0,0.7);
 }
 
@@ -475,12 +474,13 @@ input, select {
   vertical-align: top;
   text-align: right;
   margin: 4px 4px 0 0;
-  width: 240px;
+  width: 43%;
   font-size: 12px;
   font-weight: bold;
 }
 
 .settings-area-control {
+  width: 52%;
   vertical-align: middle;
   display: inline-block;
 }
