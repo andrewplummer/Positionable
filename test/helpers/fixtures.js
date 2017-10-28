@@ -13,7 +13,7 @@
 
     classes.unshift('box');
 
-    parent = parent || document.getElementById('element-fixtures');
+    parent = parent || getFixturesContainer();
 
     el = createDiv();
     el.id = id;
@@ -25,6 +25,17 @@
   function appendNestedBox(className, parentClassName) {
     var el = appendBox(parentClassName || 'relative-box');
     return appendBox(className, el);
+  }
+
+  function appendSvg() {
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute('width', '600');
+    svg.setAttribute('height', '250');
+    getFixturesContainer().appendChild(svg);
+  }
+
+  function getFixturesContainer() {
+    return document.getElementById('element-fixtures');
   }
 
   function isPositioningBox(className) {
@@ -57,6 +68,7 @@
   }
 
   window.appendBox = appendBox;
+  window.appendSvg = appendSvg;
   window.appendNestedBox = appendNestedBox;
   window.releaseAppendedFixtures = releaseAppendedFixtures;
   window.createDiv = createDiv;

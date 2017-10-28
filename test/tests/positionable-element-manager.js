@@ -323,6 +323,12 @@ describe('PositionableElementManager', function() {
     assert.equal(manager.elements.length, 0);
   });
 
+  it('should not find svg elements', function() {
+    appendSvg();
+    manager.findElements('svg');
+    assert.equal(manager.elements.length, 0);
+  });
+
   // --- Focusing
 
   it('should focus element on position handle mousedown', function() {

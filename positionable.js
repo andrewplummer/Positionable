@@ -4141,6 +4141,7 @@ class PositionableElementManager {
       excludeSelectors.push('script');
       excludeSelectors.push('style');
       excludeSelectors.push('link');
+      excludeSelectors.push('svg');
       excludeSelector = excludeSelectors.map(s => `:not(${s})`).join('');
 
       let query = `${includeSelector || '*'}${excludeSelector}`;
