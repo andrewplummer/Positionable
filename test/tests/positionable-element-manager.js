@@ -92,7 +92,7 @@ describe('PositionableElementManager', function() {
 
   setup(function() {
     listener = new Listener();
-    manager = new PositionableElementManager(listener);
+    manager  = new PositionableElementManager(listener, ShadowDomInjector.UI_HOST_CLASS_NAME);
   });
 
   teardown(function() {

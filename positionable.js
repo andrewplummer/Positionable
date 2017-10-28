@@ -12,10 +12,6 @@
 // - TODO: todos!
 // - TODO: release!
 
-const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
-const PLATFORM_IS_MAC    = /mac/i.test(navigator.platform);
-
-
 /*-------------------------] Utilities [--------------------------*/
 
 function camelize(str) {
@@ -541,6 +537,7 @@ class Element {
 
 class ShadowDomInjector {
 
+  static get UI_HOST_CLASS_NAME() { return 'positionable-extension-ui' };
   static get EXTENSION_RELATIVE_PATH_REG() { return /chrome-extension:\/\/__MSG_@@extension_id__\//g; }
 
   static setBasePath(path) {
@@ -646,7 +643,7 @@ class ShadowDomInjector {
       container.style.width  = '100%';
       container.style.height = '100%';
     }
-    container.className = UI_HOST_CLASS_NAME;
+    container.className = ShadowDomInjector.UI_HOST_CLASS_NAME;
 
     // Note that changing this to attachShadow was causing some weird
     // issues with eventing (window copy event was not firing) in both
@@ -3239,10 +3236,12 @@ class CopyManager {
 
 class AppController {
 
+  static get PLATFORM_IS_MAC() { return /mac/i.test(navigator.platform); }
   static get HOST_CLASS_NAME() { return 'positionble-extension-ui'; }
 
   constructor(uiRoot) {
 
+    this.uiRoot = uiRoot;
     this.settings = new Settings(this, uiRoot);
     this.outputManager = new OutputManager(this.settings);
     this.alignmentManager = new AlignmentManager();
@@ -3258,8 +3257,8 @@ class AppController {
     this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
 
     // TODO: order here?
-    this.elementManager = new PositionableElementManager(this);
-    this.controlPanel   = new ControlPanel(uiRoot, this);
+    this.elementManager = new PositionableElementManager(this, ShadowDomInjector.UI_HOST_CLASS_NAME);
+    this.controlPanel   = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
     this.nudgeManager   = new NudgeManager(this);
 
     this.setupKeyManager();
@@ -3269,7 +3268,7 @@ class AppController {
   }
 
   setupKeyManager() {
-    this.keyManager = new KeyManager(this, PLATFORM_IS_MAC);
+    this.keyManager = new KeyManager(this, AppController.PLATFORM_IS_MAC);
 
     this.keyManager.setupKey(KeyManager.SHIFT_KEY);
     this.keyManager.setupKey(KeyManager.CTRL_KEY);
@@ -3749,11 +3748,8 @@ class AppController {
   // --- Control Panel Align Rendering
 
   destroy() {
-    var els = document.querySelectorAll('.' + UI_HOST_CLASS_NAME);
-    for (let i = 0, el; el = els[i]; i++) {
-      el.remove();
-    }
     this.elementManager.releaseAll();
+    this.uiRoot.host.remove();
   }
 
 }
@@ -3762,9 +3758,9 @@ class AppController {
 
 class PositionableElementManager {
 
-  constructor(listener) {
-
-    this.listener = listener;
+  constructor(listener, hostClassName) {
+    this.listener      = listener;
+    this.hostClassName = hostClassName;
 
     this.elements = [];
     this.focusedElements = [];
@@ -4138,7 +4134,7 @@ class PositionableElementManager {
       // so split the query by commas and append the host class here.
       let excludeSelectors = excludeSelector ? excludeSelector.split(',') : [];
 
-      excludeSelectors.push('.' + UI_HOST_CLASS_NAME);
+      excludeSelectors.push('.' + this.hostClassName);
       excludeSelectors.push('script');
       excludeSelectors.push('style');
       excludeSelectors.push('link');
@@ -4657,7 +4653,7 @@ class ControlPanel extends DraggableElement {
   static get HIGHLIGHT_LOTS_THRESHOLD() { return 32; }
   static get HIGHLIGHT_TONS_THRESHOLD() { return 60; }
 
-  constructor(root, listener) {
+  constructor(root, listener, isMac) {
     super(root.getElementById('control-panel'), true);
     this.setupInteractiveElements();
 
@@ -4669,7 +4665,7 @@ class ControlPanel extends DraggableElement {
     this.setupAreas(root);
     this.setupUiEvents(root);
     this.setupRenderedElements(root);
-    this.setupWindows();
+    this.setupWindowsKeys(isMac);
     this.setupDoubleClick();
     this.setupHighlightButtons();
   }
@@ -4772,8 +4768,8 @@ class ControlPanel extends DraggableElement {
     }
   }
 
-  setupWindows() {
-    if (!PLATFORM_IS_MAC) {
+  setupWindowsKeys(isMac) {
+    if (!isMac) {
       this.addClass(ControlPanel.WINDOWS_CLASS);
     }
   }
