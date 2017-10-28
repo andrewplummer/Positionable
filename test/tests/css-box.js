@@ -669,6 +669,15 @@ describe('CSSBox', function() {
     assert.equal(box.getRatio(), 0);
   });
 
+  it('should validate a reflected box to become a normal one', function() {
+    setupBox(200, 200, -100, -100);
+    box.validate();
+    assert.equal(box.cssH.px,      100);
+    assert.equal(box.cssV.px,      100);
+    assert.equal(box.cssWidth.px,  100);
+    assert.equal(box.cssHeight.px, 100);
+  });
+
   it('should get its position header', function() {
     setupBox(100, 100, 150, 150);
     assert.equal(box.getPositionHeader(), '100px, 100px');

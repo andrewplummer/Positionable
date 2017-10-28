@@ -11,7 +11,6 @@
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: clean these constants up by moving them into AppController
 // - TODO: todos!
-// - TODO: rotated box won't reflect
 // - TODO: release!
 
 const UI_HOST_CLASS_NAME = 'positionable-extension-ui';
@@ -2070,6 +2069,10 @@ class PositionableElement extends BrowserEventTarget {
 
   }
 
+  validate() {
+    this.cssBox.validate();
+  }
+
   alignAnchors(corner, lastState, nextState) {
     var anchorOffset = this.getAnchorShift(corner, lastState, nextState);
     if (anchorOffset.x || anchorOffset.y) {
@@ -4041,6 +4044,7 @@ class PositionableElementManager {
   }
 
   onResizeDragStop(evt, handle, element) {
+    this.draggingElements.forEach(el => el.validate());
     this.onElementDragStop(evt, element);
     this.listener.onResizeDragStop(evt, handle, element);
   }
@@ -7000,6 +7004,11 @@ class CSSBox {
     return y === 0 ? 0 : Math.abs(x) / Math.abs(y);
   }
 
+  validate() {
+    this.validateAxis(this.cssH, this.cssWidth);
+    this.validateAxis(this.cssV, this.cssHeight);
+  }
+
   clone() {
     return new CSSBox(
       this.cssH.clone(),
@@ -7251,6 +7260,15 @@ class CSSBox {
       dim.px = -dim.px;
     }
     return dim;
+  }
+
+  // --- Other
+
+  validateAxis(pos, dim) {
+    if (dim.px < 0) {
+      pos.px += dim.px;
+      dim.px = -dim.px;
+    }
   }
 
 }

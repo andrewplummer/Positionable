@@ -882,7 +882,7 @@ describe('PositionableElementManager', function() {
     assertBoxDimensions(el, '0px', '-1000px', '1920px', '2080px');
   });
 
-  // --- Resize constraining - special
+  // --- Resize constraining - Special
 
   it('should allow a zero size element when constraining', function() {
     setupPositionedBox('100px', '100px', '100px', '100px');
@@ -1119,6 +1119,16 @@ describe('PositionableElementManager', function() {
     assert.equal(el.style.width,     '200px');
     assert.equal(el.style.height,    '200px');
     assert.equal(el.style.transform, 'translate(10%, 15%)');
+  });
+
+  it('should resize from nw corner multiple times', function() {
+    setupBox();
+    dragElement(getUiElement(el, '.resize-handle-nw'), 100, 100, 300, 300);
+    dragElement(getUiElement(el, '.resize-handle-nw'), 200, 200, 400, 400);
+    assert.equal(el.style.left,      '300px');
+    assert.equal(el.style.top,       '300px');
+    assert.equal(el.style.width,     '100px');
+    assert.equal(el.style.height,    '100px');
   });
 
   // --- Rotation
