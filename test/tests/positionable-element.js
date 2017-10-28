@@ -562,6 +562,13 @@ describe('PositionableElement', function() {
     assert.equal(el.style.animation, '');
   });
 
+  it('should turn off user select while active', function() {
+    setupBox();
+    assert.equal(el.style.userSelect, 'none');
+    element.destroy();
+    assert.equal(el.style.userSelect, '');
+  });
+
   it('should not clear all rendered styles when destroyed', function() {
     setupBox('animation-box');
     element.pushState();

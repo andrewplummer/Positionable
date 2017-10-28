@@ -1743,6 +1743,7 @@ class PositionableElement extends BrowserEventTarget {
     }
     this.el.style.animation  = 'none';
     this.el.style.transition = 'none';
+    this.el.style.userSelect = 'none';
     this.isFixed = position === 'fixed';
   }
 
@@ -1750,6 +1751,7 @@ class PositionableElement extends BrowserEventTarget {
     this.el.style.position   = '';
     this.el.style.animation  = '';
     this.el.style.transition = '';
+    this.el.style.userSelect = '';
   }
 
   /*
