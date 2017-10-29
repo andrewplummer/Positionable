@@ -133,9 +133,9 @@ input, select {
 .control-panel-area {
   position: absolute;
   top: 25px;
-  left: 25px;
-  right: 30px;
-  bottom: 30px;
+  left: 35px;
+  right: 25px;
+  bottom: 35px;
   pointer-events: none;
   transition: opacity 300ms linear;
   opacity: 0;
@@ -372,7 +372,7 @@ input, select {
 
 .getting-started-skip-link {
   position: absolute;
-  bottom: -11px;
+  bottom: -20px;
   right: 2px;
   font-size: 11px;
   color: #999;
@@ -385,6 +385,7 @@ input, select {
   position: absolute;
   top: 50px;
   bottom: 0;
+  width: 100%;
 }
 
 .settings-area-tabs {
@@ -453,8 +454,9 @@ input, select {
 
 .settings-field {
   border: none;
-  padding: 4px 0px;
   color: rgba(0,0,0,0.7);
+  margin: 0;
+  padding: 4px 0px;
 }
 
 .settings-field--invalid {

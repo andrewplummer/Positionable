@@ -1,5 +1,5 @@
 
-xdescribe('Settings', function(uiRoot) {
+describe('Settings', function(uiRoot) {
 
   var listener, settings;
 
@@ -89,10 +89,10 @@ xdescribe('Settings', function(uiRoot) {
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'styles.css');
     assert.equal(settings.get(Settings.TAB_STYLE),           'two');
     assert.equal(settings.get(Settings.OUTPUT_SELECTOR),     'auto');
+    assert.equal(settings.get(Settings.OUTPUT_GROUPING),     'auto');
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR),    '');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR),    '');
     assert.equal(settings.get(Settings.OUTPUT_CHANGED_ONLY), false);
-    assert.equal(settings.get(Settings.OUTPUT_UNIQUE_ONLY),  false);
   });
 
   it('should initialize with stored settings', function() {
@@ -100,47 +100,47 @@ xdescribe('Settings', function(uiRoot) {
       [Settings.SAVE_FILENAME]:       'bar.css',
       [Settings.TAB_STYLE]:           Settings.TABS_FOUR_SPACES,
       [Settings.OUTPUT_SELECTOR]:     Settings.OUTPUT_SELECTOR_TAG,
+      [Settings.OUTPUT_GROUPING]:     Settings.OUTPUT_GROUPING_AUTO,
       [Settings.INCLUDE_SELECTOR]:   'p',
       [Settings.EXCLUDE_SELECTOR]:   'h2',
-      [Settings.OUTPUT_CHANGED_ONLY]: true,
-      [Settings.OUTPUT_UNIQUE_ONLY]:  true
+      [Settings.OUTPUT_CHANGED_ONLY]: true
     });
     setupSettings();
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'bar.css');
     assert.equal(settings.get(Settings.TAB_STYLE),           Settings.TABS_FOUR_SPACES);
     assert.equal(settings.get(Settings.OUTPUT_SELECTOR),     Settings.OUTPUT_SELECTOR_TAG);
+    assert.equal(settings.get(Settings.OUTPUT_GROUPING),     Settings.OUTPUT_GROUPING_AUTO);
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR),    'p');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR),    'h2');
     assert.equal(settings.get(Settings.OUTPUT_CHANGED_ONLY), true);
-    assert.equal(settings.get(Settings.OUTPUT_UNIQUE_ONLY),  true);
   });
 
   it('should set form fields with stored settings', function() {
     var form = getForm();
     chrome.storage.sync.set({
-      [Settings.SAVE_FILENAME]:       'bar.css',
+      [Settings.SAVE_FILENAME]:      'bar.css',
       [Settings.TAB_STYLE]:           Settings.TABS_FOUR_SPACES,
       [Settings.OUTPUT_SELECTOR]:     Settings.OUTPUT_SELECTOR_TAG,
+      [Settings.OUTPUT_GROUPING]:     Settings.OUTPUT_GROUPING_AUTO,
       [Settings.INCLUDE_SELECTOR]:   'p',
       [Settings.EXCLUDE_SELECTOR]:   'h2',
-      [Settings.OUTPUT_CHANGED_ONLY]: true,
-      [Settings.OUTPUT_UNIQUE_ONLY]:  true
-    });
+      [Settings.OUTPUT_CHANGED_ONLY]: true
+   });
     setupSettings();
-    assert.equal(form.elements[Settings.SAVE_FILENAME].value,       'bar.css');
-    assert.equal(form.elements[Settings.TAB_STYLE].value,           Settings.TABS_FOUR_SPACES);
-    assert.equal(form.elements[Settings.OUTPUT_SELECTOR].value,     Settings.OUTPUT_SELECTOR_TAG);
-    assert.equal(form.elements[Settings.INCLUDE_SELECTOR].value,    'p');
-    assert.equal(form.elements[Settings.EXCLUDE_SELECTOR].value,    'h2');
+    assert.equal(form.elements[Settings.SAVE_FILENAME].value,        'bar.css');
+    assert.equal(form.elements[Settings.TAB_STYLE].value,             Settings.TABS_FOUR_SPACES);
+    assert.equal(form.elements[Settings.OUTPUT_SELECTOR].value,       Settings.OUTPUT_SELECTOR_TAG);
+    assert.equal(form.elements[Settings.OUTPUT_GROUPING].value,       Settings.OUTPUT_GROUPING_AUTO);
+    assert.equal(form.elements[Settings.INCLUDE_SELECTOR].value,     'p');
+    assert.equal(form.elements[Settings.EXCLUDE_SELECTOR].value,     'h2');
     assert.equal(form.elements[Settings.OUTPUT_CHANGED_ONLY].checked, true);
-    assert.equal(form.elements[Settings.OUTPUT_UNIQUE_ONLY].checked,  true);
   });
 
   it('should set boolean fields', function() {
     setupSettings();
-    uiRoot.getElementById('output-unique-only').checked = true;
+    uiRoot.getElementById('output-changed-only').checked = true;
     submitForm();
-    assert.equal(getStoredData('output-unique-only'), true);
+    assert.equal(getStoredData('output-changed-only'), true);
   });
 
   it('should receive submit event', function() {
@@ -160,10 +160,10 @@ xdescribe('Settings', function(uiRoot) {
     assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
     assert.equal(settings.get(Settings.TAB_STYLE), 'two');
     assert.equal(settings.get(Settings.OUTPUT_SELECTOR), 'auto');
+    assert.equal(settings.get(Settings.OUTPUT_GROUPING), 'auto');
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
     assert.isFalse(settings.get(Settings.OUTPUT_CHANGED_ONLY));
-    assert.isFalse(settings.get(Settings.OUTPUT_UNIQUE_ONLY));
   });
 
   it('should validate selectors on submit', function() {
@@ -234,14 +234,7 @@ xdescribe('Settings', function(uiRoot) {
     assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
   });
 
-  it('should fire correct events snapping changed', function() {
-    setupSettings();
-    uiRoot.getElementById('snap-x').value = '7';
-    uiRoot.getElementById('snap-y').value = '5';
-    submitForm();
-    assert.equal(listener.lastSnapX, 7);
-    assert.equal(listener.lastSnapY, 5);
-  });
+  // --- Query Selectors
 
   it('should validate correct queries', function() {
     setupSettings();
@@ -287,6 +280,69 @@ xdescribe('Settings', function(uiRoot) {
     assertInvalidQuery('#15');
     assertInvalidQuery('.15');
     assertInvalidQuery('[foo=23]');
+  });
+
+  // --- Snapping
+
+  it('should have valid initial snap data', function() {
+    setupSettings();
+    assert.equal(settings.data['snap-x'], 0);
+    assert.equal(settings.data['snap-y'], 0);
+  });
+
+  it('should fire correct events snapping changed', function() {
+    setupSettings();
+    uiRoot.getElementById('snap-x').value = '7';
+    uiRoot.getElementById('snap-y').value = '5';
+    submitForm();
+    assert.equal(listener.lastSnapX, 7);
+    assert.equal(listener.lastSnapY, 5);
+  });
+
+  // --- grouping map
+
+  it('should have valid initial grouping map data', function() {
+    setupSettings();
+    assert.equal(typeof settings.data['grouping-map'], 'object');
+    assert.equal(Object.keys(settings.data['grouping-map']).length, 0);
+  });
+
+  it('should transform the grouping map on submit', function() {
+    var map, textarea;
+    textarea = uiRoot.getElementById('grouping-map');
+    setupSettings();
+    textarea.value = 'width: $foobar';
+    submitForm();
+    map = getStoredData('grouping-map');
+    assert.equal(Object.keys(map).length, 1);
+    assert.equal(map.width, '$foobar');
+  });
+
+  it('should strip trailing semicolons in the grouping map', function() {
+    var map, textarea;
+    textarea = uiRoot.getElementById('grouping-map');
+    setupSettings();
+    textarea.value = 'width: $foobar;';
+    submitForm();
+    map = getStoredData('grouping-map');
+    assert.equal(map.width, '$foobar');
+  });
+
+  it('should validate an unparseable grouping map', function() {
+    var field    = uiRoot.querySelector('[name="grouping-map-field"]');
+    var textarea = uiRoot.getElementById('grouping-map');
+    setupSettings();
+    textarea.value = '?#()#$';
+    submitForm();
+    assert.isTrue(field.classList.contains('settings-field--invalid'));
+  });
+
+  it('should correctly set the grouping map control from stored data', function() {
+    chrome.storage.sync.set({
+      [Settings.GROUPING_MAP]: { width: '$foobar' },
+    });
+    setupSettings();
+    assert.equal(uiRoot.getElementById('grouping-map').value, 'width: $foobar');
   });
 
 });

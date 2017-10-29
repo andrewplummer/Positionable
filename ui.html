@@ -233,14 +233,19 @@
               </div>
               <div class="settings-control">
                 <select id="output-grouping">
-                  <option value="group" selected>Group</option>
+                  <option value="auto" selected>Auto</option>
                   <option value="remove">Remove</option>
+                  <option value="none">None</option>
                   <option value="map">Map</option>
                 </select>
                 <!-- TODO: change me! -->
                 <div class="output-selector-description">
-                  <div class="select-linked-area" data-linked-option="group">
-                    <p>GROUP!</p>
+                  <div class="select-linked-area" data-linked-option="auto">
+                    <p>AUTO!</p>
+                    <code>...</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="none">
+                    <p>NONE!</p>
                     <code>...</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="remove">
@@ -250,6 +255,10 @@
                   <div class="select-linked-area" data-linked-option="map">
                     <p>MAP!</p>
                     <code>...</code>
+                    <fieldset name="grouping-map-field">
+                      <label for="grouping-map">Map</label>
+                      <textarea id="grouping-map" rows="8" cols="40"></textarea>
+                    </fieldset>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 
 describe('OutputManager', function(uiRoot) {
-  var settings, manager, element, el;
+  var settings, manager, element, el, els;
 
   class Listener {
     onSettingsInitialized() {}
@@ -20,18 +20,33 @@ describe('OutputManager', function(uiRoot) {
     releaseAppendedFixtures();
   });
 
-  function getPositionableElement(className) {
+  function buildPositionableElement(className) {
     el = appendBox(className);
     return new PositionableElement(el);
   }
 
   function setupBox(className) {
-    element = getPositionableElement(className);
+    element = buildPositionableElement(className);
   }
 
   function setupNestedBox(className, parentClassName) {
     el = appendNestedBox(className, parentClassName);
     element = new PositionableElement(el);
+  }
+
+  function setupMultipleElements(className1, className2) {
+    els = [];
+    els.push(buildPositionableElement(className1));
+    els.push(buildPositionableElement(className2));
+  }
+
+  function getMockGroupMap() {
+    return {
+      top: "$mockTop",
+      left: "$mockLeft",
+      width: "$mockWidth",
+      height: "$mockHeight"
+    }
   }
 
   function assertSimpleBoxSelector(styles, selector, expected) {
@@ -308,12 +323,10 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
-  it('should get correct styles for multiple elements', function() {
-
-    var el1 = getPositionableElement();
-    var el2 = getPositionableElement('complex-box');
-
-    assert.equal(manager.getStyles([el1, el2]), dec`
+  it('should get correct styles for multiple elements with no grouping', function() {
+    setupMultipleElements('absolute-box', 'complex-box');
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_NONE);
+    assert.equal(manager.getStyles(els), dec`
 
       #absolute-box {
         top: 100px;
@@ -539,11 +552,35 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
-  // --- Unique Setting
+  // --- Grouping Styles
 
-  it('should output all styles when only one element is passed', function() {
+  it('should not group styles when grouping is set to none', function() {
+    setupMultipleElements('background-box', 'rotate-box');
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_NONE);
+    assert.equal(manager.getStyles(els), dec`
+
+      #background-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        background-position: 20px 40px;
+      }
+
+      #rotate-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+        transform: rotate(45deg);
+      }
+
+    `);
+  });
+
+  it('should not group styles when only one element is passed', function() {
     setupBox();
-    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_REMOVE);
     assert.equal(manager.getStyles([element]), dec`
 
     #absolute-box {
@@ -556,44 +593,37 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
-  it('should output only styles unique to each element', function() {
+  it('should remove common styles when grouping is set to remove', function() {
+    setupMultipleElements('background-box', 'rotate-box');
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_REMOVE);
+    assert.equal(manager.getStyles(els), dec`
 
-    var el1 = getPositionableElement('background-box');
-    var el2 = getPositionableElement('z-box rotate-translate-box');
-
-    el1.el.id = 'one';
-    el2.el.id = 'two';
-
-    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
-    assert.equal(manager.getStyles([el1, el2]), dec`
-
-      #one {
+      #background-box {
         background-position: 20px 40px;
       }
 
-      #two {
-        z-index: 400;
-        transform: rotate(45deg) translate(20px, 30px);
+      #rotate-box {
+        transform: rotate(45deg);
       }
 
     `);
   });
 
-  it('should work on elements with no common styles', function() {
-    var el1 = getPositionableElement();
-    var el2 = getPositionableElement();
+  it('should output everything when grouping is set to remove and there are no common styles', function() {
+    setupMultipleElements();
+    els[0].el.id = 'absolute-box-1';
+    els[1].el.id = 'absolute-box-2';
 
-    el2.el.id = 'absolute-box-2';
-    el2.pushState();
-    el2.move(100, 100);
+    els[1].pushState();
+    els[1].move(100, 100);
 
-    el2.pushState();
-    el2.resize(50, 50, 'se');
+    els[1].pushState();
+    els[1].resize(50, 50, 'se');
 
-    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
-    assert.equal(manager.getStyles([el1, el2]), dec`
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_REMOVE);
+    assert.equal(manager.getStyles(els), dec`
 
-    #absolute-box {
+    #absolute-box-1 {
       top: 100px;
       left: 100px;
       width: 100px;
@@ -610,16 +640,130 @@ describe('OutputManager', function(uiRoot) {
     `);
   });
 
-  it('should work on elements with all common styles', function() {
-    var el1 = getPositionableElement();
-    var el2 = getPositionableElement();
-
-    el2.el.id = 'absolute-box-2';
-    settings.set(Settings.OUTPUT_UNIQUE_ONLY, true);
-    assert.equal(manager.getStyles([el1, el2]), '');
+  it('should output nothing when grouping is set to remove and all styles are common', function() {
+    setupMultipleElements();
+    els[0].el.id = 'absolute-box-1';
+    els[1].el.id = 'absolute-box-2';
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_REMOVE);
+    assert.equal(manager.getStyles(els), '');
   });
 
-  it('should work on elements with all common styles', function() {
+  it('should auto group styles by common class', function() {
+    setupMultipleElements('background-box', 'rotate-box');
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_AUTO);
+    assert.equal(manager.getStyles(els), dec`
+
+      .absolute-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+      #background-box {
+        background-position: 20px 40px;
+      }
+
+      #rotate-box {
+        transform: rotate(45deg);
+      }
+
+    `);
+  });
+
+  it('should auto group styles using all selectors', function() {
+    setupMultipleElements('background-box', 'rotate-box');
+    els[0].el.classList.remove('box', 'absolute-box');
+    els[1].el.classList.remove('box', 'absolute-box');
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_AUTO);
+    assert.equal(manager.getStyles(els), dec`
+
+      #background-box, #rotate-box {
+        top: 100px;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+      #background-box {
+        background-position: 20px 40px;
+      }
+
+      #rotate-box {
+        transform: rotate(45deg);
+      }
+
+    `);
+  });
+
+  it('should allow a map of properties to sass variables', function() {
+    setupMultipleElements('background-box', 'rotate-box');
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_MAP);
+    settings.set(Settings.GROUPING_MAP, getMockGroupMap());
+    assert.equal(manager.getStyles(els), dec`
+
+      $mockTop: 100px;
+      $mockLeft: 100px;
+      $mockWidth: 100px;
+      $mockHeight: 100px;
+
+      #background-box {
+        top: $mockTop;
+        left: $mockLeft;
+        width: $mockWidth;
+        height: $mockHeight;
+        background-position: 20px 40px;
+      }
+
+      #rotate-box {
+        top: $mockTop;
+        left: $mockLeft;
+        width: $mockWidth;
+        height: $mockHeight;
+        transform: rotate(45deg);
+      }
+
+    `);
+  });
+
+  it('should map variables on a single common property', function() {
+    setupMultipleElements();
+    settings.set(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_MAP);
+    settings.set(Settings.GROUPING_MAP, getMockGroupMap());
+
+    els[0].el.id = 'absolute-box-1';
+    els[1].el.id = 'absolute-box-2';
+
+    els[0].pushState();
+    els[0].move(100, 0);
+
+    els[0].pushState();
+    els[0].resize(100, 100, 'se');
+
+    assert.equal(manager.getStyles(els), dec`
+
+      $mockTop: 100px;
+
+      #absolute-box-1 {
+        top: $mockTop;
+        left: 200px;
+        width: 200px;
+        height: 200px;
+      }
+
+      #absolute-box-2 {
+        top: $mockTop;
+        left: 100px;
+        width: 100px;
+        height: 100px;
+      }
+
+    `);
+  });
+
+  // --- Other
+
+  it('should save styles', function() {
     var link;
 
     createElementMock.apply();
@@ -632,8 +776,6 @@ describe('OutputManager', function(uiRoot) {
     assert.equal(link.download, 'styles.css');
 
   });
-
-  // --- Other
 
   it('should not output incorrect headers on a percent box when the parent has no dimensions', function() {
     setupNestedBox('percent-box', 'zero-dimension-box');
@@ -684,8 +826,8 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should not output empty spaces for multiple elements', function() {
-    var el1 = getPositionableElement();
-    var el2 = getPositionableElement();
+    var el1 = buildPositionableElement();
+    var el2 = buildPositionableElement();
     settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
     assert.equal(manager.getStyles([el1, el2]), '');
   });

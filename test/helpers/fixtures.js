@@ -28,7 +28,7 @@
   }
 
   function appendSvg() {
-    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('width', '600');
     svg.setAttribute('height', '250');
     getFixturesContainer().appendChild(svg);

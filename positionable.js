@@ -6,6 +6,7 @@
  *
  * ---------------------------- */
 
+// - TODO: style grouping area
 // - TODO: close settings on blur instead?
 // - TODO: nudging should align to grid too?
 // - TODO: cleanup!!
@@ -541,7 +542,7 @@ class Element {
 
 class ShadowDomInjector {
 
-  static get UI_HOST_CLASS_NAME() { return 'positionable-extension-ui' };
+  static get UI_HOST_CLASS_NAME() { return 'positionable-extension-ui'; }
   static get EXTENSION_RELATIVE_PATH_REG() { return /chrome-extension:\/\/__MSG_@@extension_id__\//g; }
 
   static setBasePath(path) {
@@ -848,7 +849,7 @@ class MouseEventTarget extends BrowserEventTarget {
 
 class DragTarget extends BrowserEventTarget {
 
-  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,label,select,code,pre,span'; }
+  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,textarea,label,select,code,pre,span'; }
   static get CTRL_DOUBLE_CLICK_TIMEOUT()     { return 500; }
 
   constructor(el) {
@@ -2612,17 +2613,17 @@ class OutputManager {
   }
 
   getStyles(elements) {
-    var blocks, unique;
+    var blocks, grouping;
 
-    blocks = elements.map(el => this.getElementDeclarationBlock(el));
-    unique = this.settings.get(Settings.OUTPUT_UNIQUE_ONLY);
+    blocks   = elements.map(el => this.getElementDeclarationBlock(el));
+    blocks   = blocks.filter(b => b && b.lines.length);
+    grouping = this.settings.get(Settings.OUTPUT_GROUPING);
 
-    if (unique) {
-      blocks = this.getUniqueDeclarationBlocks(blocks);
+    if (grouping !== Settings.OUTPUT_GROUPING_NONE) {
+      blocks = this.getGroupedDeclarationBlocks(blocks, grouping);
     }
 
-    blocks = blocks.filter(lines => lines.length);
-    return blocks.map(lines => lines.join('\n')).join('\n\n');
+    return blocks.map(b => b.lines.join('\n')).join('\n\n');
   }
 
   // --- Private
@@ -2640,7 +2641,7 @@ class OutputManager {
     }
 
     if (declarations.length === 0) {
-      return [];
+      return null;
     }
 
     declarations = declarations.map(p => tab + p);
@@ -2655,11 +2656,15 @@ class OutputManager {
       lines.push('}');
     }
 
-    return lines;
+    return {
+      lines: lines,
+      element: element,
+      selector: selector
+    };
   }
 
-  getUniqueDeclarationBlocks(blocks) {
-    var commonMap;
+  getGroupedDeclarationBlocks(blocks, grouping) {
+    var commonStyles, isMapping, groupingMap;
 
     // If there is 1 or less elements, then all styles are
     // considered to be unique, so just return the blocks.
@@ -2667,55 +2672,175 @@ class OutputManager {
       return blocks;
     }
 
-    // Initialize a hash table of lines common to all blocks.
-    commonMap = {};
+    // Get a hash of the declarations common to all blocks.
+    commonStyles = this.buildCommonMap(blocks, block => {
+      return block.lines.slice(1, -1);
+    });
 
-    // Map the blocks to an array of objects containing the
-    // details of each block including hash tables of used
-    // lines, while populating the hash with all lines used.
-    blocks = blocks.map(lines => {
-      var map, firstLine, lastLine;
+    isMapping = grouping === Settings.OUTPUT_GROUPING_MAP;
+    if (isMapping) {
+      groupingMap = this.settings.get(Settings.GROUPING_MAP);
+    }
 
-      map = {};
+    // Declarations common to the group may either be removed
+    // or mapped to variables defined in the grouping map. so
+    // we need to step through each line here and filter out
+    // those that have been removed.
+    blocks = blocks.map(block => {
+      var lines, firstLine, lastLine;
 
+      lines     = block.lines;
       firstLine = lines.shift();
       lastLine  = lines.pop();
 
-      lines.forEach(line => {
-        map[line] = true;
-        commonMap[line] = true;
+      lines = lines.map(line => {
+        return this.getCommonDeclaration(line, commonStyles, groupingMap)
       });
+      lines = lines.filter(l => l);
+
+      // Push the first and last lines back onto the array.
+      lines.unshift(firstLine);
+      lines.push(lastLine);
 
       return {
-        map: map,
-        lastLine: lastLine,
-        firstLine: firstLine,
-        declarations: lines
+        lines: lines,
+        element: block.element,
+        selector: block.selector
       };
     });
 
-    // Reduce the hash table to only lines used in all blocks
-    // using hashIntersect.
-    blocks.forEach(b => {
-      commonMap = hashIntersect(commonMap, b.map);
-    });
+    // Filter out blocks that no longer have declarations
+    // after grouping.
+    blocks = blocks.filter(b => b.lines.length > 2);
 
-    // Map the blocks back to an array of lines containing
-    // only declarations that are not common to all.
-    blocks = blocks.map(b => {
-
-      // Filter out any lines not common to the group.
-      var lines = b.declarations.filter(line => !commonMap[line]);
-
-      // Push the first and last lines back onto the array.
-      lines.unshift(b.firstLine);
-      lines.push(b.lastLine);
-
-      return lines;
-    });
+    if (isMapping) {
+      this.prependMappedVariableBlock(blocks, commonStyles, groupingMap);
+    } else if (grouping === Settings.OUTPUT_GROUPING_AUTO) {
+      this.prependAutoGroupedBlock(blocks, commonStyles);
+    }
 
     // Return only blocks that have declarations.
-    return blocks.filter(b => b.length > 2);
+    return blocks.filter(b => b.lines.length);
+  }
+
+  getCommonDeclaration(line, commonStyles, groupingMap) {
+    var d, mappedProperty;
+    // If the line is unique, then it must be retuned
+    // as is. Otherwise, check the grouping map to see
+    // if there are variables that it can be mapped to
+    // and return those instead.
+    if (!commonStyles[line]) {
+      return line;
+    }
+    if (groupingMap) {
+      d = this.decomposeLine(line);
+      mappedProperty = groupingMap[d.prop];
+      if (mappedProperty) {
+        return d.whitespace + d.prop + ': ' + mappedProperty + ';';
+      }
+    }
+  }
+
+  prependAutoGroupedBlock(blocks, commonStyles) {
+    var lines, selector;
+
+    // Create an array of lines out of the hash of
+    // styles common to all blocks. If there are none,
+    // then don't do anything.
+    lines = Object.keys(commonStyles);
+    if (lines.length === 0) {
+      return;
+    }
+
+    // Wrap the declarations with the selector that for the group.
+    selector = this.getGroupedSelector(blocks);
+    lines.unshift(selector + ' {');
+    lines.push('}');
+
+    blocks.unshift({
+      lines: lines
+    });
+  }
+
+  prependMappedVariableBlock(blocks, commonStyles, groupingMap) {
+    var lines, map;
+
+    lines = Object.keys(commonStyles);
+    if (lines.length === 0) {
+      return;
+    }
+
+    lines = lines.map(line => {
+      var dec = this.decomposeLine(line);
+      if (groupingMap[dec.prop]) {
+        return groupingMap[dec.prop] + ': ' + dec.val + ';';
+      }
+    });
+    lines = lines.filter(l => l);
+    blocks.unshift({
+      lines: lines
+    });
+  }
+
+  decomposeLine(line) {
+    var match, whitespace, prop, val;
+    match = line.match(/(\s*)(.+?):\s*(.+?);/);
+    whitespace = match[1];
+    prop       = match[2];
+    val        = match[3];
+    return {
+      val: val,
+      prop: prop,
+      whitespace: whitespace
+    }
+  }
+
+  getGroupedSelector(blocks) {
+    var commonMap, commonClasses, selector;
+
+    // Create a hash table of classes common to all elements.
+    commonMap = this.buildCommonMap(blocks, block => {
+      return block.element.el.classList;
+    });
+
+    // If common classes exist, then choose the longest one,
+    // otherwise join them together to create a group selector.
+    commonClasses = Object.keys(commonMap);
+    if (commonClasses.length > 0) {
+      selector = '.';
+      selector += commonClasses.reduce((longestName, name) => {
+        return name.length > longestName.length ? name : longestName;
+      }, '');
+    } else {
+      selector = blocks.map(block => block.selector).join(', ');
+    }
+
+    return selector;
+  }
+
+  buildCommonMap(blocks, fn) {
+    var maps, commonMap = {};
+
+    // Initialize a hash table to be used for all common strings,
+    // then build up both the common hash table and individual
+    // hash tables of strings found in each block.
+    maps = blocks.map(block => {
+      var arr, map = {};
+      arr = fn(block);
+      arr.forEach(str => {
+        map[str] = true;
+        commonMap[str] = true;
+      });
+      return map;
+    });
+
+    // Reduce the hash table to only strings common to everything
+    // returned using hashIntersect.
+    maps.forEach(map => {
+      commonMap = hashIntersect(commonMap, map);
+    });
+
+    return commonMap;
   }
 
   getFirstClass(list) {
@@ -4762,7 +4887,7 @@ class ControlPanel extends DraggableElement {
     this.cssHeight = new CSSPixelValue(0);
   }
 
-  setupAreas(root, listener) {
+  setupAreas(root) {
     this.defaultArea    = new ControlPanelDefaultArea(this, this.listener, root);
     this.elementArea    = new ControlPanelElementArea(this, this.listener, root);
     this.multipleArea   = new ControlPanelMultipleArea(this, this.listener, root);
@@ -4984,7 +5109,7 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     return {
       default: new Point(620, 400),
       help:    new Point(650, 530)
-    }
+    };
   }
 
   constructor(panel, listener, root) {
@@ -5097,12 +5222,12 @@ class ControlPanelElementArea extends ControlPanelArea {
   // --- Private
 
   setupElements(root) {
-    this.selector           = new Element(root.getElementById('element-selector')),
-    this.position           = new Element(root.getElementById('element-position')),
-    this.dimensions         = new Element(root.getElementById('element-dimensions')),
-    this.zIndex             = new Element(root.getElementById('element-zindex')),
-    this.transform          = new Element(root.getElementById('element-transform')),
-    this.backgroundPosition = new Element(root.getElementById('element-background-position'))
+    this.selector           = new Element(root.getElementById('element-selector'));
+    this.position           = new Element(root.getElementById('element-position'));
+    this.dimensions         = new Element(root.getElementById('element-dimensions'));
+    this.zIndex             = new Element(root.getElementById('element-zindex'));
+    this.transform          = new Element(root.getElementById('element-transform'));
+    this.backgroundPosition = new Element(root.getElementById('element-background-position'));
   }
 
   setSize() {
@@ -5117,7 +5242,7 @@ class ControlPanelElementArea extends ControlPanelArea {
     super.setSize(size);
   }
 
-  renderField(field, text, suffix) {
+  renderField(field, text) {
     field.text(text || '');
   }
 
@@ -5142,7 +5267,7 @@ class ControlPanelMultipleArea extends ControlPanelArea {
       many:    new Point(480, 165),
       lots:    new Point(480, 180),
       tons:    new Point(480, 190)
-    }
+    };
   }
 
   constructor(panel, listener, root) {
@@ -5291,7 +5416,7 @@ class ControlPanelQuickstartArea extends ControlPanelArea {
 
   static get SIZES() {
     return {
-      default: new Point(590, 370)
+      default: new Point(590, 380)
     };
   }
 
@@ -6219,13 +6344,14 @@ class ControlPanelBlock extends ControlPanelComponent {
 }
   */
 
-/*-------------------------] Settings [--------------------------*/
+/*-------------------------] Form [--------------------------*/
 
 class Form extends BrowserEventTarget {
 
   static get TEXT()            { return 'text';       }
   static get NUMBER()          { return 'number';     }
   static get CHECKBOX()        { return 'checkbox';   }
+  static get TEXTAREA()        { return 'textarea';   }
   static get SELECT_ONE()      { return 'select-one'; }
   static get INVALID_CLASS()   { return 'settings-field--invalid';    }
   static get CONFIRM_MESSAGE() { return 'Really clear all settings?'; }
@@ -6243,6 +6369,15 @@ class Form extends BrowserEventTarget {
 
     this.validState = true;
     this.validations = [];
+    this.transforms  = {};
+  }
+
+  addTransform(id, parse, stringify) {
+    var transform = {
+      parse: parse,
+      stringify: stringify
+    };
+    this.transforms[id] = transform;
   }
 
   addValidation(controls, validator, field) {
@@ -6259,9 +6394,9 @@ class Form extends BrowserEventTarget {
       if (control.type === Form.CHECKBOX) {
         data[control.id] = control.checked;
       } else if (control.type === Form.NUMBER) {
-        data[control.id] = parseInt(control.value);
+        data[control.id] = parseInt(control.value) || 0;
       } else {
-        data[control.id] = control.value;
+        data[control.id] = this.getTransformedControlValue(control);
       }
     });
     return data;
@@ -6269,7 +6404,8 @@ class Form extends BrowserEventTarget {
 
   setControlsFromData(data) {
     this.forEachControl(control => {
-      var val = data[control.id];
+      var val = this.getTransformedDataValue(data, control.id);
+
       if (val) {
         switch (control.type) {
           case Form.SELECT_ONE:
@@ -6281,6 +6417,7 @@ class Form extends BrowserEventTarget {
             break;
           case Form.TEXT:
           case Form.NUMBER:
+          case Form.TEXTAREA:
             control.value = val;
             break;
           case Form.CHECKBOX:
@@ -6300,7 +6437,7 @@ class Form extends BrowserEventTarget {
 
   onSubmit(evt) {
     evt.preventDefault();
-    this.validState = this.validate();
+    this.runValidations();
     if (this.validState) {
       this.listener.onFormSubmit(evt, this);
       this.blur();
@@ -6330,7 +6467,18 @@ class Form extends BrowserEventTarget {
     }
   }
 
-  validate() {
+  getTransformedControlValue(control) {
+    var transform = this.transforms[control.id];
+    return transform ? transform.parse(control.value) : control.value;
+  }
+
+  getTransformedDataValue(data, id) {
+    var val = data[id];
+    var transform = this.transforms[id];
+    return transform ? transform.stringify(val) : val;
+  }
+
+  runValidations() {
     var validState = true;
     this.clearInvalid();
     this.forEachValidation((control, field, validator) => {
@@ -6339,11 +6487,11 @@ class Form extends BrowserEventTarget {
         field.classList.add(Form.INVALID_CLASS);
       }
     });
-    return validState;
+    this.validState = validState;
   }
 
   clearInvalid() {
-    this.forEachValidation((control, field, validator) => {
+    this.forEachValidation((control, field) => {
       field.classList.remove(Form.INVALID_CLASS);
     });
   }
@@ -6381,15 +6529,16 @@ class Form extends BrowserEventTarget {
 class Settings {
 
   // --- Fields
-  static get SAVE_FILENAME()       { return 'save-filename';       }
-  static get INCLUDE_SELECTOR()    { return 'include-selector';    }
-  static get EXCLUDE_SELECTOR()    { return 'exclude-selector';    }
-  static get TAB_STYLE()           { return 'tab-style';           }
-  static get OUTPUT_SELECTOR()     { return 'output-selector';     }
-  static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only'; }
-  static get OUTPUT_UNIQUE_ONLY()  { return 'output-unique-only';  }
-  static get SNAP_X()              { return 'snap-x';              }
-  static get SNAP_Y()              { return 'snap-y';              }
+  static get SAVE_FILENAME()       { return 'save-filename';        }
+  static get INCLUDE_SELECTOR()    { return 'include-selector';     }
+  static get EXCLUDE_SELECTOR()    { return 'exclude-selector';     }
+  static get TAB_STYLE()           { return 'tab-style';            }
+  static get OUTPUT_SELECTOR()     { return 'output-selector';      }
+  static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only';  }
+  static get SNAP_X()              { return 'snap-x';               }
+  static get SNAP_Y()              { return 'snap-y';               }
+  static get OUTPUT_GROUPING()     { return 'output-grouping';      }
+  static get GROUPING_MAP()        { return 'grouping-map'; }
 
   // --- Values
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
@@ -6400,16 +6549,22 @@ class Settings {
   static get OUTPUT_SELECTOR_FIRST()   { return 'first';   }
   static get OUTPUT_SELECTOR_NONE()    { return 'inline';  }
   static get OUTPUT_SELECTOR_LONGEST() { return 'longest'; }
-  static get TABS_TWO_SPACES()         { return 'two';  }
-  static get TABS_FOUR_SPACES()        { return 'four'; }
-  static get TABS_EIGHT_SPACES()       { return 'eight'; }
-  static get TABS_TAB()                { return 'tab';  }
+  static get OUTPUT_GROUPING_MAP()     { return 'map';     }
+  static get OUTPUT_GROUPING_AUTO()    { return 'auto';    }
+  static get OUTPUT_GROUPING_NONE()    { return 'none';    }
+  static get OUTPUT_GROUPING_REMOVE()  { return 'remove';  }
+  static get TABS_TWO_SPACES()         { return 'two';     }
+  static get TABS_FOUR_SPACES()        { return 'four';    }
+  static get TABS_EIGHT_SPACES()       { return 'eight';   }
+  static get TABS_TAB()                { return 'tab';     }
 
   // --- Validations
-  static get SNAP_FIELD()              { return 'snap-field'; }
-  static get SNAP_CONTROLS()           { return [Settings.SNAP_X, Settings.SNAP_Y]; }
-  static get QUERY_CONTROLS()          { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
-  static get ATTRIBUTE_SELECTOR_REG()  { return /\[[^\]]+(\])?/gi; }
+  static get SNAP_FIELD()             { return 'snap-field';       }
+  static get GROUPING_MAP_FIELD()     { return 'grouping-map-field'; }
+  static get SNAP_CONTROLS()          { return [Settings.SNAP_X, Settings.SNAP_Y]; }
+  static get QUERY_CONTROLS()         { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
+  static get GROUPING_MAP_CONTROLS()  { return [Settings.GROUPING_MAP]; }
+  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
 
   constructor(listener, root) {
     this.form = new Form(root.getElementById('settings-form'), this);
@@ -6465,20 +6620,39 @@ class Settings {
   // --- Private
 
   setup(root) {
+    this.setupForm(root);
     this.defaultData = this.form.getData();
+    this.fetchSettings();
+  }
+
+  setupForm(root) {
+    this.isValidQuery         = this.isValidQuery.bind(this);
+    this.isValidSnap          = this.isValidSnap.bind(this);
+    this.isValidGroupingMap   = this.isValidGroupingMap.bind(this);
+    this.parseGroupingMap     = this.parseGroupingMap.bind(this);
+    this.stringifyGroupingMap = this.stringifyGroupingMap.bind(this);
+
     this.form.addValidation(Settings.QUERY_CONTROLS, this.isValidQuery);
     this.form.addValidation(Settings.SNAP_CONTROLS, this.isValidSnap, Settings.SNAP_FIELD);
-    this.fetchSettings();
-    new LinkedSelect(root.getElementById('output-selector'));
-    new LinkedSelect(root.getElementById('output-grouping'));
+    this.form.addValidation(Settings.GROUPING_MAP_CONTROLS, this.isValidGroupingMap, Settings.GROUPING_MAP_FIELD);
+    this.form.addTransform(Settings.GROUPING_MAP, this.parseGroupingMap, this.stringifyGroupingMap);
+
+    this.selectorLinkedSelect = new LinkedSelect(root.getElementById('output-selector'));
+    this.groupingLinkedSelect = new LinkedSelect(root.getElementById('output-grouping'));
+  }
+
+  onInitialized() {
+    this.form.setControlsFromData(this.data);
+    this.selectorLinkedSelect.update();
+    this.groupingLinkedSelect.update();
+    this.listener.onSettingsInitialized();
   }
 
   fetchSettings() {
     chrome.storage.sync.get(Settings.DEFAULTS, data => {
       // Merge the initial form data with the fetched settings data.
       this.data = Object.assign({}, this.defaultData, data);
-      this.form.setControlsFromData(this.data);
-      this.listener.onSettingsInitialized();
+      this.onInitialized();
     });
   }
 
@@ -6517,6 +6691,32 @@ class Settings {
     return !n || n > 0;
   }
 
+  isValidGroupingMap(str) {
+    return !str || !!this.parseGroupingMap(str);
+  }
+
+  parseGroupingMap(str) {
+    var lines = str.split('\n'), data = {};
+    lines = lines.filter(l => l);
+    for (let i = 0, line; line = lines[i]; i++) {
+      var match, key, val;
+      match = line.match(/\s*([^:]+):\s*([^;]+)/);
+      if (!match) {
+        return null;
+      }
+      key = match[1];
+      val = match[2];
+      data[key] = val;
+    }
+    return data;
+  }
+
+  stringifyGroupingMap(obj) {
+    return Object.keys(obj).map(key => {
+      return key + ': ' + obj[key];
+    }).join('\n');
+  }
+
   selectorChanged(data) {
     return this.data[Settings.INCLUDE_SELECTOR] !== data[Settings.INCLUDE_SELECTOR] ||
            this.data[Settings.EXCLUDE_SELECTOR] !== data[Settings.EXCLUDE_SELECTOR];
@@ -6538,6 +6738,11 @@ class LinkedSelect extends BrowserEventTarget {
     this.setup();
   }
 
+  update() {
+    this.hideLinkedArea(this.activeLinkedArea);
+    this.setCurrentAreaActive();
+  }
+
   setup() {
     this.linked = {};
     var els = this.el.parentNode.querySelectorAll('[data-linked-option]');
@@ -6557,8 +6762,7 @@ class LinkedSelect extends BrowserEventTarget {
   }
 
   onChange() {
-    this.hideLinkedArea(this.activeLinkedArea);
-    this.setCurrentAreaActive();
+    this.update();
   }
 
   setCurrentAreaActive() {
@@ -8309,7 +8513,7 @@ class CSSEmValue extends CSSFontSizeValue {
 
 class CSSRemValue extends CSSFontSizeValue {
 
-  static create(val, initial, el) {
+  static create(val, initial) {
     var doc = document.documentElement;
     var fontSize = parseFloat(window.getComputedStyle(doc).fontSize);
     return new CSSRemValue(val, initial, fontSize);
