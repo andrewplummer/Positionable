@@ -10,12 +10,21 @@ describe('Settings', function(uiRoot) {
       this.selectorUpdatedCount = 0;
     }
 
+    onSettingsInitialized() {
+      this.settingsInitialized = true;
+    }
+
     onSelectorUpdated() {
       this.selectorUpdatedCount += 1;
     }
 
     onSettingsUpdated() {
       this.settingsUpdatedCount += 1;
+    }
+
+    onSnappingUpdated(x, y) {
+      this.lastSnapX = x;
+      this.lastSnapY = y;
     }
 
   }
@@ -69,6 +78,11 @@ describe('Settings', function(uiRoot) {
   function assertInvalidQuery(query) {
     assertQuery(query, false);
   }
+
+  it('should fire an event when initialized', function() {
+    setupSettings();
+    assert.isTrue(listener.settingsInitialized);
+  });
 
   it('should initialize with default settings', function() {
     setupSettings();
@@ -218,6 +232,15 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     resetForm();
     assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
+  });
+
+  it('should fire correct events snapping changed', function() {
+    setupSettings();
+    uiRoot.getElementById('snap-x').value = '7';
+    uiRoot.getElementById('snap-y').value = '5';
+    submitForm();
+    assert.equal(listener.lastSnapX, 7);
+    assert.equal(listener.lastSnapY, 5);
   });
 
   it('should validate correct queries', function() {

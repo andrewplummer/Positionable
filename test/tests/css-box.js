@@ -643,6 +643,35 @@ describe('CSSBox', function() {
     assert.equal(decs[3], 'height: 150px;');
   });
 
+  // --- Snapping
+
+  it('should snap position', function() {
+    setupBox(108, 122, 143, 129);
+    box.snapPosition(10, 10);
+    assert.equal(box.cssH.px,      110);
+    assert.equal(box.cssV.px,      120);
+    assert.equal(box.cssWidth.px,  143);
+    assert.equal(box.cssHeight.px, 129);
+  });
+
+  it('should snap dimensions', function() {
+    setupBox(108, 122, 143, 129);
+    box.snapDimensions(10, 10);
+    assert.equal(box.cssH.px,      108);
+    assert.equal(box.cssV.px,      122);
+    assert.equal(box.cssWidth.px,  140);
+    assert.equal(box.cssHeight.px, 130);
+  });
+
+  it('should not snap less than 1', function() {
+    setupBox(108, 122, 143, 129);
+    box.snapDimensions(1, -5);
+    assert.equal(box.cssH.px,      108);
+    assert.equal(box.cssV.px,      122);
+    assert.equal(box.cssWidth.px,  143);
+    assert.equal(box.cssHeight.px, 129);
+  });
+
   // --- Other
 
   it('should be able to clone itself', function() {

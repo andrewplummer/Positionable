@@ -3,8 +3,10 @@ describe('OutputManager', function(uiRoot) {
   var settings, manager, element, el;
 
   class Listener {
-    onSelectorUpdated() {}
+    onSettingsInitialized() {}
     onSettingsUpdated() {}
+    onSelectorUpdated() {}
+    onSnappingUpdated() {}
   }
 
   setup(function() {
@@ -14,8 +16,8 @@ describe('OutputManager', function(uiRoot) {
   });
 
   teardown(function() {
-    releaseAppendedFixtures();
     chromeMock.release();
+    releaseAppendedFixtures();
   });
 
   function getPositionableElement(className) {

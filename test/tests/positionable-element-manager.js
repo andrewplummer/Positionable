@@ -17,76 +17,39 @@ describe('PositionableElementManager', function() {
 
     // --- Position Events
 
-    onPositionDragIntentStart() {
-    }
-
-    onPositionDragIntentStop() {
-    }
-
-    onPositionDragStart() {
-    }
-
-    onPositionDragMove() {
-    }
-
-    onPositionDragStop() {
-    }
+    onPositionDragIntentStart() {}
+    onPositionDragIntentStop() {}
+    onPositionDragStart() {}
+    onPositionDragMove() {}
+    onPositionDragStop() {}
 
     // --- Resize Events
 
-    onResizeDragIntentStart() {
-    }
-
-    onResizeDragIntentStop() {
-    }
-
-    onResizeDragStart() {
-    }
-
-    onResizeDragMove() {
-    }
-
-    onResizeDragStop() {
-    }
+    onResizeDragIntentStart() {}
+    onResizeDragIntentStop() {}
+    onResizeDragStart() {}
+    onResizeDragMove() {}
+    onResizeDragStop() {}
 
     // --- Rotation Events
 
-    onRotationDragIntentStart() {
-    }
-
-    onRotationDragIntentStop() {
-    }
-
-    onRotationDragStart() {
-    }
-
-    onRotationDragMove() {
-    }
-
-    onRotationDragStop() {
-    }
+    onRotationDragIntentStart() {}
+    onRotationDragIntentStop() {}
+    onRotationDragStart() {}
+    onRotationDragMove() {}
+    onRotationDragStop() {}
 
     // --- Background Image Events
 
-    onBackgroundImageSnap() {
-    }
+    onBackgroundImageSnap() {}
 
     // --- Update Events
 
-    onPositionUpdated() {
-    }
-
-    onBackgroundPositionUpdated() {
-    }
-
-    onDimensionsUpdated() {
-    }
-
-    onRotationUpdated() {
-    }
-
-    onZIndexUpdated() {
-    }
+    onBackgroundPositionUpdated() {}
+    onDimensionsUpdated() {}
+    onPositionUpdated() {}
+    onRotationUpdated() {}
+    onZIndexUpdated() {}
 
   }
 
@@ -732,6 +695,24 @@ describe('PositionableElementManager', function() {
     assert.equal(el.style.top,    '5cm');
     assert.equal(el.style.width,  '5in');
     assert.equal(el.style.height, '5in');
+  });
+
+  it('should snap position when snapping enabled', function() {
+    setupBox();
+    manager.setSnap(10, 10);
+    dragElement(getUiElement(el, '.position-handle'), 100, 100, 157, 191);
+    assert.equal(el.style.left, '160px');
+    assert.equal(el.style.top,  '190px');
+  });
+
+  it('should snap dimensions when snapping enabled', function() {
+    setupBox();
+    manager.setSnap(10, 10);
+    dragElement(getUiElement(el, '.resize-handle-nw'), 100, 100, 157, 191);
+    assert.equal(el.style.left,   '160px');
+    assert.equal(el.style.top,    '190px');
+    assert.equal(el.style.width,  '40px');
+    assert.equal(el.style.height, '10px');
   });
 
   // --- Background Positioning

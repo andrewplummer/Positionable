@@ -518,6 +518,18 @@ input, select {
   color: rgba(0,0,0,0.6);
 }
 
+.snap-control {
+  width: 2.9em;
+  text-align: center;
+  vertical-align: middle;
+  padding-left: 8px;
+}
+
+.snap-separator {
+  color: rgba(0,0,0,.5);
+  vertical-align: sub;
+}
+
 .settings-save {
   position: absolute;
   right: 0px;

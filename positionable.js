@@ -2031,7 +2031,7 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  resize(x, y, corner, constrain) {
+  resize(x, y, corner, constrain, snapX, snapY) {
     var lastState, lastBox, nextBox;
 
     lastState = this.getLastState();
@@ -2043,6 +2043,9 @@ class PositionableElement extends BrowserEventTarget {
     if (constrain) {
       nextBox.constrain(lastBox.getRatio(), corner);
     }
+
+    nextBox.snapPosition(snapX, snapY);
+    nextBox.snapDimensions(snapX, snapY);
 
     // Render the box first so that percentage values can update
     // below to ensure correct anchor calculations.
@@ -2106,10 +2109,11 @@ class PositionableElement extends BrowserEventTarget {
 
   // --- Position
 
-  move(x, y, constrain) {
+  move(x, y, constrain, snapX, snapY) {
     var p = this.getConstrainedMovePosition(x, y, constrain);
     this.cssBox = this.getLastState().cssBox.clone();
     this.cssBox.move(p.x, p.y);
+    this.cssBox.snapPosition(snapX, snapY);
     this.renderBox();
   }
 
@@ -2443,7 +2447,7 @@ class PositionableElement extends BrowserEventTarget {
   getEdgeValue(side) {
     var handle = this.getHandleForSide(side);
     return handle.getPosition()[this.getAxisForSide(side)];
- }
+  }
 
   /*
   getCenterAlignValue(type) {
@@ -3338,9 +3342,20 @@ class AppController {
     this.copyManager.setActive(true);
   }
 
+  onSettingsInitialized() {
+    this.elementManager.setSnap(
+      this.settings.get(Settings.SNAP_X),
+      this.settings.get(Settings.SNAP_Y)
+    );
+  }
+
   onSelectorUpdated() {
     this.elementManager.releaseAll();
     this.loadingAnimation.show();
+  }
+
+  onSnappingUpdated(x, y) {
+    this.elementManager.setSnap(x, y);
   }
 
   onSettingsUpdated() {
@@ -3781,6 +3796,11 @@ class PositionableElementManager {
     loadingAnimation.show(this.build.bind(this));
   }
   */
+
+  setSnap(x, y) {
+    this.snapX = x;
+    this.snapY = y;
+  }
 
   // --- Focusing
 
@@ -4406,13 +4426,14 @@ class PositionableElementManager {
   // --- Position Dragging
 
   applyPositionDrag(evt, isBackground) {
+    var constrained = evt.drag.constrained;
     this.draggingElements.forEach(el => {
       var x = el.isFixed ? evt.drag.clientX : evt.drag.pageX;
       var y = el.isFixed ? evt.drag.clientY : evt.drag.pageY;
       if (evt.ctrlKey) {
-        el.moveBackground(x, y, evt.drag.constrained);
+        el.moveBackground(x, y, constrained);
       } else {
-        el.move(x, y, evt.drag.constrained);
+        el.move(x, y, constrained, this.snapX, this.snapY);
       }
     });
     if (isBackground) {
@@ -4423,7 +4444,10 @@ class PositionableElementManager {
   }
 
   applyResizeDrag(evt, handle, element) {
-    var vector, rotation;
+    var corner, constrained, vector, rotation;
+
+    corner      = handle.corner;
+    constrained = evt.drag.constrained;
 
     // When resizing, any rotation is relative to the current
     // dragging element, not each individual element, so if
@@ -4438,7 +4462,7 @@ class PositionableElementManager {
     }
 
     this.draggingElements.forEach(el => {
-      el.resize(vector.x, vector.y, handle.corner, evt.drag.constrained);
+      el.resize(vector.x, vector.y, corner, constrained, this.snapX, this.snapY);
     });
     // Position may also shift as the result of dragging a box's
     // nw corner, or in the case of reflecting.
@@ -5936,6 +5960,7 @@ class ControlPanelBlock extends ControlPanelComponent {
 class Form extends BrowserEventTarget {
 
   static get TEXT()            { return 'text';       }
+  static get NUMBER()          { return 'number';     }
   static get CHECKBOX()        { return 'checkbox';   }
   static get SELECT_ONE()      { return 'select-one'; }
   static get INVALID_CLASS()   { return 'settings-area-field--invalid'; }
@@ -5956,9 +5981,10 @@ class Form extends BrowserEventTarget {
     this.validations = [];
   }
 
-  addValidationFields(fields, validator) {
+  addValidation(controls, validator, field) {
     this.validations.push({
-      fields: fields,
+      field: field,
+      controls: controls,
       validator: validator
     });
   }
@@ -5968,6 +5994,8 @@ class Form extends BrowserEventTarget {
     this.forEachControl(control => {
       if (control.type === Form.CHECKBOX) {
         data[control.id] = control.checked;
+      } else if (control.type === Form.NUMBER) {
+        data[control.id] = parseInt(control.value);
       } else {
         data[control.id] = control.value;
       }
@@ -5988,6 +6016,7 @@ class Form extends BrowserEventTarget {
             }
             break;
           case Form.TEXT:
+          case Form.NUMBER:
             control.value = val;
             break;
           case Form.CHECKBOX:
@@ -6039,22 +6068,30 @@ class Form extends BrowserEventTarget {
 
   validate() {
     var validState = true;
-    this.validations.forEach(v => {
-      v.fields.forEach(name => {
-        var control, field;
-
-        control = this.el.elements[name];
-        field   = this.el.elements[name + '-field'];
-
-        if (v.validator(control.value)) {
-          field.classList.remove(Form.INVALID_CLASS);
-        } else {
-          validState = false;
-          field.classList.add(Form.INVALID_CLASS);
-        }
-      });
+    this.clearInvalid();
+    this.forEachValidation((control, field, validator) => {
+      if (!validator(control.value)) {
+        validState = false;
+        field.classList.add(Form.INVALID_CLASS);
+      }
     });
     return validState;
+  }
+
+  clearInvalid() {
+    this.forEachValidation((control, field, validator) => {
+      field.classList.remove(Form.INVALID_CLASS);
+    });
+  }
+
+  forEachValidation(fn) {
+    this.validations.forEach(v => {
+      v.controls.forEach(name => {
+        var control = this.el.elements[name];
+        var field   = this.el.elements[v.field || name + '-field'];
+        fn(control, field, v.validator);
+      });
+    });
   }
 
   getFirstControl() {
@@ -6087,6 +6124,8 @@ class Settings {
   static get OUTPUT_SELECTOR()     { return 'output-selector';     }
   static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only'; }
   static get OUTPUT_UNIQUE_ONLY()  { return 'output-unique-only';  }
+  static get SNAP_X()              { return 'snap-x';              }
+  static get SNAP_Y()              { return 'snap-y';              }
 
   // --- Values
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
@@ -6102,8 +6141,10 @@ class Settings {
   static get TABS_EIGHT_SPACES()       { return 'eight'; }
   static get TABS_TAB()                { return 'tab';  }
 
-  // --- Other
-  static get QUERY_FIELDS() { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
+  // --- Validations
+  static get SNAP_FIELD()             { return 'snap-field'; }
+  static get SNAP_CONTROLS()          { return [Settings.SNAP_X, Settings.SNAP_Y]; }
+  static get QUERY_CONTROLS()         { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
   static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
 
   constructor(listener, root) {
@@ -6131,6 +6172,12 @@ class Settings {
     if (this.selectorChanged(data)) {
       this.listener.onSelectorUpdated();
     }
+    if (this.snapChanged(data)) {
+      this.listener.onSnappingUpdated(
+        data[Settings.SNAP_X],
+        data[Settings.SNAP_Y]
+      );
+    }
     this.data = data;
     this.listener.onSettingsUpdated();
   }
@@ -6155,16 +6202,18 @@ class Settings {
 
   setup(root) {
     this.defaultData = this.form.getData();
-    this.fetchData();
-    this.form.addValidationFields(Settings.QUERY_FIELDS, this.isValidQuery);
+    this.fetchSettings();
+    this.form.addValidation(Settings.QUERY_CONTROLS, this.isValidQuery);
+    this.form.addValidation(Settings.SNAP_CONTROLS, this.isValidSnap, Settings.SNAP_FIELD);
     new LinkedSelect(root.getElementById('output-selector'));
   }
 
-  fetchData() {
+  fetchSettings() {
     chrome.storage.sync.get(Settings.DEFAULTS, data => {
       // Merge the initial form data with the fetched settings data.
       this.data = Object.assign({}, this.defaultData, data);
       this.form.setControlsFromData(this.data);
+      this.listener.onSettingsInitialized();
     });
   }
 
@@ -6199,9 +6248,18 @@ class Settings {
     return true;
   }
 
+  isValidSnap(n) {
+    return !n || n > 0;
+  }
+
   selectorChanged(data) {
     return this.data[Settings.INCLUDE_SELECTOR] !== data[Settings.INCLUDE_SELECTOR] ||
            this.data[Settings.EXCLUDE_SELECTOR] !== data[Settings.EXCLUDE_SELECTOR];
+  }
+
+  snapChanged(data) {
+    return this.data[Settings.SNAP_X] !== data[Settings.SNAP_X] ||
+           this.data[Settings.SNAP_Y] !== data[Settings.SNAP_Y];
   }
 
 }
@@ -6933,6 +6991,16 @@ class CSSBox {
     this.applyConstraint(newRatio, corner);
   }
 
+  snapPosition(x, y) {
+    this.applySnap(this.cssH, x);
+    this.applySnap(this.cssV, y);
+  }
+
+  snapDimensions(x, y) {
+    this.applySnap(this.cssWidth, x);
+    this.applySnap(this.cssHeight, y);
+  }
+
   // --- Dimensions
 
   getDimensions() {
@@ -7101,6 +7169,14 @@ class CSSBox {
 
     this.moveEdge(offsetW, this.cssH, this.cssWidth,  hEdge);
     this.moveEdge(offsetH, this.cssV, this.cssHeight, vEdge);
+  }
+
+  // --- Snapping
+
+  applySnap(cssValue, mult) {
+    if (mult && mult > 1) {
+      cssValue.px = Math.round(cssValue.px / mult) * mult;
+    }
   }
 
   // --- Edges
