@@ -7,7 +7,6 @@
  * ---------------------------- */
 
 // - TODO: style grouping area
-// - TODO: close settings on blur instead?
 // - TODO: nudging should align to grid too?
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
@@ -3435,6 +3434,10 @@ class AppController {
     this.renderActiveControlPanel();
   }
 
+  onElementMouseDown() {
+    this.controlPanel.closeSettings();
+  }
+
   renderActiveControlPanel() {
     var elements = this.elementManager.getFocusedElements();
     if (elements.length > 1) {
@@ -4097,6 +4100,7 @@ class PositionableElementManager {
     } else if (!this.isFocused(element)) {
       this.setFocused(element);
     }
+    this.listener.onElementMouseDown();
   }
 
   onElementDragStart(evt, element) {
@@ -4805,6 +4809,12 @@ class ControlPanel extends DraggableElement {
   activate() {
     this.show();
     this.addClass(ControlPanel.ACTIVE_CLASS);
+  }
+
+  closeSettings() {
+    if (this.activeArea === this.settingsArea) {
+      this.showLastArea();
+    }
   }
 
   // --- Toggling
