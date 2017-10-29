@@ -5,11 +5,9 @@ describe('ControlPanel', function(uiRoot) {
 
   class Listener {
 
-    onControlPanelDragStart() {
-    }
-
-    onControlPanelDragStop() {
-    }
+    onControlPanelDragStart() {}
+    onControlPanelDragStop() {}
+    onSettingsClick() {}
 
   }
 
@@ -72,12 +70,17 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(panel.el.style.bottom, '20px');
   });
 
-  // --- Rendering Element Area
-
-  it('should not render element components if area not active', function() {
-    panel.renderElementSelector('.foo');
-    assert.equal(getUiElement(document.documentElement, '#element-area-selector').textContent, '');
+  it('should toggle settings when button clicked', function() {
+    var area   = getUiElement(document.documentElement, '#settings-area');
+    var button = getUiElement(document.documentElement, '#control-panel-settings-button');
+    panel.showDefaultArea();
+    clickElement(button);
+    assert.isTrue(area.classList.contains('control-panel-area--active'));
+    clickElement(button);
+    assert.isFalse(area.classList.contains('control-panel-area--active'));
   });
+
+  // --- Rendering Element Area
 
   it('should render element area with single element', function() {
     panel.showElementArea();
@@ -86,15 +89,15 @@ describe('ControlPanel', function(uiRoot) {
     panel.renderElementDimensions('100px, 100px');
     panel.renderElementZIndex('5');
     panel.renderElementTransform('45deg');
-    assert.equal(getUiElement(document.documentElement, '#element-area-selector').textContent, '.foo');
-    assert.equal(getUiElement(document.documentElement, '#element-area-position').textContent, '50px, 50px');
-    assert.equal(getUiElement(document.documentElement, '#element-area-dimensions').textContent, '100px, 100px');
-    assert.equal(getUiElement(document.documentElement, '#element-area-zindex').textContent, '5z');
-    assert.equal(getUiElement(document.documentElement, '#element-area-transform').textContent, '45deg');
+    assert.equal(getUiElement(document.documentElement, '#element-selector').textContent, '.foo');
+    assert.equal(getUiElement(document.documentElement, '#element-position').textContent, '50px, 50px');
+    assert.equal(getUiElement(document.documentElement, '#element-dimensions').textContent, '100px, 100px');
+    assert.equal(getUiElement(document.documentElement, '#element-zindex').textContent, '5z');
+    assert.equal(getUiElement(document.documentElement, '#element-transform').textContent, '45deg');
   });
 
   it('should not render zIndex when empty empty fields', function() {
-    var zIndexEl = getUiElement(document.documentElement, '#element-area-zindex');
+    var zIndexEl = getUiElement(document.documentElement, '#element-zindex');
     panel.showElementArea();
 
     panel.renderElementZIndex('');
@@ -107,23 +110,26 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   it('should deactivate transform when empty', function() {
-    var transformEl = getUiElement(document.documentElement, '#element-area-transform');
+    var areaEl = getUiElement(document.documentElement, '#element-area');
+    var transformEl = getUiElement(document.documentElement, '#element-transform');
 
     panel.showElementArea();
     panel.renderElementTransform('');
-    assert.isFalse(panel.el.classList.contains(ControlPanel.TRANSFORM_ACTIVE_CLASS));
+    assert.isFalse(areaEl.classList.contains(ControlPanelElementArea.TRANSFORM_CLASS));
 
     panel.renderElementTransform('50deg');
     assert.equal(transformEl.textContent, '50deg');
-    assert.isTrue(panel.el.classList.contains(ControlPanel.TRANSFORM_ACTIVE_CLASS));
+    assert.isTrue(areaEl.classList.contains(ControlPanelElementArea.TRANSFORM_CLASS));
   });
 
   it('should render background position and hide when not active', function() {
-    var className = 'control-panel--element-background-active';
+    var areaEl = getUiElement(document.documentElement, '#element-area');
+    var className = ControlPanelElementArea.BACKGROUND_CLASS;
+
     panel.showElementArea();
     panel.renderElementBackgroundPosition('20px 40px');
-    assert.equal(getUiElement(document.documentElement, '#element-area-background-position').textContent, '20px 40px');
-    assert.isTrue(panel.el.classList.contains(className));
+    assert.equal(getUiElement(document.documentElement, '#element-background-position').textContent, '20px 40px');
+    assert.isTrue(areaEl.classList.contains(className));
   });
 
   // --- Rendering Nudge Modes
@@ -151,7 +157,7 @@ describe('ControlPanel', function(uiRoot) {
   it('should render multiple selected', function() {
     var elements = getMockElements(5);
     panel.renderMultipleSelected(elements);
-    assert.equal(getUiElement(document.documentElement, '#multiple-area-header').textContent, '5 elements selected');
+    assert.equal(getUiElement(document.documentElement, '#multiple-header').textContent, '5 elements selected');
     assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, '');
     assert.equal(getUiElement(document.documentElement, '#highlight-buttons').children.length, 5);
   });

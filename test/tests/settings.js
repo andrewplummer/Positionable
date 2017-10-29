@@ -1,5 +1,5 @@
 
-describe('Settings', function(uiRoot) {
+xdescribe('Settings', function(uiRoot) {
 
   var listener, settings;
 

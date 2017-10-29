@@ -6,6 +6,8 @@
  *
  * ---------------------------- */
 
+// - TODO: close settings on blur instead?
+// - TODO: nudging should align to grid too?
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: clean these constants up by moving them into AppController
@@ -470,18 +472,20 @@ class Element {
     this[methodName] = target[methodName].bind(target);
   }
 
-  addClass(name) {
-    this.el.classList.add(this.getClassName(name));
-    return this;
+  addClass(className) {
+    this.el.classList.add(className);
   }
 
-  removeClass(name) {
-    this.el.classList.remove(this.getClassName(name));
-    return this;
+  removeClass(className) {
+    this.el.classList.remove(className);
   }
 
-  getClassName(name) {
-    return name;
+  replaceClass(oldName, newName) {
+    this.el.classList.replace(oldName, newName);
+  }
+
+  toggleClass(className, toggle) {
+    this.el.classList.toggle(className, toggle);
   }
 
   resetScroll() {
@@ -3327,7 +3331,10 @@ class AppController {
     this.settings.focusForm();
   }
 
-  onGettingStartedSkip() {
+  onAdvancedSettingsClick() {
+  }
+
+  onQuickstartSkip() {
     this.settings.set(Settings.SKIP_GETTING_STARTED, true);
     this.renderActiveControlPanel();
   }
@@ -3381,7 +3388,7 @@ class AppController {
     if (this.settings.get(Settings.SKIP_GETTING_STARTED)) {
       this.controlPanel.showDefaultArea();
     } else {
-      this.controlPanel.showGettingStartedArea();
+      this.controlPanel.showQuickstartArea();
     }
   }
 
@@ -4663,87 +4670,568 @@ class ControlPanel extends DraggableElement {
   static get ACTIVE_CLASS()     { return 'control-panel--active'; }
   static get WINDOWS_CLASS()    { return 'control-panel--win';    }
 
-  static get TRANSFORM_ACTIVE_CLASS()  { return 'control-panel--element-transform-active'; }
-  static get BACKGROUND_ACTIVE_CLASS() { return 'control-panel--element-background-active'; }
+  constructor(root, listener, isMac) {
+    super(root.getElementById('control-panel'), true);
+    this.setupInteractiveElements();
+    this.listener = listener;
+    this.setup(root, isMac);
+  }
+
+  activate() {
+    this.show();
+    this.addClass(ControlPanel.ACTIVE_CLASS);
+  }
+
+  // --- Toggling
+
+  showDefaultArea() {
+    this.showArea(this.defaultArea);
+  }
+
+  showElementArea() {
+    this.showArea(this.elementArea);
+  }
+
+  showMultipleArea() {
+    this.showArea(this.multipleArea);
+  }
+
+  showSettingsArea() {
+    this.showArea(this.settingsArea);
+  }
+
+  showQuickstartArea() {
+    this.showArea(this.quickstartArea);
+  }
+
+  // --- Rendering
+
+  renderMultipleHeader(str) {
+    this.multipleArea.renderHeader(str);
+  }
+
+  renderMultipleSelected(elements) {
+    this.multipleArea.renderSelected(elements);
+  }
+
+  renderElementSelector(selector) {
+    this.elementArea.renderSelector(selector);
+  }
+
+  renderElementPosition(position) {
+    this.elementArea.renderPosition(position);
+  }
+
+  renderElementDimensions(dimensions) {
+    this.elementArea.renderDimensions(dimensions);
+  }
+
+  renderElementZIndex(zIndex) {
+    this.elementArea.renderZIndex(zIndex);
+  }
+
+  renderElementTransform(transform) {
+    this.elementArea.renderTransform(transform);
+  }
+
+  renderElementBackgroundPosition(backgroundPosition) {
+    this.elementArea.renderBackgroundPosition(backgroundPosition);
+  }
+
+  // --- Mode Indicator
+
+  setNudgeMode(mode) {
+    this.modeIndicator.setMode(mode);
+  }
+
+  // --- Private
+
+  setup(root, isMac) {
+    this.setupDimensions();
+    this.setupAreas(root);
+    this.setupButtons(root);
+    this.setupModeIndicator(root);
+    this.setupWindowsKeys(isMac);
+    this.setupDoubleClick();
+  }
+
+  setupDimensions() {
+    this.defaultH  = this.cssH;
+    this.defaultV  = this.cssV;
+    this.cssWidth  = new CSSPixelValue(0);
+    this.cssHeight = new CSSPixelValue(0);
+  }
+
+  setupAreas(root, listener) {
+    this.defaultArea    = new ControlPanelDefaultArea(this, this.listener, root);
+    this.elementArea    = new ControlPanelElementArea(this, this.listener, root);
+    this.multipleArea   = new ControlPanelMultipleArea(this, this.listener, root);
+    this.settingsArea   = new ControlPanelSettingsArea(this, this.listener, root);
+    this.quickstartArea = new ControlPanelQuickstartArea(this, this.listener, root);
+  }
+
+  setupButtons(root) {
+    var el = root.getElementById('control-panel-settings-button');
+    el.addEventListener('click', this.onSettingsClick.bind(this));
+  }
+
+  setupModeIndicator(root) {
+    this.modeIndicator = new ControlPanelModeIndicator(root);
+  }
+
+  setupWindowsKeys(isMac) {
+    if (!isMac) {
+      this.addClass(ControlPanel.WINDOWS_CLASS);
+    }
+  }
+
+  // --- Toggling
+
+  showArea(area) {
+    if (this.activeArea) {
+      this.activeArea.hide();
+    }
+    this.lastArea = this.activeArea;
+    this.activeArea = area;
+    this.renderModeIndicator();
+    this.renderArea();
+  }
+
+  showLastArea() {
+    if (this.lastArea) {
+      this.showArea(this.lastArea);
+    }
+  }
+
+  // --- Events
+
+  onDragStart(evt) {
+    super.onDragStart(evt);
+    this.listener.onControlPanelDragStart(evt);
+  }
+
+  onDragStop(evt) {
+    super.onDragStop(evt);
+    this.listener.onControlPanelDragStop(evt);
+  }
+
+  onDoubleClick() {
+    this.cssH = this.defaultH;
+    this.cssV = this.defaultV;
+    this.render();
+  }
+
+  onSettingsClick() {
+    if (this.activeArea === this.settingsArea) {
+      this.showLastArea();
+    } else {
+      this.showSettingsArea();
+    }
+    this.listener.onSettingsClick();
+  }
+
+  onAreaSizeChanged() {
+    this.renderArea();
+  }
+
+  // --- Rendering
+
+  renderModeIndicator() {
+    if (this.activeArea.usesModeIndicator()) {
+      this.modeIndicator.show();
+    } else {
+      this.modeIndicator.hide();
+    }
+  }
+
+  renderArea() {
+    var size = this.activeArea.getSize();
+    this.activeArea.show();
+    this.cssWidth.px  = size.x;
+    this.cssHeight.px = size.y;
+    this.el.style.width  = this.cssWidth;
+    this.el.style.height = this.cssHeight;
+  }
+
+}
+
+/*-------------------------] ControlPanelModeIndicator [--------------------------*/
+
+class ControlPanelModeIndicator extends Element {
+
+  static get ACTIVE_CLASS() { return 'mode-indicator--active'; }
+
+  constructor(root) {
+    super(root.getElementById('mode-indicator'));
+    this.setupElements(root);
+  }
+
+  show() {
+    this.addClass(ControlPanelModeIndicator.ACTIVE_CLASS);
+  }
+
+  hide() {
+    this.removeClass(ControlPanelModeIndicator.ACTIVE_CLASS);
+  }
+
+  setMode(mode) {
+    var el = this.getElementForMode(mode);
+    if (this.currentElement && this.currentElement !== el) {
+      this.currentElement.hide();
+    }
+    el.show();
+    this.currentElement = el;
+  }
+
+  // --- Private
+
+  setupElements(root) {
+    this.position   = new Element(root.getElementById('mode-position'));
+    this.seResize   = new Element(root.getElementById('mode-resize-se'));
+    this.nwResize   = new Element(root.getElementById('mode-resize-nw'));
+    this.resize     = new Element(root.getElementById('mode-resize'));
+    this.rotate     = new Element(root.getElementById('mode-rotate'));
+    this.zIndex     = new Element(root.getElementById('mode-z-index'));
+    this.background = new Element(root.getElementById('mode-background'));
+  }
+
+  getElementForMode(mode) {
+    switch (mode) {
+      case 'position':   return this.position;
+      case 'resize-se':  return this.seResize;
+      case 'resize-nw':  return this.nwResize;
+      case 'rotate':     return this.rotate;
+      case 'z-index':    return this.zIndex;
+      case 'background': return this.background;
+    }
+  }
+
+}
+
+/*-------------------------] ControlPanelArea [--------------------------*/
+
+class ControlPanelArea extends Element {
+
+  static get ACTIVE_CLASS() { return 'control-panel-area--active'; }
+
+  constructor(panel, listener, root, name, sizes) {
+    super(root.getElementById(name + '-area'));
+    this.panel    = panel;
+    this.listener = listener;
+    this.sizes    = sizes;
+    this.size     = sizes.default;
+  }
+
+  show() {
+    this.addClass(ControlPanelArea.ACTIVE_CLASS);
+  }
+
+  hide() {
+    this.removeClass(ControlPanelArea.ACTIVE_CLASS);
+  }
+
+  getSize() {
+    return this.size;
+  }
+
+  usesModeIndicator() {
+    return false;
+  }
+
+  // --- Protected
+
+  setSize(size) {
+    if (size !== this.size) {
+      this.size = size;
+      this.panel.onAreaSizeChanged();
+    }
+  }
+
+  setExtraClass(className) {
+    if (this.currentExtraClass) {
+      this.replaceClass(this.currentExtraClass, className);
+    } else {
+      this.addClass(className);
+    }
+    this.currentExtraClass = className;
+  }
+
+  clearExtraClass() {
+    this.removeClass(this.currentExtraClass);
+    this.currentExtraClass = null;
+  }
+
+  // --- Private
+
+  setupButton(root, id, handler) {
+    var el = root.getElementById(id);
+    el.addEventListener('click', handler.bind(this));
+  }
+
+}
+
+/*-------------------------] ControlPanelSettingsArea [--------------------------*/
+
+
+class ControlPanelSettingsArea extends ControlPanelArea {
+
+  static get AREA_HELP_CLASS()     { return 'settings-area--help';     }
+  static get AREA_BASIC_CLASS()    { return 'settings-area--basic';    }
+  static get AREA_ADVANCED_CLASS() { return 'settings-area--advanced'; }
+  static get FORM_ADVANCED_CLASS() { return 'settings-form--advanced'; }
+
+  static get SIZES() {
+    return {
+      default: new Point(620, 400),
+      help:    new Point(650, 530)
+    }
+  }
+
+  constructor(panel, listener, root) {
+    super(panel, listener, root, 'settings', ControlPanelSettingsArea.SIZES);
+    this.setupElements(root);
+    this.setupButtons(root);
+    this.setBasicMode();
+  }
+
+  // --- Private
+
+  setupElements(root) {
+    this.form = new Element(root.getElementById('settings-form'));
+  }
+
+  setupButtons(root) {
+    this.setupButton(root, 'settings-tab-help', this.setHelpMode);
+    this.setupButton(root, 'settings-tab-basic', this.setBasicMode);
+    this.setupButton(root, 'settings-tab-advanced', this.setAdvancedMode);
+  }
+
+  setHelpMode() {
+    this.setExtraClass(ControlPanelSettingsArea.AREA_HELP_CLASS);
+    this.setSize(this.sizes.help);
+  }
+
+  setBasicMode() {
+    this.setExtraClass(ControlPanelSettingsArea.AREA_BASIC_CLASS);
+    this.form.removeClass(ControlPanelSettingsArea.FORM_ADVANCED_CLASS);
+    this.setSize(this.sizes.default);
+  }
+
+  setAdvancedMode() {
+    this.setExtraClass(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
+    this.form.addClass(ControlPanelSettingsArea.FORM_ADVANCED_CLASS);
+    this.setSize(this.sizes.default);
+  }
+
+}
+
+
+/*-------------------------] ControlPanelElementArea [--------------------------*/
+
+
+class ControlPanelElementArea extends ControlPanelArea {
+
+  static get TRANSFORM_CLASS()  { return 'element-area--transform-active'; }
+  static get BACKGROUND_CLASS() { return 'element-area--background-active'; }
 
   static get LONG_SELECTOR_LENGTH() { return 30; }
   static get LONG_SELECTOR_CLASS()  { return 'element-area-selector--long'; }
 
-  static get HIGHLIGHT_BUTTON_CLASS() { return 'highlight-button'; }
-
-  static get HIGHLIGHT_MANY_CLASS()     { return 'control-panel--highlight-many';  }
-  static get HIGHLIGHT_LOTS_CLASS()     { return 'control-panel--highlight-lots';  }
-  static get HIGHLIGHT_TONS_CLASS()     { return 'control-panel--highlight-tons';  }
-  static get HIGHLIGHT_MANY_THRESHOLD() { return 18; }
-  static get HIGHLIGHT_LOTS_THRESHOLD() { return 32; }
-  static get HIGHLIGHT_TONS_THRESHOLD() { return 60; }
-
-  constructor(root, listener, isMac) {
-    super(root.getElementById('control-panel'), true);
-    this.setupInteractiveElements();
-
-    this.listener = listener;
-
-    this.defaultH = this.cssH;
-    this.defaultV = this.cssV;
-
-    this.setupAreas(root);
-    this.setupUiEvents(root);
-    this.setupRenderedElements(root);
-    this.setupWindowsKeys(isMac);
-    this.setupDoubleClick();
-    this.setupHighlightButtons();
-  }
-
-  setupAreas(root) {
-    this.helpArea           = new ControlPanelArea(root, 'help');
-    this.defaultArea        = new ControlPanelArea(root, 'default');
-    this.elementArea        = new ControlPanelArea(root, 'element');
-    this.multipleArea       = new ControlPanelArea(root, 'multiple');
-    this.settingsArea       = new ControlPanelArea(root, 'settings');
-    this.gettingStartedArea = new ControlPanelArea(root, 'getting-started');
-  }
-
-  setupUiEvents(root) {
-    this.setupClickEvent(root, 'control-panel-settings-button', this.onControlPanelSettingsClick);
-    this.setupClickEvent(root, 'settings-area-help-link',       this.onSettingsAreaHelpLinkClick);
-    this.setupClickEvent(root, 'getting-started-skip-link',     this.onGettingStartedSkipLinkClick);
-    this.setupClickEvent(root, 'align-top-button',              this.onAlignTopButtonClicked);
-    this.setupClickEvent(root, 'align-hcenter-button',          this.onAlignHCenterButtonClicked);
-    this.setupClickEvent(root, 'align-bottom-button',           this.onAlignBottomButtonClicked);
-    this.setupClickEvent(root, 'align-left-button',             this.onAlignLeftButtonClicked);
-    this.setupClickEvent(root, 'align-vcenter-button',          this.onAlignVCenterButtonClicked);
-    this.setupClickEvent(root, 'align-right-button',            this.onAlignRightButtonClicked);
-    this.setupClickEvent(root, 'distribute-hcenter-button',     this.onDistributeHCenterButtonClicked);
-    this.setupClickEvent(root, 'distribute-vcenter-button',     this.onDistributeVCenterButtonClicked);
-  }
-
-  setupRenderedElements(root) {
-    this.renderedElements = {
-      'multipleHeader':     new Element(root.getElementById('multiple-area-header')),
-      'distributeButtons':  new Element(root.getElementById('distribute-buttons')),
-      'highlightButtons':   new Element(root.getElementById('highlight-buttons')),
-      'modePosition':       new Element(root.getElementById('mode-position')),
-      'modeResizeSe':       new Element(root.getElementById('mode-resize-se')),
-      'modeResizeNw':       new Element(root.getElementById('mode-resize-nw')),
-      'modeResize':         new Element(root.getElementById('mode-resize')),
-      'modeRotate':         new Element(root.getElementById('mode-rotate')),
-      'modeZIndex':         new Element(root.getElementById('mode-z-index')),
-      'modeBackground':     new Element(root.getElementById('mode-background')),
-      'selector':           new Element(root.getElementById('element-area-selector')),
-      'position':           new Element(root.getElementById('element-area-position')),
-      'dimensions':         new Element(root.getElementById('element-area-dimensions')),
-      'zIndex':             new Element(root.getElementById('element-area-zindex')),
-      'transform':          new Element(root.getElementById('element-area-transform')),
-      'backgroundPosition': new Element(root.getElementById('element-area-background-position'))
+  static get SIZES() {
+    return {
+      default:  new Point(500, 110),
+      single:   new Point(500, 131),
+      multiple: new Point(500, 152)
     };
   }
 
+  constructor(panel, listener, root) {
+    super(panel, listener, root, 'element', ControlPanelElementArea.SIZES);
+    this.setupElements(root);
+  }
+
+  usesModeIndicator() {
+    return true;
+  }
+
+  // --- Rendering
+
+  renderSelector(selector) {
+    var isLong = selector.length > ControlPanelElementArea.LONG_SELECTOR_LENGTH;
+    this.toggleClass(ControlPanelElementArea.LONG_SELECTOR_CLASS, isLong);
+    this.renderField(this.selector, selector);
+  }
+
+  renderPosition(position) {
+    this.renderField(this.position, position);
+  }
+
+  renderDimensions(dimensions) {
+    this.renderField(this.dimensions, dimensions);
+  }
+
+  renderZIndex(zIndex) {
+    zIndex = zIndex ? zIndex + 'z' : '';
+    this.renderField(this.zIndex, zIndex);
+    if (zIndex) {
+      this.zIndex.unhide();
+    } else {
+      this.zIndex.hide();
+    }
+  }
+
+  renderTransform(transform) {
+    this.hasTransform = !!transform;
+    this.renderField(this.transform, transform);
+    this.toggleClass(ControlPanelElementArea.TRANSFORM_CLASS, transform);
+    this.setSize();
+  }
+
+  renderBackgroundPosition(backgroundPosition) {
+    this.hasBackgroundPosition = !!backgroundPosition;
+    this.renderField(this.backgroundPosition, backgroundPosition);
+    this.toggleClass(ControlPanelElementArea.BACKGROUND_CLASS, backgroundPosition);
+    this.setSize();
+  }
+
+  // --- Private
+
+  setupElements(root) {
+    this.selector           = new Element(root.getElementById('element-selector')),
+    this.position           = new Element(root.getElementById('element-position')),
+    this.dimensions         = new Element(root.getElementById('element-dimensions')),
+    this.zIndex             = new Element(root.getElementById('element-zindex')),
+    this.transform          = new Element(root.getElementById('element-transform')),
+    this.backgroundPosition = new Element(root.getElementById('element-background-position'))
+  }
+
+  setSize() {
+    var size;
+    if (this.hasTransform && this.hasBackgroundPosition) {
+      size = this.sizes.multiple;
+    } else if (this.hasTransform || this.hasBackgroundPosition) {
+      size = this.sizes.single;
+    } else {
+      size = this.sizes.default;
+    }
+    super.setSize(size);
+  }
+
+  renderField(field, text, suffix) {
+    field.text(text || '');
+  }
+
+}
+
+/*-------------------------] ControlPanelMultipleArea [--------------------------*/
+
+
+class ControlPanelMultipleArea extends ControlPanelArea {
+
+  static get HIGHLIGHT_BUTTON_CLASS()   { return 'highlight-button'; }
+
+  static get HIGHLIGHT_MANY_THRESHOLD() { return 18; }
+  static get HIGHLIGHT_LOTS_THRESHOLD() { return 36; }
+  static get HIGHLIGHT_TONS_THRESHOLD() { return 60; }
+  static get HIGHLIGHT_LOTS_CLASS()     { return 'multiple-area--highlight-lots'; }
+  static get HIGHLIGHT_TONS_CLASS()     { return 'multiple-area--highlight-tons'; }
+
+  static get SIZES() {
+    return {
+      default: new Point(480, 150),
+      many:    new Point(480, 165),
+      lots:    new Point(480, 180),
+      tons:    new Point(480, 190)
+    }
+  }
+
+  constructor(panel, listener, root) {
+    super(panel, listener, root, 'multiple', ControlPanelMultipleArea.SIZES);
+    this.setupButtons(root);
+  }
+
+  usesModeIndicator() {
+    return true;
+  }
+
+  // --- Rendering
+
+  renderHeader(str) {
+    str = str || this.highlightedCount + ' elements selected';
+    this.header.text(str);
+  }
+
+  renderSelected(elements) {
+    this.highlightedCount = elements.length;
+    if (this.highlightedCount > 2) {
+      this.distributeButtons.unhide();
+    } else {
+      this.distributeButtons.hide();
+    }
+    this.renderHighlightButtons(elements);
+    this.renderHeader();
+  }
+
+  // --- Private
+
+  setupButtons(root) {
+    // UI Buttons
+    this.setupButton(root, 'align-top-button',          this.onAlignTopClicked);
+    this.setupButton(root, 'align-hcenter-button',      this.onAlignHCenterClicked);
+    this.setupButton(root, 'align-bottom-button',       this.onAlignBottomClicked);
+    this.setupButton(root, 'align-left-button',         this.onAlignLeftClicked);
+    this.setupButton(root, 'align-vcenter-button',      this.onAlignVCenterClicked);
+    this.setupButton(root, 'align-right-button',        this.onAlignRightClicked);
+    this.setupButton(root, 'distribute-hcenter-button', this.onDistributeHCenterClicked);
+    this.setupButton(root, 'distribute-vcenter-button', this.onDistributeVCenterClicked);
+
+    // Elements
+    this.header            = new Element(root.getElementById('multiple-header'));
+    this.distributeButtons = new Element(root.getElementById('distribute-buttons'));
+    this.highlightButtons  = new BrowserEventTarget(root.getElementById('highlight-buttons'));
+
+    // Highlights
+    this.setupHighlightButtons();
+  }
+
   setupHighlightButtons() {
-    var el = this.renderedElements.highlightButtons.el;
-    el.addEventListener('mouseover', this.onHighlightButtonMouseOver.bind(this));
-    el.addEventListener('mouseout', this.onHighlightButtonMouseOut.bind(this));
-    el.addEventListener('click', this.onHighlightButtonClick.bind(this));
+    this.highlightButtons.addEventListener('mouseover', this.onHighlightButtonMouseOver.bind(this));
+    this.highlightButtons.addEventListener('mouseout', this.onHighlightButtonMouseOut.bind(this));
+    this.highlightButtons.addEventListener('click', this.onHighlightButtonClick.bind(this));
+  }
+
+  // --- Events
+
+  onAlignTopClicked() {
+    this.listener.onAlignButtonClicked('top');
+  }
+
+  onAlignHCenterClicked() {
+    this.listener.onAlignButtonClicked('hcenter');
+  }
+
+  onAlignBottomClicked() {
+    this.listener.onAlignButtonClicked('bottom');
+  }
+
+  onAlignLeftClicked() {
+    this.listener.onAlignButtonClicked('left');
+  }
+
+  onAlignVCenterClicked() {
+    this.listener.onAlignButtonClicked('vcenter');
+  }
+
+  onAlignRightClicked() {
+    this.listener.onAlignButtonClicked('right');
+  }
+
+  onDistributeHCenterClicked() {
+    this.listener.onDistributeButtonClicked('hcenter');
+  }
+
+  onDistributeVCenterClicked() {
+    this.listener.onDistributeButtonClicked('vcenter');
   }
 
   onHighlightButtonMouseOver(evt) {
@@ -4756,7 +5244,10 @@ class ControlPanel extends DraggableElement {
 
   onHighlightButtonClick(evt) {
     this.fireFromHighlightEvent(evt, 'onElementHighlightClick');
+    this.clearHighlightButtons();
   }
+
+  // --- Highlighting
 
   fireFromHighlightEvent(evt, name) {
     var index = evt.target.dataset.index;
@@ -4765,303 +5256,76 @@ class ControlPanel extends DraggableElement {
     }
   }
 
-  renderMultipleHeader(str) {
-    str = str || this.highlightedCount + ' elements selected';
-    this.renderedElements.multipleHeader.text(str);
-  }
-
-  clearHighlightButtonClasses() {
-    this.removeClass(ControlPanel.HIGHLIGHT_MANY_CLASS);
-    this.removeClass(ControlPanel.HIGHLIGHT_LOTS_CLASS);
-    this.removeClass(ControlPanel.HIGHLIGHT_TONS_CLASS);
-  }
-
   renderHighlightButtons(elements) {
-    var container = this.renderedElements.highlightButtons.el, html, className;
-    className = ControlPanel.HIGHLIGHT_BUTTON_CLASS;
+    var el = this.highlightButtons.el, html, className;
+    className = ControlPanelMultipleArea.HIGHLIGHT_BUTTON_CLASS;
     html = elements.map((el, i) => {
       return `<div data-index="${i}"class="${className}"></div>`;
     }).join('');
-    container.innerHTML = html;
-    this.clearHighlightButtonClasses();
-    if (elements.length > ControlPanel.HIGHLIGHT_TONS_THRESHOLD) {
-      this.addClass(ControlPanel.HIGHLIGHT_TONS_CLASS);
-    } else if (elements.length > ControlPanel.HIGHLIGHT_LOTS_THRESHOLD) {
-      this.addClass(ControlPanel.HIGHLIGHT_LOTS_CLASS);
-    } else if (elements.length > ControlPanel.HIGHLIGHT_MANY_THRESHOLD) {
-      this.addClass(ControlPanel.HIGHLIGHT_MANY_CLASS);
-    }
-  }
-
-  setupWindowsKeys(isMac) {
-    if (!isMac) {
-      this.addClass(ControlPanel.WINDOWS_CLASS);
-    }
-  }
-
-  setNudgeMode(mode) {
-    var el;
-    switch (mode) {
-      case 'position':   el = this.renderedElements.modePosition;   break;
-      case 'resize-se':  el = this.renderedElements.modeResizeSe;   break;
-      case 'resize-nw':  el = this.renderedElements.modeResizeNw;   break;
-      case 'resize':     el = this.renderedElements.modeResize;     break;
-      case 'rotate':     el = this.renderedElements.modeRotate;     break;
-      case 'z-index':    el = this.renderedElements.modeZIndex;     break;
-      case 'background': el = this.renderedElements.modeBackground; break;
-    }
-    if (el !== this.currentModeEl) {
-      if (this.currentModeEl) {
-        this.currentModeEl.hide();
-      }
-      el.show();
-      this.currentModeEl = el;
-    }
-  }
-
-  setupClickEvent(root, id, handler) {
-    root.getElementById(id).addEventListener('click', evt => {
-      evt.stopPropagation();
-      handler.call(this, evt);
-    });
-  }
-
-  onDoubleClick() {
-    this.cssH = this.defaultH;
-    this.cssV = this.defaultV;
-    this.render();
-  }
-
-  activate() {
-    this.show();
-    this.addClass(ControlPanel.ACTIVE_CLASS);
-    // TODO: necessary?
-    this.active = true;
-  }
-
-  showHelpArea() {
-    this.showArea(this.helpArea);
-  }
-
-  showElementArea() {
-    this.showArea(this.elementArea);
-  }
-
-  showDefaultArea() {
-    this.showArea(this.defaultArea);
-  }
-
-  showGettingStartedArea() {
-    this.showArea(this.gettingStartedArea);
-  }
-
-  showSettingsArea() {
-    this.showArea(this.settingsArea);
-  }
-
-  showMultipleArea() {
-    this.showArea(this.multipleArea);
-  }
-
-  getAreaActiveClassName(area) {
-    return 'control-panel--' + area.name + '-active';
-  }
-
-  showArea(area) {
-    if (this.activeArea) {
-      this.removeClass(this.getAreaActiveClassName(this.activeArea));
-      this.activeArea.hide();
-    }
-    if (area !== this.elementArea) {
-      this.removeClass(ControlPanel.TRANSFORM_ACTIVE_CLASS);
-      this.removeClass(ControlPanel.BACKGROUND_ACTIVE_CLASS);
-    }
-    if (area !== this.multipleArea) {
-      this.clearHighlightButtonClasses();
-    }
-    this.addClass(this.getAreaActiveClassName(area));
-    area.show();
-    this.activeArea = area;
-
-    /*
-     if (this.currentArea === area) return;
-     this.areas.forEach(function(a) {
-       var className = 'control-panel-' + a.name + '-active';
-       if (a === area) {
-         this.addClass(className);
-         a.addClass('active-area');
-       } else {
-         this.removeClass(className);
-         a.removeClass('active-area');
-       }
-     }, this);
-     this.currentArea = area;
-     if (area === this.elementArea) {
-       this.defaultArea = this.elementArea;
-     }
-     if (area === this.settingsArea) {
-       this.inputs[0].el.focus();
-    // Forcing focus can make the scrolling go haywire,
-    // so need to actively reset the scrolling here.
-       this.resetScroll();
-     } else {
-       document.activeElement.blur();
-     }
-     */
-  }
-
-
-  // --- Rendering
-
-  renderMultipleSelected(elements) {
-    this.highlightedCount = elements.length;
-    if (this.highlightedCount > 2) {
-      this.renderedElements.distributeButtons.unhide();
+    el.innerHTML = html;
+    if (elements.length > ControlPanelMultipleArea.HIGHLIGHT_TONS_THRESHOLD) {
+      this.setExtraClass(ControlPanelMultipleArea.HIGHLIGHT_TONS_CLASS);
+      this.setSize(this.sizes.tons);
+    } else if (elements.length > ControlPanelMultipleArea.HIGHLIGHT_LOTS_THRESHOLD) {
+      this.setExtraClass(ControlPanelMultipleArea.HIGHLIGHT_LOTS_CLASS);
+      this.setSize(this.sizes.lots);
+    } else if (elements.length > ControlPanelMultipleArea.HIGHLIGHT_MANY_THRESHOLD) {
+      this.clearExtraClass();
+      this.setSize(this.sizes.many);
     } else {
-      this.renderedElements.distributeButtons.hide();
-    }
-    this.renderHighlightButtons(elements);
-    this.renderMultipleHeader();
-  }
-
-  renderElementSelector(selector) {
-    this.renderElementDetails(this.renderedElements.selector, selector);
-    if (selector.length > ControlPanel.LONG_SELECTOR_LENGTH) {
-      this.renderedElements.selector.addClass(ControlPanel.LONG_SELECTOR_CLASS);
-    } else {
-      this.renderedElements.selector.removeClass(ControlPanel.LONG_SELECTOR_CLASS);
+      this.clearExtraClass();
+      this.setSize(this.sizes.default);
     }
   }
 
-  renderElementPosition(position) {
-    this.renderElementDetails(this.renderedElements.position, position);
-  }
-
-  renderElementDimensions(dimensions) {
-    this.renderElementDetails(this.renderedElements.dimensions, dimensions);
-  }
-
-  renderElementZIndex(zIndex) {
-    if (zIndex) {
-      zIndex += 'z';
-    }
-    this.renderElementDetails(this.renderedElements.zIndex, zIndex);
-  }
-
-  renderElementTransform(transform) {
-    this.renderElementDetails(
-      this.renderedElements.transform,
-      transform,
-      ControlPanel.TRANSFORM_ACTIVE_CLASS
-    );
-  }
-
-  renderElementBackgroundPosition(backgroundPosition) {
-    this.renderElementDetails(
-      this.renderedElements.backgroundPosition,
-      backgroundPosition,
-      ControlPanel.BACKGROUND_ACTIVE_CLASS
-    );
-  }
-
-  renderElementDetails(el, text, className) {
-    if (this.activeArea !== this.elementArea) {
-      return;
-    }
-    if (text) {
-      el.text(text);
-      if (className) {
-        this.addClass(className);
-      } else {
-        el.unhide();
-      }
-    } else {
-      if (className) {
-        this.removeClass(className);
-      } else {
-        el.hide();
-      }
-    }
-  }
-
-  // --- Button Events
-
-  onControlPanelSettingsClick() {
-    this.showSettingsArea();
-    this.listener.onSettingsClick();
-  }
-
-  onSettingsAreaHelpLinkClick() {
-    this.showHelpArea();
-  }
-
-  onGettingStartedSkipLinkClick() {
-    this.listener.onGettingStartedSkip();
-  }
-
-  // --- Align Button Events
-
-  onAlignTopButtonClicked() {
-    this.listener.onAlignButtonClicked('top');
-  }
-
-  onAlignHCenterButtonClicked() {
-    this.listener.onAlignButtonClicked('hcenter');
-  }
-
-  onAlignBottomButtonClicked() {
-    this.listener.onAlignButtonClicked('bottom');
-  }
-
-  onAlignLeftButtonClicked() {
-    this.listener.onAlignButtonClicked('left');
-  }
-
-  onAlignVCenterButtonClicked() {
-    this.listener.onAlignButtonClicked('vcenter');
-  }
-
-  onAlignRightButtonClicked() {
-    this.listener.onAlignButtonClicked('right');
-  }
-
-  onDistributeHCenterButtonClicked() {
-    this.listener.onDistributeButtonClicked('hcenter');
-  }
-
-  onDistributeVCenterButtonClicked() {
-    this.listener.onDistributeButtonClicked('vcenter');
-  }
-
-  // --- Drag Events
-
-  onDragStart(evt) {
-    super.onDragStart(evt);
-    this.listener.onControlPanelDragStart(evt);
-  }
-
-  onDragStop(evt) {
-    super.onDragStop(evt);
-    this.listener.onControlPanelDragStop(evt);
+  clearHighlightButtons() {
+    this.highlightButtons.el.innerHTML = '';
   }
 
 }
 
-class ControlPanelArea extends Element {
+/*-------------------------] ControlPanelQuickstartArea [--------------------------*/
 
-  static get ACTIVE_CLASS() { return 'control-panel-area--active'; }
 
-  constructor(root, name) {
-    super(root.getElementById(name + '-area'));
-    this.name = name;
+class ControlPanelQuickstartArea extends ControlPanelArea {
+
+  static get SIZES() {
+    return {
+      default: new Point(590, 370)
+    };
   }
 
-  show() {
-    this.addClass(ControlPanelArea.ACTIVE_CLASS);
+  constructor(panel, listener, root) {
+    super(panel, listener, root, 'getting-started', ControlPanelQuickstartArea.SIZES);
+    this.setupButtons(root);
   }
 
-  hide() {
-    this.removeClass(ControlPanelArea.ACTIVE_CLASS);
+  // --- Private
+
+  setupButtons(root) {
+    this.setupButton(root, 'getting-started-skip-link', this.onSkipClicked);
+  }
+
+  // --- Events
+
+  onSkipClicked() {
+    this.listener.onQuickstartSkip();
+  }
+
+}
+
+/*-------------------------] ControlPanelDefaultArea [--------------------------*/
+
+class ControlPanelDefaultArea extends ControlPanelArea {
+
+  static get SIZES() {
+    return {
+      default: new Point(180, 90)
+    };
+  }
+
+  constructor(panel, listener, root) {
+    super(panel, listener, root, 'default', ControlPanelDefaultArea.SIZES);
   }
 
 }
@@ -5963,7 +6227,7 @@ class Form extends BrowserEventTarget {
   static get NUMBER()          { return 'number';     }
   static get CHECKBOX()        { return 'checkbox';   }
   static get SELECT_ONE()      { return 'select-one'; }
-  static get INVALID_CLASS()   { return 'settings-area-field--invalid'; }
+  static get INVALID_CLASS()   { return 'settings-field--invalid';    }
   static get CONFIRM_MESSAGE() { return 'Really clear all settings?'; }
 
   constructor(el, listener) {
@@ -6142,10 +6406,10 @@ class Settings {
   static get TABS_TAB()                { return 'tab';  }
 
   // --- Validations
-  static get SNAP_FIELD()             { return 'snap-field'; }
-  static get SNAP_CONTROLS()          { return [Settings.SNAP_X, Settings.SNAP_Y]; }
-  static get QUERY_CONTROLS()         { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
-  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
+  static get SNAP_FIELD()              { return 'snap-field'; }
+  static get SNAP_CONTROLS()           { return [Settings.SNAP_X, Settings.SNAP_Y]; }
+  static get QUERY_CONTROLS()          { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
+  static get ATTRIBUTE_SELECTOR_REG()  { return /\[[^\]]+(\])?/gi; }
 
   constructor(listener, root) {
     this.form = new Form(root.getElementById('settings-form'), this);
@@ -6202,10 +6466,11 @@ class Settings {
 
   setup(root) {
     this.defaultData = this.form.getData();
-    this.fetchSettings();
     this.form.addValidation(Settings.QUERY_CONTROLS, this.isValidQuery);
     this.form.addValidation(Settings.SNAP_CONTROLS, this.isValidSnap, Settings.SNAP_FIELD);
+    this.fetchSettings();
     new LinkedSelect(root.getElementById('output-selector'));
+    new LinkedSelect(root.getElementById('output-grouping'));
   }
 
   fetchSettings() {

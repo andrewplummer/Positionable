@@ -100,7 +100,6 @@ input, select {
   bottom: 20px;
   left: 20px;
   overflow: hidden;
-  color: #333;
   background-color: rgba(255,255,255,0.9);
   box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.2), 0px 2px 5px 2px rgba(0,0,0,0.2);
   border-radius: 10px;
@@ -133,14 +132,13 @@ input, select {
 
 .control-panel-area {
   position: absolute;
-  z-index: 1;
   top: 25px;
-  right: 25px;
+  left: 25px;
+  right: 30px;
   bottom: 30px;
-  left: 30px;
-  opacity: 0;
-  transition: opacity 300ms ease-in-out;
   pointer-events: none;
+  transition: opacity 300ms linear;
+  opacity: 0;
 }
 
 .control-panel-area--active {
@@ -161,13 +159,7 @@ input, select {
   pointer-events: none;
 }
 
-.element-area,
-.multiple-area {
-  margin-right: 60px;
-}
-
-.control-panel--multiple-active .mode-indicator,
-.control-panel--element-active .mode-indicator {
+.mode-indicator--active {
   opacity: 1;
   pointer-events: auto;
 }
@@ -194,34 +186,29 @@ input, select {
 
 /*---------------------------] Element Area [-----------------------*/
 
-.control-panel--element-active {
-  width: 500px;
-  height: 110px;
-}
-
-.element-area-selector {
+.element-selector {
   font-size: 28px;
   white-space: nowrap;
   overflow-x: auto;
 }
 
-.element-area-selector--long {
+.element-selector--long {
   font-size: 20px;
   margin-bottom: .2em;
 }
 
-.element-area-property:not(:first-of-type):before {
+.element-property:not(:first-of-type):before {
   content: '|';
   margin-right: .2em;
 }
 
-.element-area-field {
+.element-field {
   font-size: 14px;
   margin-bottom: 2px;
   white-space: nowrap;
 }
 
-.element-area-property-icon {
+.element-property-icon {
   display: inline-block;
   vertical-align: -1px;
   margin-right: 5px;
@@ -230,54 +217,40 @@ input, select {
   transition: opacity 150ms linear 50ms, margin-left 300ms ease-in-out;
 }
 
-.element-area-extra {
+.element-extra {
   transition: opacity 150ms linear 50ms, max-height 300ms ease-in-out;
   opacity: 0;
   max-height: 0;
   overflow: hidden;
 }
 
-.element-area-extra-property {
+.element-extra-property {
   display: inline-block;
   vertical-align: top;
   overflow-x: auto;
   max-width: 85%;
 }
 
-.control-panel--element-transform-active,
-.control-panel--element-background-active {
-  height: 131px;
-}
-
-.control-panel--element-transform-active.control-panel--element-background-active {
-  height: 152px;
-}
-
-.control-panel--element-transform-active .element-area-property-icon,
-.control-panel--element-background-active .element-area-property-icon {
+.element-area--transform-active .element-property-icon,
+.element-area--background-active .element-property-icon {
   margin-left: 0;
   opacity: 1;
 }
 
-.control-panel--element-transform-active .element-area-extra-transform,
-.control-panel--element-background-active .element-area-extra-background-position {
+.element-area--transform-active .element-extra-transform,
+.element-area--background-active .element-extra-background-position {
   opacity: 1;
   max-height: 2.4em;
 }
 
 /*---------------------------] Multiple Area [-----------------------*/
 
-.control-panel--multiple-active {
-  width: 480px;
-  height: 150px;
-}
-
-.multiple-area-button-frame {
+.multiple-button-frame {
   white-space: nowrap;
   margin: 5px 0;
 }
 
-.multiple-area-header {
+.multiple-header {
   font-size: 22px;
   margin-bottom: .3em;
   white-space: nowrap;
@@ -336,45 +309,19 @@ input, select {
   font-size: 18px;
 }
 
-/* Many highlight buttons */
-
-.control-panel--highlight-many {
-  width: 480px;
-  height: 165px;
-}
-
-/* Lots of highlight buttons */
-
-.control-panel--highlight-lots {
-  width: 480px;
-  height: 180px;
-}
-
-.control-panel--highlight-lots .multiple-area-highlight-button {
+.multiple-area--highlight-lots .highlight-button {
   width: 18px;
   height: 18px;
   padding: 0 1px 1px 0;
 }
 
-/* Tons of highlight buttons */
-
-.control-panel--highlight-tons {
-  width: 480px;
-  height: 190px;
-}
-
-.control-panel--highlight-tons .multiple-area-highlight-button {
+.multiple-area--highlight-tons .highlight-button {
   width: 16px;
   height: 16px;
   padding: 0 1px 1px 0;
 }
 
 /*---------------------------] Default Area [-----------------------*/
-
-.control-panel--default-active {
-  width: 180px;
-  height: 90px;
-}
 
 .default-area-icon {
   height: 35px;
@@ -387,13 +334,7 @@ input, select {
   text-align: center;
 }
 
-
 /*---------------------------] Getting Started Area [-----------------------*/
-
-.control-panel--getting-started-active {
-  width: 590px;
-  height: 370px;
-}
 
 .getting-started-block {
   position: absolute;
@@ -440,40 +381,87 @@ input, select {
 
 /*---------------------------] Settings Area [-----------------------*/
 
-.control-panel--settings-active {
-  width: 620px;
-  height: 400px;
+.settings-area-container {
+  position: absolute;
+  top: 50px;
+  bottom: 0;
 }
 
-.settings-area-header {
-  display: inline-block;
-  font-size: 18px;
-  font-weight: 300;
-  margin: 0 0 1em 0;
-  color: rgba(0,0,0,0.7);
+.settings-area-tabs {
+  border-bottom: 1px solid #eee;
+  margin-top: -6px;
+  padding-bottom: 12px;
 }
 
-.settings-area-help-link {
-  font-size: 14px;
-  font-weight: 200;
-  color: rgba(20,130,240,0.8);
+.settings-tab {
+  font-size: 15px;
+  padding: 0 .6em;
   cursor: pointer;
-  border-left: 1px solid rgba(0,0,0,0.1);
-  padding: 2px 12px;
-  margin: 0 0 0 8px;
+  color: #d6d6d6;
 }
 
-.settings-area-field {
+.settings-tab:hover {
+  color: #666;
+}
+
+.settings-area--help .settings-tab--help,
+.settings-area--basic .settings-tab--basic,
+.settings-area--advanced .settings-tab--advanced {
+  color: #444;
+}
+
+.settings-form,
+.settings-help {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms linear;
+}
+
+.settings-area--help .settings-help,
+.settings-area--basic .settings-form,
+.settings-area--advanced .settings-form {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.settings-form-page-container {
+  width: 200%;
+  display: flex;
+  transition: transform 300ms cubic-bezier(0.645, 0.045, 0.355, 1.000);
+}
+
+.settings-form-page {
+  width: 100%;
+  transition: opacity 200ms linear;
+}
+
+.settings-form--advanced .settings-form-page-container {
+  transform: translateX(-50%);
+}
+
+.settings-form-page--advanced,
+.settings-area--advanced .settings-form-page--basic {
+  opacity: 0;
+}
+
+.settings-form-page--basic,
+.settings-area--advanced .settings-form-page--advanced {
+  opacity: 1;
+}
+
+/*---------------------------] Settings Area Form [-----------------------*/
+
+.settings-field {
   border: none;
   padding: 4px 0px;
   color: rgba(0,0,0,0.7);
 }
 
-.settings-area-field--invalid {
+.settings-field--invalid {
   color: #d82323;
 }
 
-.settings-area-label {
+.settings-label {
   display: inline-block;
   vertical-align: top;
   text-align: right;
@@ -483,22 +471,19 @@ input, select {
   font-weight: bold;
 }
 
-.settings-area-control {
+.settings-control {
   width: 52%;
   vertical-align: middle;
   display: inline-block;
 }
 
-.settings-area-input {
+.settings-input {
   font-size: 14px;
   color: inherit;
-}
-
-.settings-area-text-input {
   padding: 1px 4px;
 }
 
-.settings-area-text-input::-webkit-input-placeholder {
+.settings-input::placeholder {
   color: rgba(0,0,0,0.5);
 }
 
@@ -544,12 +529,7 @@ input, select {
   cursor: pointer;
 }
 
-/*---------------------------] Help Area [-----------------------*/
-
-.control-panel--help-active {
-  width: 650px;
-  height: 475px;
-}
+/*---------------------------] Settings Area Help [-----------------------*/
 
 .help-area-block {
   position: absolute;
@@ -566,7 +546,7 @@ input, select {
 }
 
 .help-area-block--commands {
-  bottom: 10px;
+  top: 240px;
   left: 0;
 }
 

@@ -10,7 +10,6 @@
 
 .position-handle {
   position: absolute;
-  z-index: 2;
   top: 22%;
   left: 22%;
   width: 56%;
@@ -21,7 +20,6 @@
 
 .rotation-handle {
   position: absolute;
-  z-index: 2;
   height: 18px;
   width: 18px;
   bottom: -18px;
@@ -46,7 +44,6 @@
 
 .resize-handle {
   position: absolute;
-  z-index: 3;
   height: 22%;
   width: 22%;
 }

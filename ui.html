@@ -4,7 +4,7 @@
     <img src="chrome-extension://__MSG_@@extension_id__/images/icons/settings.svg" width="18" height="18">
   </button>
 
-  <div class="mode-indicator">
+  <div id="mode-indicator" class="mode-indicator">
     <div id="mode-position" class="mode mode--position" title="Use keyboard to move element.">
       <img class="mode-icon" width="34" height="34" src="chrome-extension://__MSG_@@extension_id__/images/icons/position.svg">
       <p class="mode-text">Move</p>
@@ -37,26 +37,26 @@
   </div>
 
   <div class="control-panel-area element-area" id="element-area">
-    <h3 id="element-area-selector" class="element-area-selector"></h3>
-    <p id="element-area-properties" class="element-area-field" title="Box Properties">
-      <img src="chrome-extension://__MSG_@@extension_id__/images/icons/dimensions.svg" class="element-area-property-icon" width="13" height="13">
-      <span class="element-area-property" id="element-area-position" title="Position"></span>
-      <span class="element-area-property" id="element-area-dimensions" title="Dimensions"></span>
-      <span class="element-area-property" id="element-area-zindex" title="Z-Index"></span>
+    <h3 id="element-selector" class="element-selector"></h3>
+    <p id="element-properties" class="element-field" title="Box Properties">
+      <img src="chrome-extension://__MSG_@@extension_id__/images/icons/dimensions.svg" class="element-property-icon" width="13" height="13">
+      <span class="element-property" id="element-position" title="Position"></span>
+      <span class="element-property" id="element-dimensions" title="Dimensions"></span>
+      <span class="element-property" id="element-zindex" title="Z-Index"></span>
     </p>
-    <p class="element-area-field element-area-extra element-area-extra-transform" title="Transform">
-      <img src="chrome-extension://__MSG_@@extension_id__/images/icons/transform.svg" class="element-area-property-icon" width="13" height="13">
-      <span id="element-area-transform" class="element-area-extra-property"></span>
+    <p class="element-field element-extra element-extra-transform" title="Transform">
+      <img src="chrome-extension://__MSG_@@extension_id__/images/icons/transform.svg" class="element-property-icon" width="13" height="13">
+      <span id="element-transform" class="element-extra-property"></span>
     </p>
-    <p class="element-area-field element-area-extra element-area-extra-background-position" title="Background Position">
-      <img src="chrome-extension://__MSG_@@extension_id__/images/icons/background-square.svg" class="element-area-property-icon" width="13" height="13">
-      <span id="element-area-background-position" class="element-area-extra-property"></span>
+    <p class="element-field element-extra element-extra-background-position" title="Background Position">
+      <img src="chrome-extension://__MSG_@@extension_id__/images/icons/background-square.svg" class="element-property-icon" width="13" height="13">
+      <span id="element-background-position" class="element-extra-property"></span>
     </p>
   </div>
 
   <div class="control-panel-area multiple-area" id="multiple-area">
-    <h3 id="multiple-area-header" class="multiple-area-header"></h3>
-    <div class="multiple-area-button-frame">
+    <h3 id="multiple-header" class="multiple-header"></h3>
+    <div class="multiple-button-frame">
       <span id="align-buttons">
         <button id="align-top-button" class="align-button image-button" title="Align top edge">
           <img src="chrome-extension://__MSG_@@extension_id__/images/icons/align-top.svg" width="16" height="16">
@@ -90,329 +90,345 @@
     <div id="highlight-buttons" class="highlight-buttons"></div>
   </div>
 
-  <div class="control-panel-area" id="settings-area">
-    <h3 class="settings-area-header">
-      Settings <span id="settings-area-help-link" class="settings-area-help-link">Help</span>
+  <div class="control-panel-area settings-area" id="settings-area">
+    <h3 class="settings-area-tabs">
+      <span id="settings-tab-basic" class="settings-tab settings-tab--basic">Settings</span>
+      <span id="settings-tab-advanced" class="settings-tab settings-tab--advanced">Advanced</span>
+      <span id="settings-tab-help" class="settings-tab settings-tab--help">Help</span>
     </h3>
-    <form id="settings-form">
-      <fieldset class="settings-area-field">
-        <div class="settings-area-label">
-          <label for="save-filename">
-            Filename when saving:
-          </label>
-        </div>
-        <div class="settings-area-control">
-          <input type="text" id="save-filename" value="styles.css"
-                 class="settings-area-input" placeholder="Filename">
-        </div>
-      </fieldset>
-      <fieldset class="settings-area-field" name="include-selector-field">
-        <div class="settings-area-label">
-          <label for="include-selector">
-            Include elements matching:
-          </label>
-        </div>
-        <div class="settings-area-control">
-          <input type="text" id="include-selector"
-                 class="settings-area-input" placeholder="CSS Selector">
-        </div>
-      </fieldset>
-      <fieldset class="settings-area-field" name="exclude-selector-field">
-        <div class="settings-area-label">
-          <label for="exclude-selector">
-            Exclude elements matching:
-          </label>
-        </div>
-        <div class="settings-area-control">
-          <input type="text" id="exclude-selector"
-                 class="settings-area-input" placeholder="CSS Selector">
-        </div>
-      </fieldset>
-      <fieldset class="settings-area-field">
-        <div class="settings-area-label">
-          <label for="tab-style">
-            Tab style:
-          </label>
-        </div>
-        <div class="settings-area-control">
-          <select id="tab-style">
-            <option value="tab">Tab</option>
-            <option value="two" selected>Two Spaces</option>
-            <option value="four">Four Spaces</option>
-            <option value="eight">Eight Spaces</option>
-          </select>
-        </div>
-      </fieldset>
-      <fieldset class="settings-area-field">
-        <div class="settings-area-label">
-          <label for="output-selector">
-            Output selector:
-          </label>
-        </div>
-        <div class="settings-area-control">
-          <select id="output-selector">
-            <option value="auto" selected>Auto</option>
-            <option value="none">None</option>
-            <option value="id">Id</option>
-            <option value="first">First Class</option>
-            <option value="longest">Longest Class</option>
-            <option value="all">All Classes</option>
-            <option value="tag">Tag</option>
-            <option value="tag-nth">Tag:nth-child</option>
-          </select>
-          <div class="output-selector-description">
-            <div class="select-linked-area" data-linked-option="auto">
-              <p>Element id or first class will be used.</p>
-              <code>#id | .first { ... }</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="none">
-              <p>No selector used. Styles will be inline.</p>
-              <code>width: 200px; height: 200px;...</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="id">
-              <p>Element id will be used.</p>
-              <code>#id { ... }</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="first">
-              <p>First class name found will be used.</p>
-              <code>.first { ... }</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="longest">
-              <p>Longest class name found will be used.</p>
-              <code>.long-class-name { ... }</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="all">
-              <p>All class names will be output together.</p>
-              <code>.one.two.three { ... }</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="tag">
-              <p>Only the tag name will be used.</p>
-              <code>div { ... }</code>
-            </div>
-            <div class="select-linked-area" data-linked-option="tag-nth">
-              <p>Tag name + nth-child selector will be used.</p>
-              <code>li:nth-child(3) { ... }</code>
-            </div>
+    <div class="settings-area-container">
+      <form id="settings-form" class="settings-form">
+        <div class="settings-form-page-container">
+          <div class="settings-form-page settings-form-page--basic">
+            <fieldset class="settings-field">
+              <div class="settings-label">
+                <label for="save-filename">
+                  Filename when saving:
+                </label>
+              </div>
+              <div class="settings-control">
+                <input type="text" id="save-filename" value="styles.css"
+                       class="settings-input" placeholder="Filename">
+              </div>
+            </fieldset>
+            <fieldset class="settings-field" name="include-selector-field">
+              <div class="settings-label">
+                <label for="include-selector">
+                  Include elements matching:
+                </label>
+              </div>
+              <div class="settings-control">
+                <input type="text" id="include-selector"
+                       class="settings-input" placeholder="CSS Selector">
+              </div>
+            </fieldset>
+            <fieldset class="settings-field" name="exclude-selector-field">
+              <div class="settings-label">
+                <label for="exclude-selector">
+                  Exclude elements matching:
+                </label>
+              </div>
+              <div class="settings-control">
+                <input type="text" id="exclude-selector"
+                       class="settings-input" placeholder="CSS Selector">
+              </div>
+            </fieldset>
+            <fieldset class="settings-field">
+              <div class="settings-label">
+                <label for="tab-style">
+                  Tab style:
+                </label>
+              </div>
+              <div class="settings-control">
+                <select id="tab-style">
+                  <option value="tab">Tab</option>
+                  <option value="two" selected>Two Spaces</option>
+                  <option value="four">Four Spaces</option>
+                  <option value="eight">Eight Spaces</option>
+                </select>
+              </div>
+            </fieldset>
+            <fieldset class="settings-field">
+              <div class="settings-label">
+                <label for="output-selector">
+                  Output selector:
+                </label>
+              </div>
+              <div class="settings-control">
+                <select id="output-selector">
+                  <option value="auto" selected>Auto</option>
+                  <option value="none">None</option>
+                  <option value="id">Id</option>
+                  <option value="first">First Class</option>
+                  <option value="longest">Longest Class</option>
+                  <option value="all">All Classes</option>
+                  <option value="tag">Tag</option>
+                  <option value="tag-nth">Tag:nth-child</option>
+                </select>
+                <div class="output-selector-description">
+                  <div class="select-linked-area" data-linked-option="auto">
+                    <p>Element id or first class will be used.</p>
+                    <code>#id | .first { ... }</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="none">
+                    <p>No selector used. Styles will be inline.</p>
+                    <code>width: 200px; height: 200px;...</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="id">
+                    <p>Element id will be used.</p>
+                    <code>#id { ... }</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="first">
+                    <p>First class name found will be used.</p>
+                    <code>.first { ... }</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="longest">
+                    <p>Longest class name found will be used.</p>
+                    <code>.long-class-name { ... }</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="all">
+                    <p>All class names will be output together.</p>
+                    <code>.one.two.three { ... }</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="tag">
+                    <p>Only the tag name will be used.</p>
+                    <code>div { ... }</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="tag-nth">
+                    <p>Tag name + nth-child selector will be used.</p>
+                    <code>li:nth-child(3) { ... }</code>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+            <fieldset class="settings-field">
+              <div class="settings-label">
+                <label for="output-changed-only">
+                  Only output changed styles:
+                </label>
+              </div>
+              <div class="settings-control">
+                <input type="checkbox" id="output-changed-only">
+              </div>
+            </fieldset>
+          </div>
+          <div class="settings-form-page settings-form-page--advanced">
+            <fieldset class="settings-field" name="snap-field">
+              <div class="settings-label">
+                <label for="snap-x">
+                  Snap to grid:
+                </label>
+              </div>
+              <div class="settings-control">
+                <input type="number" id="snap-x" class="snap-control">
+                <span class="snap-separator">&times;</span>
+                <input type="number" id="snap-y" class="snap-control">
+              </div>
+            </fieldset>
+            <fieldset class="settings-field">
+              <div class="settings-label">
+                <label for="output-grouping">
+                  Group common styles:
+                </label>
+              </div>
+              <div class="settings-control">
+                <select id="output-grouping">
+                  <option value="group" selected>Group</option>
+                  <option value="remove">Remove</option>
+                  <option value="map">Map</option>
+                </select>
+                <!-- TODO: change me! -->
+                <div class="output-selector-description">
+                  <div class="select-linked-area" data-linked-option="group">
+                    <p>GROUP!</p>
+                    <code>...</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="remove">
+                    <p>REMOVE!</p>
+                    <code>...</code>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="map">
+                    <p>MAP!</p>
+                    <code>...</code>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
           </div>
         </div>
-      </fieldset>
-      <fieldset class="settings-area-field" name="snap-field">
-        <div class="settings-area-label">
-          <label for="snap-x">
-            Snap to grid:
-          </label>
+        <button type="reset" class="settings-reset">Clear All</button>
+        <button type="submit" class="settings-save">Save</button>
+      </form>
+      <div class="settings-help">
+        <div class="help-area-block help-area-block--keyboard">
+          <h3 class="help-area-header">Keyboard</h3>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">
+                <img src="chrome-extension://__MSG_@@extension_id__/images/icons/arrow-key.svg"
+                     class="help-area-arrow-key-icon">
+              </span>
+            </div>
+            <p class="help-area-text">Use the arrow keys to nudge the element.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">&#x21e7;</span>
+            </div>
+            <p class="help-area-text">Shift: Constrain dragging / nudge multiplier / select multiple.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">&#x2303;</span>
+            </div>
+            <p class="help-area-text">Ctrl: Move the background image when dragging.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">&#x2325;</span>
+            </div>
+            <p class="help-area-text">Option/Alt: Peek at the background image.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large key-icon--command">
+                <span class="key-icon--mac">&#x2318;</span>
+                <span class="key-icon--win key-icon--wingdings">ÿ</span>
+              </span>
+            </div>
+            <p class="help-area-text">Cmd/Win: While dragging, temporarily move a single element.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">b</span>
+            </div>
+            <p class="help-area-text">Background position nudge mode.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">s</span>
+            </div>
+            <p class="help-area-text">Size nudge mode.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">m</span>
+            </div>
+            <p class="help-area-text">Move (position) nudge mode.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">r</span>
+            </div>
+            <p class="help-area-text">Rotation nudge mode.</p>
+          </div>
+          <div class="help-area-item">
+            <div class="help-area-graphic">
+              <span class="key-icon key-icon--large">z</span>
+            </div>
+            <p class="help-area-text">Z-index nudge mode.</p>
+          </div>
         </div>
-        <div class="settings-area-control">
-          <input type="number" id="snap-x" class="snap-control">
-          <span class="snap-separator">&times;</span>
-          <input type="number" id="snap-y" class="snap-control">
+        <div class="help-area-block help-area-block--mouse">
+          <h3 class="help-area-header">Mouse</h3>
+          <div class="help-area-item">
+            <span class="help-area-graphic help-area-graphic--solid">
+              <img src="chrome-extension://__MSG_@@extension_id__/images/icons/position.svg"
+                   class="help-area-position-icon">
+            </span>
+            <p class="help-area-text">Drag the middle of the element to move it around.</p>
+          </div>
+          <div class="help-area-item">
+            <span class="help-area-graphic help-area-graphic--solid">
+              <span class="help-area-resize-icon help-area-resize-icon--nw"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--n"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--ne"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--e"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--se"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--s"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--sw"></span>
+              <span class="help-area-resize-icon help-area-resize-icon--w"></span>
+            </span>
+            <p class="help-area-text">Drag border handles to resize.</p>
+          </div>
+          <div class="help-area-item help-area-item--lower">
+            <span class="help-area-graphic help-area-graphic--solid">
+              <span class="help-area-rotate-handle"></span>
+            </span>
+            <p class="help-area-text">Drag the rotate handle to rotate.</p>
+          </div>
+          <div class="help-area-item">
+            <span class="help-area-graphic help-area-graphic--solid">
+              <img src="chrome-extension://__MSG_@@extension_id__/images/icons/background.svg"
+                   class="help-area-snap-background-icon">
+              <img src="chrome-extension://__MSG_@@extension_id__/images/icons/pointer.svg"
+                   class="help-area-snap-pointer-icon">
+            </span>
+            <p class="help-area-text">Double click to snap element dimensions to a background sprite.</p>
+          </div>
+          <div class="help-area-item">
+            <span class="help-area-graphic help-area-graphic--dashed">
+              <span class="help-area-drag-box--one"></span>
+              <span class="help-area-drag-box--two"></span>
+              <img src="chrome-extension://__MSG_@@extension_id__/images/icons/pointer.svg"
+                   class="help-area-drag-pointer-icon">
+            </span>
+            <p class="help-area-text">Drag to select multiple elements.</p>
+          </div>
         </div>
-      </fieldset>
-      <fieldset class="settings-area-field">
-        <div class="settings-area-label">
-          <label for="output-changed-only">
-            Only output changed styles:
-          </label>
+        <div class="help-area-block help-area-block--commands">
+          <h3 class="help-area-header">Commands</h3>
+          <p class="help-area-item">
+            <span class="help-area-key-combo">
+              <span class="key-icon key-icon--large">
+                <span class="key-icon--mac">&#x2318;</span>
+                <span class="key-icon--win">&#x2303;</span>
+              </span>
+              <span class="">+</span>
+              <span class="key-icon key-icon--large">z</span>
+            </span>
+            <span class="help-area-text">Undo</span>
+          </p>
+          <p class="help-area-item">
+            <span class="help-area-key-combo">
+              <span class="key-icon key-icon--large">
+                <span class="key-icon--mac">&#x2318;</span>
+                <span class="key-icon--win">&#x2303;</span>
+              </span>
+              <span class="">+</span>
+              <span class="key-icon key-icon--large">a</span>
+            </span>
+            <span class="help-area-text">Select All</span>
+          </p>
+          <p class="help-area-item">
+            <span class="help-area-key-combo">
+              <span class="key-icon key-icon--large">
+                <span class="key-icon--mac">&#x2318;</span>
+                <span class="key-icon--win">&#x2303;</span>
+              </span>
+              <span class="">+</span>
+              <span class="key-icon key-icon--large">c</span>
+            </span>
+            <span class="help-area-text">Copy Styles</span>
+          </p>
+          <span class="help-area-item">
+            <span class="help-area-key-combo">
+              <span class="key-icon key-icon--large">
+                <span class="key-icon--mac">&#x2318;</span>
+                <span class="key-icon--win">&#x2303;</span>
+              </span>
+              <span class="">+</span>
+              <span class="key-icon key-icon--large">s</span>
+            </span>
+            <span class="help-area-text">Save Styles</span>
+          </span>
         </div>
-        <div class="settings-area-control">
-          <input type="checkbox" id="output-changed-only">
-        </div>
-      </fieldset>
-      <fieldset class="settings-area-field">
-        <div class="settings-area-label">
-          <label for="output-unique-only">
-            Exclude styles common to a group:
-          </label>
-        </div>
-        <div class="settings-area-control">
-          <input type="checkbox" id="output-unique-only">
-        </div>
-      </fieldset>
-      <button type="reset" class="settings-reset">Clear All</button>
-      <button type="submit" class="settings-save">Save</button>
-    </form>
+      </div>
+    </div>
+
   </div>
 
-  <div class="control-panel-area" id="help-area">
-    <div class="help-area-block help-area-block--keyboard">
-
-      <h3 class="help-area-header">Keyboard</h3>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">
-            <img src="chrome-extension://__MSG_@@extension_id__/images/icons/arrow-key.svg"
-                 class="help-area-arrow-key-icon">
-          </span>
-        </div>
-        <p class="help-area-text">Use the arrow keys to nudge the element.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">&#x21e7;</span>
-        </div>
-        <p class="help-area-text">Shift: Constrain dragging / nudge multiplier / select multiple.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">&#x2303;</span>
-        </div>
-        <p class="help-area-text">Ctrl: Move the background image when dragging.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">&#x2325;</span>
-        </div>
-        <p class="help-area-text">Option/Alt: Peek at the background image.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large key-icon--command">
-            <span class="key-icon--mac">&#x2318;</span>
-            <span class="key-icon--win key-icon--wingdings">ÿ</span>
-          </span>
-        </div>
-        <p class="help-area-text">Cmd/Win: While dragging, temporarily move a single element.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">b</span>
-        </div>
-        <p class="help-area-text">Background position nudge mode.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">s</span>
-        </div>
-        <p class="help-area-text">Size nudge mode.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">m</span>
-        </div>
-        <p class="help-area-text">Move (position) nudge mode.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">r</span>
-        </div>
-        <p class="help-area-text">Rotation nudge mode.</p>
-      </div>
-
-      <div class="help-area-item">
-        <div class="help-area-graphic">
-          <span class="key-icon key-icon--large">z</span>
-        </div>
-        <p class="help-area-text">Z-index nudge mode.</p>
-      </div>
-
-    </div>
-
-    <div class="help-area-block help-area-block--mouse">
-      <h3 class="help-area-header">Mouse</h3>
-      <div class="help-area-item">
-        <span class="help-area-graphic help-area-graphic--solid">
-          <img src="chrome-extension://__MSG_@@extension_id__/images/icons/position.svg"
-               class="help-area-position-icon">
-        </span>
-        <p class="help-area-text">Drag the middle of the element to move it around.</p>
-      </div>
-      <div class="help-area-item">
-        <span class="help-area-graphic help-area-graphic--solid">
-          <span class="help-area-resize-icon help-area-resize-icon--nw"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--n"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--ne"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--e"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--se"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--s"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--sw"></span>
-          <span class="help-area-resize-icon help-area-resize-icon--w"></span>
-        </span>
-        <p class="help-area-text">Drag border handles to resize.</p>
-      </div>
-      <div class="help-area-item help-area-item--lower">
-        <span class="help-area-graphic help-area-graphic--solid">
-          <span class="help-area-rotate-handle"></span>
-        </span>
-        <p class="help-area-text">Drag the rotate handle to rotate.</p>
-      </div>
-      <div class="help-area-item">
-        <span class="help-area-graphic help-area-graphic--solid">
-          <img src="chrome-extension://__MSG_@@extension_id__/images/icons/background.svg"
-               class="help-area-snap-background-icon">
-          <img src="chrome-extension://__MSG_@@extension_id__/images/icons/pointer.svg"
-               class="help-area-snap-pointer-icon">
-        </span>
-        <p class="help-area-text">Double click to snap element dimensions to a background sprite.</p>
-      </div>
-      <div class="help-area-item">
-        <span class="help-area-graphic help-area-graphic--dashed">
-          <span class="help-area-drag-box--one"></span>
-          <span class="help-area-drag-box--two"></span>
-          <img src="chrome-extension://__MSG_@@extension_id__/images/icons/pointer.svg"
-               class="help-area-drag-pointer-icon">
-        </span>
-        <p class="help-area-text">Drag to select multiple elements.</p>
-      </div>
-    </div>
-    <div class="help-area-block help-area-block--commands">
-      <h3 class="help-area-header">Commands</h3>
-      <p class="help-area-item">
-        <span class="help-area-key-combo">
-          <span class="key-icon key-icon--large">
-            <span class="key-icon--mac">&#x2318;</span>
-            <span class="key-icon--win">&#x2303;</span>
-          </span>
-          <span class="">+</span>
-          <span class="key-icon key-icon--large">z</span>
-        </span>
-        <span class="help-area-text">Undo</span>
-      </p>
-      <p class="help-area-item">
-        <span class="help-area-key-combo">
-          <span class="key-icon key-icon--large">
-            <span class="key-icon--mac">&#x2318;</span>
-            <span class="key-icon--win">&#x2303;</span>
-          </span>
-          <span class="">+</span>
-          <span class="key-icon key-icon--large">a</span>
-        </span>
-        <span class="help-area-text">Select All</span>
-      </p>
-      <p class="help-area-item">
-        <span class="help-area-key-combo">
-          <span class="key-icon key-icon--large">
-            <span class="key-icon--mac">&#x2318;</span>
-            <span class="key-icon--win">&#x2303;</span>
-          </span>
-          <span class="">+</span>
-          <span class="key-icon key-icon--large">c</span>
-        </span>
-        <span class="help-area-text">Copy Styles</span>
-      </p>
-      <span class="help-area-item">
-        <span class="help-area-key-combo">
-          <span class="key-icon key-icon--large">
-            <span class="key-icon--mac">&#x2318;</span>
-            <span class="key-icon--win">&#x2303;</span>
-          </span>
-          <span class="">+</span>
-          <span class="key-icon key-icon--large">s</span>
-        </span>
-        <span class="help-area-text">Save Styles</span>
-      </span>
-    </div>
-  </div>
-
-  <div class="control-panel-area" id="getting-started-area">
+  <div class="control-panel-area control-panel-area--getting-started" id="getting-started-area">
 
     <div class="getting-started-block getting-started-block--mouse">
       <img class="getting-started-image" src="chrome-extension://__MSG_@@extension_id__/images/icons/mouse.svg">
