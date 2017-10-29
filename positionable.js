@@ -3494,11 +3494,11 @@ class AppController {
     this.renderActiveControlPanel();
   }
 
-  onAlignButtonClicked(edge) {
+  onAlignButtonClick(edge) {
     this.alignmentManager.align(this.elementManager.getFocusedElements(), edge);
   }
 
-  onDistributeButtonClicked(edge) {
+  onDistributeButtonClick(edge) {
     this.alignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
   }
 
@@ -5301,14 +5301,14 @@ class ControlPanelMultipleArea extends ControlPanelArea {
 
   setupButtons(root) {
     // UI Buttons
-    this.setupButton(root, 'align-top-button',          this.onAlignTopClicked);
-    this.setupButton(root, 'align-hcenter-button',      this.onAlignHCenterClicked);
-    this.setupButton(root, 'align-bottom-button',       this.onAlignBottomClicked);
-    this.setupButton(root, 'align-left-button',         this.onAlignLeftClicked);
-    this.setupButton(root, 'align-vcenter-button',      this.onAlignVCenterClicked);
-    this.setupButton(root, 'align-right-button',        this.onAlignRightClicked);
-    this.setupButton(root, 'distribute-hcenter-button', this.onDistributeHCenterClicked);
-    this.setupButton(root, 'distribute-vcenter-button', this.onDistributeVCenterClicked);
+    this.setupButton(root, 'align-top-button',          this.onAlignTopClick);
+    this.setupButton(root, 'align-hcenter-button',      this.onAlignHCenterClick);
+    this.setupButton(root, 'align-bottom-button',       this.onAlignBottomClick);
+    this.setupButton(root, 'align-left-button',         this.onAlignLeftClick);
+    this.setupButton(root, 'align-vcenter-button',      this.onAlignVCenterClick);
+    this.setupButton(root, 'align-right-button',        this.onAlignRightClick);
+    this.setupButton(root, 'distribute-hcenter-button', this.onDistributeHCenterClick);
+    this.setupButton(root, 'distribute-vcenter-button', this.onDistributeVCenterClick);
 
     // Elements
     this.header            = new Element(root.getElementById('multiple-header'));
@@ -5327,36 +5327,36 @@ class ControlPanelMultipleArea extends ControlPanelArea {
 
   // --- Events
 
-  onAlignTopClicked() {
-    this.listener.onAlignButtonClicked('top');
+  onAlignTopClick() {
+    this.listener.onAlignButtonClick('top');
   }
 
-  onAlignHCenterClicked() {
-    this.listener.onAlignButtonClicked('hcenter');
+  onAlignHCenterClick() {
+    this.listener.onAlignButtonClick('hcenter');
   }
 
-  onAlignBottomClicked() {
-    this.listener.onAlignButtonClicked('bottom');
+  onAlignBottomClick() {
+    this.listener.onAlignButtonClick('bottom');
   }
 
-  onAlignLeftClicked() {
-    this.listener.onAlignButtonClicked('left');
+  onAlignLeftClick() {
+    this.listener.onAlignButtonClick('left');
   }
 
-  onAlignVCenterClicked() {
-    this.listener.onAlignButtonClicked('vcenter');
+  onAlignVCenterClick() {
+    this.listener.onAlignButtonClick('vcenter');
   }
 
-  onAlignRightClicked() {
-    this.listener.onAlignButtonClicked('right');
+  onAlignRightClick() {
+    this.listener.onAlignButtonClick('right');
   }
 
-  onDistributeHCenterClicked() {
-    this.listener.onDistributeButtonClicked('hcenter');
+  onDistributeHCenterClick() {
+    this.listener.onDistributeButtonClick('hcenter');
   }
 
-  onDistributeVCenterClicked() {
-    this.listener.onDistributeButtonClicked('vcenter');
+  onDistributeVCenterClick() {
+    this.listener.onDistributeButtonClick('vcenter');
   }
 
   onHighlightButtonMouseOver(evt) {
@@ -5428,12 +5428,12 @@ class ControlPanelQuickstartArea extends ControlPanelArea {
   // --- Private
 
   setupButtons(root) {
-    this.setupButton(root, 'getting-started-skip-link', this.onSkipClicked);
+    this.setupButton(root, 'getting-started-skip-link', this.onSkipClick);
   }
 
   // --- Events
 
-  onSkipClicked() {
+  onSkipClick() {
     this.listener.onQuickstartSkip();
   }
 
