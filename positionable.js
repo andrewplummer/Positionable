@@ -7,7 +7,7 @@
  * ---------------------------- */
 
 // - TODO: style grouping area
-// - TODO: nudging should align to grid too?
+// - TODO: pro features?
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: clean these constants up by moving them into AppController
@@ -848,7 +848,7 @@ class MouseEventTarget extends BrowserEventTarget {
 
 class DragTarget extends BrowserEventTarget {
 
-  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,textarea,label,select,code,pre,span'; }
+  static get INTERACTIVE_ELEMENTS_SELECTOR() { return 'h1,h2,h3,h4,h5,h6,p,a,input,button,textarea,label,select,code,pre,span'; }
   static get CTRL_DOUBLE_CLICK_TIMEOUT()     { return 500; }
 
   constructor(el) {
@@ -4530,11 +4530,15 @@ class PositionableElementManager {
   // --- Nudging
 
   applyPositionNudge(x, y) {
+    x *= this.snapX || 1;
+    y *= this.snapY || 1;
     this.focusedElements.forEach(el => el.move(x, y));
     this.listener.onPositionUpdated();
   }
 
   applyResizeNudge(x, y, corner) {
+    x *= this.snapX || 1;
+    y *= this.snapY || 1;
     this.focusedElements.forEach(el => {
       el.resize(x, y, corner);
     });

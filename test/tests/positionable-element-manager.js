@@ -9,6 +9,10 @@ describe('PositionableElementManager', function() {
       this.focusedElementsChangedEvents = 0;
     }
 
+    // --- Element Events
+
+    onElementMouseDown(){}
+
     // --- Focus Events
 
     onFocusedElementsChanged() {
@@ -1489,6 +1493,30 @@ describe('PositionableElementManager', function() {
     manager.applyBackgroundNudge(30, 30);
 
     assert.equal(el.style.backgroundPosition, '50px 70px');
+  });
+
+  it('should snap position nudge to grid', function() {
+    setupBox();
+
+    manager.setSnap(10, 10);
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyPositionNudge(1, 2);
+    assert.equal(el.style.left, '110px');
+    assert.equal(el.style.top,  '120px');
+  });
+
+  it('should snap dimensions nudge to grid', function() {
+    setupBox();
+
+    manager.setSnap(10, 10);
+    manager.focusAll();
+
+    manager.pushFocusedStates();
+    manager.applyResizeNudge(1, 2, 'se');
+    assert.equal(el.style.width,  '110px');
+    assert.equal(el.style.height, '120px');
   });
 
   // --- Missing Properties
