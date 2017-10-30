@@ -33,6 +33,8 @@ describe('CSSProperty', function() {
     assertValue('backgroundPosition', '',          '0% 0%',     '');
     assertValue('backgroundPosition', 'initial',   '0% 0%',     '');
     assertValue('backgroundPosition', '20px 20px', '20px 20px', '20px 20px');
+    assertValue('backgroundPosition', '', '20px 20px', '20px 20px');
+
 
     assertValue('transform', 'none',          'none',                       '');
     assertValue('transform', '',              'none',                       '');
@@ -57,6 +59,7 @@ describe('CSSProperty', function() {
     assertInitial('backgroundPosition', '',          '0% 0%',     true);
     assertInitial('backgroundPosition', 'initial',   '0% 0%',     true);
     assertInitial('backgroundPosition', '20px 20px', '20px 20px', false);
+    assertInitial('backgroundPosition', '', '20px 20px',          false);
 
     assertInitial('transform', 'none',          'none',                      true);
     assertInitial('transform', '',              'none',                      true);

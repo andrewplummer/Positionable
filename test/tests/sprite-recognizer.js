@@ -1,23 +1,32 @@
 
 describe('SpriteRecognizer', function() {
 
-  var el, url, img;
+  var recognizer;
 
   setup(function() {
-    imageLoadMock.apply();
-    el = appendBox('background-box');
-    url = window.getComputedStyle(el).backgroundImage.match(/url\("(.+)"\)/)[1];
-    img = new Image();
-    img.src = url;
+    imageMock.apply();
   });
 
   teardown(function() {
-    imageLoadMock.release();
+    imageMock.release();
     releaseAppendedFixtures();
   });
 
+  function setupRecognizer(url) {
+    var img = new Image();
+    img.src = url;
+    recognizer = new SpriteRecognizer(img);
+  }
+
+  function setupElementRecognizer() {
+    var el = appendBox('background-box');
+    url = window.getComputedStyle(el).backgroundImage.match(/url\("(.+)"\)/)[1];
+    setupRecognizer(url);
+  }
+
   it('should not recognize sprite dimensions when no sprite found', function() {
-    var recognizer = new SpriteRecognizer(img), bounds;
+    var bounds;
+    setupElementRecognizer();
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(0, 0));
     assert.isUndefined(bounds);
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(0, 1));
@@ -27,8 +36,9 @@ describe('SpriteRecognizer', function() {
   });
 
   it('should recognize close sprite', function() {
-    var recognizer = new SpriteRecognizer(img);
-    var bounds = recognizer.getSpriteBoundsForCoordinate(new Point(1, 1));
+    var bounds;
+    setupElementRecognizer();
+    bounds = recognizer.getSpriteBoundsForCoordinate(new Point(1, 1));
     assert.equal(bounds.left,   1);
     assert.equal(bounds.top,    1);
     assert.equal(bounds.right,  3);
@@ -36,8 +46,9 @@ describe('SpriteRecognizer', function() {
   });
 
   it('should recognize far sprite', function() {
-    var recognizer = new SpriteRecognizer(img);
-    var bounds = recognizer.getSpriteBoundsForCoordinate(new Point(3, 3));
+    var bounds;
+    setupElementRecognizer();
+    bounds = recognizer.getSpriteBoundsForCoordinate(new Point(3, 3));
     assert.equal(bounds.left,   3);
     assert.equal(bounds.top,    3);
     assert.equal(bounds.right,  5);

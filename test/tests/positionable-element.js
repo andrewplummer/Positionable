@@ -67,14 +67,14 @@ describe('PositionableElement', function() {
 
   setup(function() {
     listener = new Listener();
+    imageMock.apply();
     promiseMock.apply();
-    imageLoadMock.apply();
   });
 
   teardown(function() {
     releaseAppendedFixtures();
+    imageMock.release();
     promiseMock.release();
-    imageLoadMock.release();
   });
 
   function setupBox(className) {

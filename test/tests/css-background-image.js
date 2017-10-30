@@ -4,14 +4,14 @@ describe('CSSBackgroundImage', function() {
   var el, backgroundImage;
 
   setup(function() {
+    imageMock.apply();
     promiseMock.apply();
-    imageLoadMock.apply();
   });
 
   teardown(function() {
     releaseAppendedFixtures();
+    imageMock.release();
     promiseMock.release();
-    imageLoadMock.release();
   });
 
   function setupBackgroundImage(className) {
@@ -21,29 +21,32 @@ describe('CSSBackgroundImage', function() {
     backgroundImage = CSSBackgroundImage.fromMatcher(matcher);
   }
 
-  function setupXDomainBox(uri) {
+  function mockOrigin(origin) {
+    CSSBackgroundImage.setOrigin(origin);
+  }
 
-    // It seems that appending an element with a background image
-    // and then loading it's data uri into an Image will provide
-    // enough time to load the image, however providing the exact
-    // same string as the src without first appending the element
-    // will not, so force the image to load by appending first here.
-    //setupBackgroundImage('background-big-box');
+  function setupXDomainBox(url) {
 
     chromeMock.apply();
     chromeMock.mockSendMessage({
-      url: 'http://fake.com/fake.jpg',
-      data: uri,
+      url: url,
+      data: 'fake-data-uri',
       success: true
     });
 
     // We need to set fake dimensions on the image so that canvas
     // rendering doesn't fail.
-    imageLoadMock.setFakeDimensions(100, 100);
-    setupBackgroundImage('background-x-domain-box');
+    imageMock.setFakeDimensions(100, 100);
+
+    // Using a fake rule matcher here to not have to go through
+    // the page, which will try to load the fake images.
+    var matcher = new MockCSSRuleMatcher();
+    matcher.setProperty('backgroundImage', 'url(' + url + ')');
+    matcher.setProperty('backgroundPosition', '0px 0px');
+    backgroundImage = CSSBackgroundImage.fromMatcher(matcher);
+
     chromeMock.release();
   }
-
 
   it('should get its correct position string', function() {
     setupBackgroundImage('background-box');
@@ -122,6 +125,13 @@ describe('CSSBackgroundImage', function() {
     assert.equal(backgroundImage.hasImage(), true);
   });
 
+  it('should correctly find the image and position from a single declaration', function() {
+    setupBackgroundImage('background-only-box');
+    assert.isTrue(backgroundImage.img.src.match(/^data:image\/png/));
+    assert.equal(backgroundImage.cssLeft.px, 20);
+    assert.equal(backgroundImage.cssTop.px,  20);
+  });
+
   it('should update its position when percentages are used and dimensions have changed', function() {
     setupBackgroundImage('background-box background-percent-box');
     el.style.width  = '200px';
@@ -134,7 +144,13 @@ describe('CSSBackgroundImage', function() {
   });
 
   it('should correctly load a cross domain image', function() {
-    setupXDomainBox('fake-data-uri');
+    setupXDomainBox('https://i.imgur.com/Z82AwNK.gifv');
+    assert.equal(backgroundImage.img.src, 'fake-data-uri');
+  });
+
+  it('should treat local images as cross domain', function() {
+    mockOrigin('file://');
+    setupXDomainBox('file:///fake-image.png');
     assert.equal(backgroundImage.img.src, 'fake-data-uri');
   });
 

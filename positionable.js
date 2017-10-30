@@ -7925,7 +7925,8 @@ class CSSProperty {
   static get BACKGROUND_IMAGE()    { return 'backgroundImage';    }
   static get BACKGROUND_POSITION() { return 'backgroundPosition'; }
 
-  static get LINEAR_GRADIENT_REG() { return /linear-gradient/; }
+  static get LINEAR_GRADIENT_REG()         { return /linear-gradient/; }
+  static get BACKGROUND_POSITION_INITIAL() { return '0% 0%'; }
 
   constructor(name, matchedValue, computedValue) {
     this.name          = name;
@@ -8000,13 +8001,49 @@ class CSSProperty {
   coercePositionKeywordPairs() {
     if (this.isPositioningPair()) {
       this.matchedValue = this.replacePositionKeywords(this.matchedValue);
-      this.computedValue = '';
+
+      // Note that when working on the local filesystem access to stylesheets
+      // is restricted, so we cannot rely on matched values to indicate whether
+      // the property is initial or not, so choose what to do here based on
+      // the type of property itself.
+      if (!this.matchedValue) {
+        if (this.canIgnoreComputedValue()) {
+          this.computedValue = '';
+        } else {
+          this.matchedValue = this.computedValue;
+        }
+      }
     }
   }
 
+  canIgnoreComputedValue() {
+    // The computed background position should only be ignored if it is
+    // in the initial state (0% 0%). This will fail on a local filesystem
+    // where we don't have access to matched styles if it is actually set
+    // to 0% 0%, but there is no way to know otherwise whether or not it
+    // is initial. The computed transform origin should always be ignored
+    // as the initial value is 50% 50%, which will change as the element
+    // is resized, so the computed value does not accurately reflect what
+    // it is. Again, this will fail when we don't have access to matched
+    // styles and is explicitly set.
+    return this.isTransformOrigin() || this.isInitialBackgroundPosition(this.computedValue);
+  }
+
+  isInitialBackgroundPosition(str) {
+    return this.isBackgroundPosition() &&
+           str === CSSProperty.BACKGROUND_POSITION_INITIAL;
+  }
+
   isPositioningPair() {
-    return this.name === CSSProperty.TRANSFORM_ORIGIN ||
-           this.name === CSSProperty.BACKGROUND_POSITION;
+    return this.isBackgroundPosition() || this.isTransformOrigin();
+  }
+
+  isBackgroundPosition() {
+    return this.name === CSSProperty.BACKGROUND_POSITION;
+  }
+
+  isTransformOrigin() {
+    return this.name === CSSProperty.TRANSFORM_ORIGIN;
   }
 
   replacePositionKeywords(str) {
@@ -8830,7 +8867,8 @@ class CSSZIndex {
 // TODO: MOVE
 class CSSBackgroundImage {
 
-  static get SAME_DOMAIN_REG() { return new RegExp('^' + location.origin.replace(/([/.])/g, '\\$1')); }
+  static get SAME_DOMAIN_REG() { return new RegExp('^' + this.getOrigin().replace(/([/.])/g, '\\$1')); }
+  static get FILE_URL_REG()    { return /^file:\/\/\//; }
   static get DATA_URI_REG()    { return /^data:/; }
   static get URL_REG()         { return /url\(["']?(.+?)["']?\)/i; }
 
@@ -8909,7 +8947,19 @@ class CSSBackgroundImage {
   }
 
   static isDomainSafeUrl(url) {
-    return this.SAME_DOMAIN_REG.test(url) || this.DATA_URI_REG.test(url);
+    return !this.FILE_URL_REG.test(url) &&
+           (this.SAME_DOMAIN_REG.test(url) || this.DATA_URI_REG.test(url));
+  }
+
+  // This seems to be the only way to mock the origin
+  // for testing, as window location is read only.
+
+  static getOrigin() {
+    return this.origin || location.origin;
+  }
+
+  static setOrigin(origin) {
+    this.origin = origin;
   }
 
   constructor(img, cssLeft, cssTop, spriteRecognizer) {

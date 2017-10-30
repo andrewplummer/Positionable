@@ -2,7 +2,7 @@
 
   var nativeImage = Image, fakeSrc, fakeWidth, fakeHeight;
 
-  class ImageLoadMock {
+  class ImageMock {
 
     // --- Mocks
 
@@ -30,7 +30,7 @@
       if (fakeSrc !== undefined) {
         return fakeSrc;
       } else {
-        return super.url;
+        return super.src;
       }
     }
 
@@ -73,6 +73,6 @@
 
   }
 
-  window.imageLoadMock = new ImageLoadMock();
+  window.imageMock = new ImageMock();
 
 })();

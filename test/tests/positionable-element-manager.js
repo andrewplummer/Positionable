@@ -64,9 +64,9 @@ describe('PositionableElementManager', function() {
 
   teardown(function() {
     releaseAppendedFixtures();
+    imageMock.release();
     promiseMock.release();
     viewportMock.release();
-    imageLoadMock.release();
     el       = null;
     els      = null;
     manager  = null;
@@ -176,8 +176,8 @@ describe('PositionableElementManager', function() {
   }
 
   function applyBackgroundImageMocks() {
+    imageMock.apply();
     promiseMock.apply();
-    imageLoadMock.apply();
   }
 
   function getElementZIndex(el) {

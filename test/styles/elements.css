@@ -272,7 +272,6 @@
  * property if declared when querying style.backgroundPosition and
  * using CSS variables, so make sure to use background-image instead.
  */
-/* TODO: rename to background-box */
 .background-box {
   background-image: var(--small-image);
   background-position: 20px 40px;
@@ -289,6 +288,15 @@
   background-image: var(--small-image), var(--big-image);
   background-position: 20px 40px, 50px 50px;
   background-repeat: no-repeat;
+}
+
+.background-only-box {
+  /* Note that we can't use CSS variables here due to a bug
+   * in getMatchedCSSRules that ends up setting background-position
+   * to the entire shorthand string when vars are used. This will
+   * have to remain an edge case for now
+   */
+  background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAGCAYAAADgzO9IAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyRpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoTWFjaW50b3NoKSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo5QTdDN0E3REE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo5QTdDN0E3RUE5MDExMUU3OEE4M0RFODA4QjFFRTlEQyI+IDx4bXBNTTpEZXJpdmVkRnJvbSBzdFJlZjppbnN0YW5jZUlEPSJ4bXAuaWlkOjlBN0M3QTdCQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjlBN0M3QTdDQTkwMTExRTc4QTgzREU4MDhCMUVFOURDIi8+IDwvcmRmOkRlc2NyaXB0aW9uPiA8L3JkZjpSREY+IDwveDp4bXBtZXRhPiA8P3hwYWNrZXQgZW5kPSJyIj8+7OsEKgAAAC5JREFUeNpi/P//PwM2wAQi3vHx/QdhDAlsgBHZKMajXGDOf+tvjMTpQAYAAQYAl5sRE6ZOq60AAAAASUVORK5CYII=') no-repeat 20px 20px;
 }
 
 .background-none-box {
@@ -313,10 +321,6 @@
 
 .background-rc-box {
   background-position: right center;
-}
-
-.background-x-domain-box {
-  background-image: url(https://i.imgur.com/Z82AwNK.gifv);
 }
 
 /*---------------------------] Animations [-----------------------*/
