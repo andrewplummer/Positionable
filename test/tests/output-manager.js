@@ -60,6 +60,11 @@ describe('OutputManager', function(uiRoot) {
     `);
   }
 
+  function assertSelector(setting, expected) {
+    settings.set(Settings.OUTPUT_SELECTOR, setting);
+    assert.equal(manager.getSelector(element), expected);
+  }
+
   // Template tag to remove whitespace for asserting
   // declaration blocks.
   function dec(strings, ...args) {
@@ -101,36 +106,39 @@ describe('OutputManager', function(uiRoot) {
 
   it('should get correct selector', function() {
     setupBox();
+    assertSelector(Settings.OUTPUT_SELECTOR_AUTO, '#absolute-box');
+    assertSelector(Settings.OUTPUT_SELECTOR_FIRST, '.box');
+    assertSelector(Settings.OUTPUT_SELECTOR_LONGEST, '.absolute-box');
+    assertSelector(Settings.OUTPUT_SELECTOR_ALL, '.box.absolute-box');
+    assertSelector(Settings.OUTPUT_SELECTOR_TAG, 'div');
+    assertSelector(Settings.OUTPUT_SELECTOR_TAG_NTH, 'div:nth-child(1)');
+    assertSelector(Settings.OUTPUT_SELECTOR_NONE, '');
+  });
 
-    // Auto (id)
-    assert.equal(manager.getSelector(element), '#absolute-box');
+  it('should get correct selectors for elements with no classes or id', function() {
+    setupBox();
+    el.id = '';
+    el.className = '';
+    assertSelector(Settings.OUTPUT_SELECTOR_AUTO,    'div');
+    assertSelector(Settings.OUTPUT_SELECTOR_FIRST,   'div');
+    assertSelector(Settings.OUTPUT_SELECTOR_LONGEST, 'div');
+    assertSelector(Settings.OUTPUT_SELECTOR_TAG,     'div');
+    assertSelector(Settings.OUTPUT_SELECTOR_ALL,     'div');
+    assertSelector(Settings.OUTPUT_SELECTOR_TAG_NTH, 'div:nth-child(1)');
+    assertSelector(Settings.OUTPUT_SELECTOR_NONE,    '');
+  });
 
-    // Auto (first class)
-    element.el.removeAttribute('id');
-    assert.equal(manager.getSelector(element), '.box');
-    element.el.setAttribute('id', 'absolute-box');
-
-    // First class
-    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_FIRST);
-    assert.equal(manager.getSelector(element), '.box');
-
-    // Longest class
-    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_LONGEST);
-    assert.equal(manager.getSelector(element), '.absolute-box');
-
-    // Tag
-    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG);
-    assert.equal(manager.getSelector(element), 'div');
-
-    // Tag:nth
-    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_TAG_NTH);
-    assert.equal(manager.getSelector(element), 'div:nth-child(1)');
-
-    // None
+  it('should get correct selector with default', function() {
+    setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_NONE);
-    assert.equal(manager.getSelector(element), '');
-    assert.equal(manager.getSelectorWithDefault(element), '[element]');
+    assert.equal(manager.getSelectorWithDefault(element), 'div');
+  });
 
+  it('should get correct selector for a box with no id', function() {
+    setupBox();
+    element.el.removeAttribute('id');
+    assertSelector(Settings.OUTPUT_SELECTOR_AUTO, '.box');
+    assertSelector(Settings.OUTPUT_SELECTOR_ID,   'div');
   });
 
   // --- Headers
@@ -457,21 +465,18 @@ describe('OutputManager', function(uiRoot) {
     assertSimpleBoxSelector(manager.getStyles([element]), '.absolute-box');
   });
 
-  it('should get styles with no selector', function() {
-    var styles, expected;
+  it('should get styles with fallback selector if none exists', function() {
+    setupBox();
+    el.id = '';
+    el.className = '';
+    settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_AUTO);
+    assertSimpleBoxSelector(manager.getStyles([element]), 'div');
+  });
 
+  it('should get styles with no selector', function() {
     setupBox();
     settings.set(Settings.OUTPUT_SELECTOR, Settings.OUTPUT_SELECTOR_NONE);
-
-    styles = manager.getStyles([element]);
-    expected = [
-      '  top: 100px;',
-      '  left: 100px;',
-      '  width: 100px;',
-      '  height: 100px;'
-    ].join('\n');
-
-    assert.equal(styles, expected);
+    assert.equal(manager.getStyles([element]), 'top: 100px; left: 100px; width: 100px; height: 100px;');
   });
 
   // --- Tabs

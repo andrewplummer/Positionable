@@ -116,9 +116,9 @@ describe('PositionableElement', function() {
     assert.equal(element.cssTransform.getTranslation().y, 100);
   });
 
-  it('should force static elements to absolute on init', function() {
+  it('should force static elements to relative on init', function() {
     setupBox('static-box');
-    assert.equal(el.style.position, 'absolute');
+    assert.equal(el.style.position, 'relative');
     element.destroy();
     assert.equal(el.style.position, '');
   });
@@ -468,6 +468,13 @@ describe('PositionableElement', function() {
     assert.equal(decs[0], 'bottom: 150px;');
     assert.equal(decs[1], 'right: 150px;');
     assert.equal(decs.length, 2);
+  });
+
+  it('should append a relative declaration if it was forced relative', function() {
+    setupBox('static-box');
+    var decs = element.getCSSDeclarations();
+    assert.equal(decs[0], 'position: relative;');
+    assert.equal(decs.length, 5);
   });
 
   // --- Anchors

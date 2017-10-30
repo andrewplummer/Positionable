@@ -1737,7 +1737,7 @@ class PositionableElement extends BrowserEventTarget {
   applyOverrides(matcher) {
     var position = matcher.getComputedValue('position');
     if (position === 'static') {
-      this.el.style.position = 'absolute';
+      this.el.style.position = 'relative';
     }
     this.el.style.animation  = 'none';
     this.el.style.transition = 'none';
@@ -2526,11 +2526,18 @@ class PositionableElement extends BrowserEventTarget {
 
   getCSSDeclarationsForAttributes(cssBox, cssZIndex, cssBackgroundImage, cssTransform) {
     var declarations = [];
+    this.appendPositionDeclaration(declarations);
     cssBox.appendCSSDeclarations(declarations);
     cssZIndex.appendCSSDeclaration(declarations);
     cssBackgroundImage.appendCSSDeclaration(declarations);
     cssTransform.appendCSSDeclaration(declarations);
     return declarations;
+  }
+
+  appendPositionDeclaration(declarations) {
+    if (this.el.style.position === 'relative') {
+      declarations.push('position: relative;');
+    }
   }
 
   // --- Teardown
@@ -2552,8 +2559,6 @@ class PositionableElement extends BrowserEventTarget {
 
 class OutputManager {
 
-  static get NULL_SELECTOR() { return '[element]'; }
-
   constructor(settings) {
     this.settings = settings;
   }
@@ -2561,23 +2566,39 @@ class OutputManager {
   // --- Selectors
 
   getSelector(element) {
-    var type = this.settings.get(Settings.OUTPUT_SELECTOR), el = element.el;
+    return this.getSelectorForElement(element);
+  }
+
+  getSelectorWithDefault(element) {
+    return this.getSelectorForElement(element, true);
+  }
+
+  getSelectorForElement(element, fallback) {
+    var el, type, selector;
+
+    el   = element.el;
+    type = this.settings.get(Settings.OUTPUT_SELECTOR);
+
     if (type === Settings.OUTPUT_SELECTOR_AUTO) {
       type = el.id ? Settings.OUTPUT_SELECTOR_ID : Settings.OUTPUT_SELECTOR_FIRST;
     }
+    selector = this.getSelectorForType(type, element.el);
+    if (!selector && (fallback || type !== Settings.OUTPUT_SELECTOR_NONE)) {
+      selector = el.tagName.toLowerCase();
+    }
+    return selector;
+  }
+
+  getSelectorForType(type, el) {
     switch(type) {
       case Settings.OUTPUT_SELECTOR_NONE:    return '';
-      case Settings.OUTPUT_SELECTOR_ID:      return '#' + el.id;
+      case Settings.OUTPUT_SELECTOR_ID:      return this.getId(el);
       case Settings.OUTPUT_SELECTOR_ALL:     return this.getAllClasses(el.classList);
       case Settings.OUTPUT_SELECTOR_TAG:     return this.getTagName(el);
       case Settings.OUTPUT_SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(el);
       case Settings.OUTPUT_SELECTOR_FIRST:   return this.getFirstClass(el.classList);
       case Settings.OUTPUT_SELECTOR_LONGEST: return this.getLongestClass(el.classList);
     }
-  }
-
-  getSelectorWithDefault(element) {
-    return this.getSelector(element) || OutputManager.NULL_SELECTOR;
   }
 
   saveStyles(styles) {
@@ -2610,7 +2631,7 @@ class OutputManager {
   }
 
   getStyles(elements) {
-    var blocks, grouping;
+    var blocks, grouping, lineSeparator, blockSeparator;
 
     blocks   = elements.map(el => this.getElementDeclarationBlock(el));
     blocks   = blocks.filter(b => b && b.lines.length);
@@ -2620,16 +2641,24 @@ class OutputManager {
       blocks = this.getGroupedDeclarationBlocks(blocks, grouping);
     }
 
-    return blocks.map(b => b.lines.join('\n')).join('\n\n');
+    [lineSeparator, blockSeparator] = this.getDeclarationSeparators();
+
+    return blocks.map(b => b.lines.join(lineSeparator)).join(blockSeparator);
+  }
+
+  getDeclarationSeparators() {
+    var type = this.settings.get(Settings.OUTPUT_SELECTOR);
+    if (type === Settings.OUTPUT_SELECTOR_NONE) {
+      return [' ', '\n'];
+    } else {
+      return ['\n', '\n\n'];
+    }
   }
 
   // --- Private
 
   getElementDeclarationBlock(element) {
-    var tab, selector, declarations, lines = [];
-
-    tab = this.getTab();
-    selector = this.getSelector(element);
+    var declarations, selector, tab, lines = [];
 
     if (this.settings.get(Settings.OUTPUT_CHANGED_ONLY)) {
       declarations = element.getChangedCSSDeclarations();
@@ -2641,15 +2670,15 @@ class OutputManager {
       return null;
     }
 
-    declarations = declarations.map(p => tab + p);
+    selector = this.getSelector(element);
+    tab = selector ? this.getTab() : '';
 
-    if (selector) {
-      lines.push(selector + ' {');
-    }
+    declarations = declarations.map(p => tab + p);
 
     lines = lines.concat(declarations);
 
     if (selector) {
+      lines.unshift(selector + ' {');
       lines.push('}');
     }
 
@@ -2840,9 +2869,27 @@ class OutputManager {
     return commonMap;
   }
 
+  getId(el) {
+    return el.id ? '#' + el.id : null;
+  }
+
   getFirstClass(list) {
     var first = list[0];
-    return first ? '.' + first : OutputManager.NULL_SELECTOR;
+    return first ? '.' + first : null;
+  }
+
+  getAllClasses(list) {
+    var str = Array.from(list).join('.');
+    return str ? '.' + str : null;
+  }
+
+  getLongestClass(list) {
+    var classNames = Array.from(list);
+    if (classNames.length > 0) {
+      return '.' + classNames.reduce(function(a, b) {
+        return a.length > b.length ? a : b;
+      });
+    }
   }
 
   getTagName(el) {
@@ -2851,24 +2898,13 @@ class OutputManager {
 
   getTagNameWithNthIndex(el) {
     var child = el, i = 1;
-    while ((child = child.previousSibling) != null ) {
+    while ((child = child.previousSibling) != null) {
       // Count only element nodes.
       if (child.nodeType == 1) {
         i++;
       }
     }
     return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
-  }
-
-  getLongestClass(list) {
-    var classNames = Array.from(list);
-    return '.' + classNames.reduce(function(a, b) {
-      return a.length > b.length ? a : b;
-    });
-  }
-
-  getAllClasses(list) {
-    return '.' + Array.from(list).join('.');
   }
 
   /*
@@ -6559,7 +6595,7 @@ class Settings {
   static get OUTPUT_SELECTOR_TAG_NTH() { return 'tag-nth'; }
   static get OUTPUT_SELECTOR_AUTO()    { return 'auto';    }
   static get OUTPUT_SELECTOR_FIRST()   { return 'first';   }
-  static get OUTPUT_SELECTOR_NONE()    { return 'inline';  }
+  static get OUTPUT_SELECTOR_NONE()    { return 'none';    }
   static get OUTPUT_SELECTOR_LONGEST() { return 'longest'; }
   static get OUTPUT_GROUPING_MAP()     { return 'map';     }
   static get OUTPUT_GROUPING_AUTO()    { return 'auto';    }
