@@ -7,18 +7,12 @@
  * ---------------------------- */
 
 // - TODO: pro features?
-// - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
+// - TODO: cleanup!!
 // - TODO: todos!
 // - TODO: release!
 
 /*-------------------------] Utilities [--------------------------*/
-
-function camelize(str) {
-  return str.replace(/-(\w)/g, function(match, letter) {
-    return letter.toUpperCase();
-  });
-}
 
 function hashIntersect(obj1, obj2) {
   var result = {}, key;
@@ -227,225 +221,6 @@ class NudgeManager {
 
 }
 
-/*-------------------------] KeyEventManager [--------------------------*/
-
-/*
-class KeyEventManager {
-
-  static get LEFT()  { return 37; }
-  static get UP()    { return 38; }
-  static get RIGHT() { return 39; }
-  static get DOWN()  { return 40; }
-
-  static get ENTER() { return 13; }
-  static get SHIFT() { return 16; }
-  static get CTRL()  { return 17; }
-  static get ALT()   { return 18; }
-  static get CMD()   { return 91; }
-
-  static get A()     { return 65; }
-  static get B()     { return 66; }
-  static get M()     { return 77; }
-  static get S()     { return 83; }
-  static get R()     { return 82; }
-  static get Z()     { return 90; }
-
-  constructor() {
-    this.handledKeys = {};
-    this.setupHandlers();
-  }
-
-  setupHandlers() {
-
-    this.setupKeyHandler('keydown', this.onKeyDown);
-    this.setupKeyHandler('keyup', this.onKeyUp);
-
-    this.setupKey('b');
-    this.setupKey('m');
-    this.setupKey('r');
-    this.setupKey('s', true);
-    this.setupKey('z', true);
-    this.setupKey('a', true);
-
-    this.setupKey('left');
-    this.setupKey('up');
-    this.setupKey('right');
-    this.setupKey('down');
-
-    this.setupKey('shift');
-    this.setupKey('ctrl');
-    this.setupKey('alt');
-    this.setupKey('cmd', true);
-
-  }
-
-  // --- Setup
-
-  setupKeyHandler(name, handler) {
-    document.documentElement.addEventListener(name, handler.bind(this));
-  }
-
-  delegateEventToElementManager(name, target) {
-    var evtName = name.slice(2).toLowerCase();
-    this.setupHandler(evtName, function(evt) {
-      elementManager[name](evt);
-    }, target);
-  }
-
-  setupKey(name, allowsCommand) {
-    var code = KeyEventManager[name.toUpperCase()];
-    this.handledKeys[code] = {
-      name: name,
-      allowsCommand: !!allowsCommand
-    }
-  }
-
-  onKeyDown(evt) {
-    this.checkKeyEvent('KeyDown', evt);
-  }
-
-  onKeyUp(evt) {
-    this.checkKeyEvent('KeyUp', evt);
-  }
-
-  checkKeyEvent(type, evt) {
-    var code = evt.keyCode;
-    if (this.isArrowKey(code)) {
-      this.callKeyHandler('arrow', type, evt, this.getArrowName(code));
-    } else {
-      var key = this.getHandledKey(code);
-      var withCommand = this.hasCommandKey(evt);
-      if (key && (key.allowsCommand || !withCommand)) {
-        this.callKeyHandler(key.name, type, evt, withCommand);
-      }
-    }
-  }
-
-  callKeyHandler(name, type, evt, arg) {
-    var fn = this[name + type];
-    if (fn) {
-      evt.preventDefault();
-      evt.stopPropagation();
-      evt.stopImmediatePropagation();
-      fn.call(this, arg);
-    }
-  }
-
-  getHandledKey(code) {
-    return this.isArrowKey(code) ? 'arrow' : this.handledKeys[code];
-  }
-
-  isArrowKey(code) {
-    return code === KeyEventManager.UP ||
-           code === KeyEventManager.RIGHT ||
-           code === KeyEventManager.DOWN ||
-           code === KeyEventManager.LEFT;
-  }
-
-  hasCommandKey(evt) {
-    // TODO: this only works for OSX
-    return evt.metaKey;
-  }
-
-  // --- Events
-
-  shiftKeyDown() {
-    nudgeManager.setMultiplier(true);
-  }
-
-  shiftKeyUp() {
-    nudgeManager.setMultiplier(false);
-  }
-
-  ctrlKeyDown() {
-    elementManager.toggleHandles(false);
-    elementManager.dragReset();
-  }
-
-  ctrlKeyUp() {
-    elementManager.toggleHandles(true);
-    nudgeManager.setMode(NudgeManager.POSITION_MODE);
-    elementManager.dragReset();
-    statusBar.update();
-  }
-
-  cmdKeyDown() {
-    elementManager.temporarilyFocusDraggingElement();
-  }
-
-  cmdKeyUp() {
-    elementManager.releasedFocusedDraggingElement();
-    nudgeManager.resetNudges();
-  }
-
-  altKeyDown() {
-    elementManager.peek(true);
-  }
-
-  altKeyUp() {
-    elementManager.peek(false);
-  }
-
-  rKeyDown() {
-    nudgeManager.toggleMode(NudgeManager.ROTATE_MODE);
-    statusBar.update();
-  }
-
-  bKeyDown() {
-    nudgeManager.toggleMode(NudgeManager.BG_POSITION_MODE);
-    statusBar.update();
-  }
-
-  mKeyDown() {
-    nudgeManager.setMode(NudgeManager.POSITION_MODE);
-    statusBar.update();
-  }
-
-  sKeyDown(withCommand) {
-    if (withCommand) {
-      elementManager.save();
-    } else {
-      nudgeManager.toggleMode(NudgeManager.RESIZE_SE_MODE);
-      statusBar.update();
-    }
-  }
-
-  zKeyDown(withCommand) {
-    if (withCommand) {
-      elementManager.undo();
-    } else {
-      nudgeManager.toggleMode(NudgeManager.Z_INDEX_MODE);
-      statusBar.update();
-    }
-  }
-
-  aKeyDown(withCommand) {
-    if (withCommand) {
-      elementManager.focusAll(true);
-      statusBar.update();
-    }
-  }
-
-  arrowKeyDown(arrowName) {
-    nudgeManager.addDirection(arrowName);
-  }
-
-  arrowKeyUp(arrowName) {
-    nudgeManager.removeDirection(arrowName);
-  }
-
-  getArrowName(code) {
-    switch(code) {
-      case KeyEventManager.LEFT:  return 'left';
-      case KeyEventManager.UP:    return 'up';
-      case KeyEventManager.RIGHT: return 'right';
-      case KeyEventManager.DOWN:  return 'down';
-    }
-  }
-
-}
-*/
-
 /*-------------------------] Element [--------------------------*/
 
 // TODO: cleanup
@@ -514,13 +289,6 @@ class Element {
 
   setStyle(name, val) {
     this.el.style[name] = val;
-  }
-
-  bindElementsById() {
-    var els = this.el.querySelectorAll('[id]');
-    for (var i = 0, el; el = els[i]; i++) {
-      this[camelize(el.id)] = new Element(el);
-    }
   }
 
   getViewportCenter() {
@@ -768,24 +536,9 @@ class BrowserEventTarget extends Element {
     }, capture);
   }
 
-  /*
-  // TODO: I think it's clearer prefer just calling this in the method directly..
-  bindEventWithPrevent(eventName, fn) {
-    this.bindEvent(eventName, evt => {
-      evt.preventDefault();
-      fn.call(this, evt);
-    });
-  }
-
-  preventDefault(eventName) {
-    this.bindEventWithPrevent(eventName, () => {});
-  }
-  */
-
   stopEventPropagation(evt) {
     evt.stopPropagation();
   }
-
 
   addEventListener(eventName, handler, capture) {
     this.listeners[eventName] = handler;
@@ -810,37 +563,6 @@ class BrowserEventTarget extends Element {
   }
 
 }
-
-/*-------------------------] MouseEventTarget [--------------------------*/
-
-/* TODO: REMOVE
-* TODO: this class seems unnecessary now... pageX vs clientX can provide
-* the distinction between viewport/page relative coordinates
-class MouseEventTarget extends BrowserEventTarget {
-
-  constructor(el, tag, className) {
-    super(el, tag, className);
-  }
-
-  setEventData(evt) {
-    evt.absX = this.getMouseEventCoord(evt, 'X');
-    evt.absY = this.getMouseEventCoord(evt, 'Y');
-  }
-
-  // --- Private
-
-  getMouseEventCoord(evt, axis) {
-    return evt['client' + axis] + window['scroll' + axis];
-    // TODO: test this on both absolute and fixed position elements
-    // ... the element positioning shouldn't matter??
-    //if (this.isAbsolute()) {
-      ///px += window['scroll' + axis];
-    //}
-    ///return px;
-  }
-
-}
-  */
 
 /*-------------------------] DragTarget [--------------------------*/
 
@@ -1215,28 +937,6 @@ class DraggableElement extends DragTarget {
     this.cssV = CSSPositioningProperty.verticalFromMatcher(matcher);
   }
 
-  // TODO: move "useClasses" flag to the constructor if we can remove
-  // the whole tag, className song and dance
-
-  /*
-  useDraggableClasses() {
-    this.useClasses = true;
-    this.addClass(DraggableElement.DRAGGABLE_CLASS);
-  }
-
-  addClass(name) {
-    if (this.useClasses) {
-      super.addClass(name);
-    }
-  }
-
-  removeClass(name) {
-    if (this.useClasses) {
-      super.removeClass(name);
-    }
-  }
-  */
-
   onMouseDown(evt) {
     super.onMouseDown(evt);
     evt.stopPropagation();
@@ -1268,80 +968,8 @@ class DraggableElement extends DragTarget {
     this.cssV.render(this.el.style);
   }
 
-   // --- Compute
-
-  /*
-   getPosition() {
-   }
-   */
-
-   // --- Update
-
-  /*
-   updatePosition() {
-     this.el.style.left   = this.position.x + 'px';
-     this.el.style.bottom = this.position.y + 'px';
-   }
-   */
-
 }
 
-/*-------------------------] DragEvent [--------------------------*/
-
-/*
-class DragEvent extends Event {
-
-  constructor(target, browserEvent) {
-    super();
-
-    this.target = target;
-    this.browserEvent = browserEvent;
-
-    this.absX    = target.absX;
-    this.absY    = target.absY;
-    this.originX = target.originX;
-    this.originY = target.originY;
-
-    this.offsetX = this.absX - this.originX;
-    this.offsetY = this.absY - this.originY;
-  }
-
-  isConstrained() {
-    return this.browserEvent.shiftKey;
-  }
-
-}
-*/
-
-/*-------------------------] Handle [--------------------------*/
-
-/*
-class Handle extends DragTarget {
-
-  constructor(el) {
-    super(el);
-    //this.name = name;
-    //this.target = target;
-  }
-
-  onMouseDown(evt) {
-    super.onMouseDown(evt);
-    this.listener.onHandleFocus(evt);
-  }
-
-  onMouseUp(evt) {
-    super.onMouseUp(evt);
-    this.listener.onHandleBlur(evt);
-  }
-
-  onDragStop(evt) {
-    super.onDragStop(evt);
-    this.stopIntent(evt);
-  }
-
-}
-
-  */
 /*-------------------------] PositionHandle [--------------------------*/
 
 class PositionHandle extends DragTarget {
@@ -1351,19 +979,12 @@ class PositionHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, listener) {
     super(root.getElementById('position-handle'));
+    this.listener = listener;
+
     this.setupDoubleClick();
     this.setupDragIntents();
     this.setupCtrlKeyReset();
     this.setupMetaKeyReset();
-
-    this.listener = listener;
-    /*
-    //this.setup(target, name);
-    this.addClass('sizing-handle');
-    this.handle = new Element(listener.el, 'div', 'handle-border handle-' + name + '-border');
-    this.xDir  = !xProp ? 0 : xProp === 'left' ? -1 : 1;
-    this.yDir  = !yProp ? 0 : yProp === 'top'  ? -1 : 1;
-    */
   }
 
   hasImageCursor() {
@@ -1373,15 +994,6 @@ class PositionHandle extends DragTarget {
   getCursor() {
     return PositionHandle.CURSOR;
   }
-
-  // --- Setup
-
-  /*
-  destroy() {
-    this.handle.remove();
-    this.remove();
-  }
-  */
 
   // --- Events
 
@@ -1424,23 +1036,14 @@ class ResizeHandle extends DragTarget {
   // TODO: arg order?
   constructor(root, corner, listener) {
     super(root.getElementById('resize-handle-' + corner));
+    this.corner   = corner;
+    this.listener = listener;
+
     this.setupDoubleClick();
     this.setupDragIntents();
     this.setupCtrlKeyReset();
     this.setupMetaKeyReset();
-
-    this.corner = corner;
-    this.listener = listener;
   }
-
-  // --- Setup
-
-  /*
-  destroy() {
-    this.handle.remove();
-    this.remove();
-  }
-  */
 
   hasImageCursor() {
     return false;
@@ -1483,100 +1086,6 @@ class ResizeHandle extends DragTarget {
     this.listener.onResizeHandleDoubleClick(evt, this);
   }
 
-  // --- Private
-
-  // --- Actions
-
-  /*
-  applyConstraint(box, ratio) {
-    var w, h, xMult, yMult, min;
-    w = box.width;
-    h = box.height;
-    xMult = 1 * (ratio || 1);
-    yMult = 1;
-    min = Math.min(w, h);
-    if (this.name === 'nw' || this.name === 'sw') {
-      xMult = -1;
-    }
-    if (this.name === 'nw' || this.name === 'ne') {
-      yMult = -1;
-    }
-    box[this.xProp] = box[this.anchor.xProp] + (min * xMult);
-    box[this.yProp] = box[this.anchor.yProp] + (min * yMult);
-  }
-  */
-
-
-  // --- Calculations
-
-  /*
-  getCoords(box) {
-    return new Point(this.getX(box), this.getY(box));
-  }
-
-  getCoords(box, rotation) {
-    // TODO: next fix specificity issues!!!!!!!!!!!!!!!!!!!!!
-    var coords = new Point(this.getX(box), this.getY(box));
-    if (rotation) {
-      var center = box.getCenterCoords();
-      coords = coords.subtract(center).rotate(rotation).add(center);
-    }
-    return coords;
-  }
-  */
-
-  /*
-  getPosition(box, rotation) {
-    var coords = new Point(this.getX(box), this.getY(box));
-    if (rotation) {
-      var center = box.getCenterCoords();
-      coords = coords.subtract(center).rotate(rotation).add(center);
-    }
-    return coords.add(box.getPosition());
-  }
-  */
-
-  /*
-   * TODO: remove?
-  getCoords() {
-    var coords, center, d;
-
-    coords = new Point(this.getX(), this.getY());
-    d = this.target.box;
-
-    if (d.rotation) {
-      center = new Point(d.width / 2, d.height / 2);
-      coords = center.add(coords.subtract(center).rotate(d.rotation));
-    }
-
-    return coords;
-  }
-
-  getPosition() {
-    return this.target.box.getPosition().add(this.getCoords());
-  }
-
-  getX(box) {
-    switch (this.xProp) {
-      case 'left':  return 0;
-      case 'right': return box.width;
-    }
-  }
-
-  getY(box) {
-    switch (this.yProp) {
-      case 'top':    return 0;
-      case 'bottom': return box.height;
-    }
-  }
-
-  offsetToCenter(x, y) {
-    if (this.xProp === 'right')  x *= -1;
-    if (this.yProp === 'bottom') y *= -1;
-    return new Point(x, y);
-  }
-  */
-
 }
 
 /*-------------------------] RotationHandle [--------------------------*/
@@ -1589,10 +1098,10 @@ class RotationHandle extends DragTarget {
 
   constructor(root, listener) {
     super(root.getElementById('rotation-handle'));
+    this.listener = listener;
+
     this.setupDragIntents();
     this.setupMetaKeyReset();
-
-    this.listener = listener;
   }
 
   setOrigin(origin) {
@@ -1670,27 +1179,6 @@ class RotationHandle extends DragTarget {
     };
   }
 
-  /*
-  addRotationEventData(evt) {
-    evt.rotation = this.getRotationData(evt);
-    return evt;
-  }
-
-  getRotationData(evt) {
-    var r = new Point(evt.absX, evt.absY).subtract(origin).getAngle();
-    return {
-      abs: r,
-      offset: r - this.startRotation
-    }
-  }
-  */
-
-  /*
-  getAngleForMouseEvent(evt, origin) {
-    return new Point(evt.absX, evt.absY).subtract(origin).getAngle();
-  }
-  */
-
 }
 
 /*-------------------------] PositionableElement [--------------------------*/
@@ -1708,11 +1196,9 @@ class PositionableElement extends BrowserEventTarget {
   constructor(el, listener) {
     super(el);
     this.listener = listener;
+    this.states   = [];
 
-    this.states = [];
     this.setup();
-    //this.addClass('positioned-element');
-
   }
 
   setHighlightMode(on) {
@@ -1775,19 +1261,6 @@ class PositionableElement extends BrowserEventTarget {
     this.el.style.userSelect = '';
   }
 
-  /*
-  setupPositionedParents() {
-    var el = this.el, style;
-    this.positionedParents = [];
-    while(el = el.offsetParent) {
-      style = window.getComputedStyle(el);
-      if (style.position !== 'static') {
-        this.positionedParents.push(new Element(el));
-      }
-    }
-  }
-  */
-
   setupHandles(root) {
     /* TODO: do we need an object to hold handles? */
     // TODO: consolidate order of listener in arguments?
@@ -1814,28 +1287,6 @@ class PositionableElement extends BrowserEventTarget {
   setRotation(r) {
     this.transform.setRotation(r);
   }
-
-  /*
-  getRotationOrigin() {
-    return this.cssBox.getCenter();
-    var p = this.box.getCenterPosition();
-    if (this.isFixedPosition) {
-      p.x -= window.scrollX;
-      p.y -= window.scrollY;
-    }
-    return p;
-  }
-
-  getPosition() {
-    // TODO: this won't work on inverted position!
-    return new Point(this.cssH.px, this.cssV.px);
-  }
-
-  getCenter() {
-    var rect = this.el.getBoundingClientRect();
-  }
-    */
-
 
   // --- Mouse Events
 
@@ -1923,22 +1374,6 @@ class PositionableElement extends BrowserEventTarget {
   onRotationHandleDragStop(evt, handle) {
     this.listener.onRotationDragStop(evt, handle, this);
   }
-
-  /*
-  createHandles() {
-    this.handles = {
-      n:         new ResizeHandle(this, 'n',   null,   'top'),
-      ne:        new ResizeHandle(this, 'ne', 'right', 'top'),
-      e:         new ResizeHandle(this, 'e',  'right',  null),
-      se:        new ResizeHandle(this, 'se', 'right', 'bottom'),
-      s:         new ResizeHandle(this, 's',   null,   'bottom'),
-      sw:        new ResizeHandle(this, 'sw', 'left',  'bottom'),
-      w:         new ResizeHandle(this, 'w',  'left',   null),
-      nw:        new ResizeHandle(this, 'nw', 'left',  'top'),
-      rotation:  new RotationHandle(this)
-    };
-  }
-  */
 
   snapToSprite(evt) {
     var rect, center, origin, pos, coords, bounds, dim, cDim, iPos;
@@ -2222,8 +1657,6 @@ class PositionableElement extends BrowserEventTarget {
     this.render();
   }
 
-
-
   // --- Peeking
 
   setPeekMode(on) {
@@ -2252,91 +1685,10 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  // --- Scrolling
-
-  /*
-  checkScrollBounds() {
-    var dim = this.getAbsoluteDimensions(), boundary;
-    if (dim.top < window.scrollY) {
-      window.scrollTo(window.scrollX, dim.top);
-    }
-    if (dim.left < window.scrollX) {
-      window.scrollTo(dim.left, window.scrollY);
-    }
-    boundary = window.scrollX + window.innerWidth;
-    if (dim.right > boundary) {
-      window.scrollTo(window.scrollX + (dim.right - boundary), window.scrollY);
-    }
-    boundary = window.scrollY + window.innerHeight;
-    if (dim.bottom > boundary) {
-      window.scrollTo(window.scrollX, window.scrollY + (dim.bottom - boundary));
-    }
-  }
-  */
-
-
-
-
-  // --- Transform
-
-  /*
-  setBackgroundPosition(p) {
-    this.backgroundImage.setPosition(p);
-    this.updateBackgroundPosition();
-  }
-  */
-
-  // TODO: remove?
-  /*
-  setPosition(point) {
-    // TODO: Remove all direct this. properties
-    this.position = point;
-    this.box.setPosition(point);
-    this.updatePosition();
-  }
-  */
-
-  /*
-  incrementBackgroundPosition(vector) {
-    if (this.backgroundImage.hasImage()) {
-      return;
-    }
-    var rotation = this.transform.getRotation();
-    if (rotation) {
-      vector = vector.rotate(-rotation);
-    }
-    this.setBackgroundPosition(this.backgroundImage.getPosition(vector).add(vector));
-  }
-
-  incrementPosition(vector) {
-    this.box.addPosition(vector);
-    this.updatePosition();
-    //this.setPosition(this.position.add(vector));
-    this.checkScrollBounds();
-  }
-
-  incrementRotation(vector) {
-    this.transform.addRotation(vector.y);
-    this.renderTransform();
-  }
-
-  incrementZIndex(vector) {
-    // Positive Y is actually down, so decrement here.
-    this.zIndex.add(vector.y);
-    this.renderZIndex();
-  }
-  */
-
-  // --- Rendering
-
   render() {
-    // TODO: update separately instead of render??
     this.renderBox();
-    //this.updatePosition();
-    //this.renderSize();
     this.renderTransform();
     this.renderBackgroundPosition();
-    //this.updateBackgroundPosition();
     this.renderZIndex();
   }
 
@@ -2353,161 +1705,16 @@ class PositionableElement extends BrowserEventTarget {
     this.cssBackgroundImage.renderPosition(this.el.style);
   }
 
-  /*
-  updatePosition() {
-    this.el.style.left = this.box.cssLeft;
-    this.el.style.top  = this.box.cssTop;
-  }
-
-  updateSize(size) {
-    this.el.style.width  = this.box.cssWidth;
-    this.el.style.height = this.box.cssHeight;
-  }
-  */
-
-  // TODO: standing in for any transform now... fix this!
   renderTransform() {
     this.cssTransform.render(this.el.style);
-    /*
-    var r = this.box.rotation, transforms = [];
-    if (this.box.cssTranslationLeft || this.box.cssTranslationTop) {
-      var tx = this.box.cssTranslationLeft || 0;
-      var ty = this.box.cssTranslationTop || 0;
-      transforms.push('translate('+ tx + ', '+ ty + ')');
-    }
-    transforms.push('rotateZ('+ r +'deg)');
-    this.el.style.webkitTransform = transforms.join(' ');
-    */
   }
-
-  /*
-  updateBackgroundPosition() {
-    if (this.backgroundImage.hasImage()) {
-      this.el.style.backgroundPosition = this.backgroundImage.getPositionString();
-    }
-  }
-  */
 
   renderZIndex() {
     this.el.style.zIndex = this.cssZIndex;
   }
 
-
-
-  // --- Calculations
-
-  /*
-  getElementCoordsForPoint(point) {
-    // Gets the coordinates relative to the element's
-    // x/y internal coordinate system, which may be rotated.
-    var dim = this.getAbsoluteDimensions();
-    var corner = new Point(dim.left, dim.top);
-    var rotation = this.transform.getRotation();
-
-    if (rotation) {
-      corner = this.box.getPositionForCoords(corner).add(this.getPositionOffset());
-      return point.subtract(corner).rotate(-rotation);
-    } else {
-      return point.subtract(corner);
-    }
-  }
-
-  getPositionOffset() {
-    // The offset between the element's position and it's actual
-    // rectangle's left/top coordinates, which can sometimes differ.
-    return this.box.getPosition().subtract(
-        new Point(this.box.left.px, this.box.top.px));
-  }
-
-  getPositionFromRotatedHandle(anchor) {
-    var offsetX  = this.box.width / 2;
-    var offsetY  = this.box.height / 2;
-    var toCenter = anchor.offsetToCenter(offsetX, offsetY).rotate(this.transform.getRotation());
-    var toCorner = new Point(-offsetX, -offsetY);
-    return anchor.startPosition.add(toCenter).add(toCorner);
-  }
-
-  getHandleForSide(side) {
-    var offset;
-    switch(side) {
-      case 'top':    offset = 0; break;
-      case 'right':  offset = 1; break;
-      case 'bottom': offset = 2; break;
-      case 'left':   offset = 3; break;
-    }
-    // TODO: could this be nicer?
-    return [this.handles.nw, this.handles.ne, this.handles.se, this.handles.sw][(this.transform.getRotation() / 90 | 0) + offset];
-  }
-  /*/
-
-  /*
-  getCenter() {
-    return this.box.getCenter();
-  }
-
-  getAbsoluteCenter() {
-    return this.getAbsoluteDimensions().getCenter();
-  }
-  */
-
-  /*
-  getViewportCenter() {
-    var rect = this.el.getBoundingClientRect();
-    var x = (rect.left + rect.right) / 2;
-    var y = (rect.top + rect.bottom) / 2;
-    return new Point(x, y);
-  }
-
-  getAbsoluteDimensions() {
-    var rect = this.el.getBoundingClientRect();
-    return new Rectangle(
-      rect.top + this.el.offsetTop,
-      rect.right + this.el.offsetLeft,
-      rect.bottom + this.el.offsetTop,
-      rect.left + this.el.offsetLeft
-    );
-  }
-  */
-
-  getEdgeValue(side) {
-    var handle = this.getHandleForSide(side);
-    return handle.getPosition()[this.getAxisForSide(side)];
-  }
-
-  /*
-  getCenterAlignValue(type) {
-    var center = this.getCenter();
-    return type === 'vertical' ? center.x : center.y;
-  }
-
-  alignToSide(side, val) {
-    // TODO ... can this be cleaned up? Do we really need "startPosition"?
-    var axis   = this.getAxisForSide(side);
-    var handle = this.getHandleForSide(side);
-    var handlePosition = handle.getPosition();
-    handlePosition[axis] = val;
-    handle.startPosition = handlePosition;
-    this.setPosition(this.getPositionFromRotatedHandle(handle));
-    this.render();
-  }
-
-  alignToCenter(line, val) {
-    var axis = line === 'vertical' ? 'x' : 'y';
-    var center = this.getCenter().clone();
-    var offsetX  = this.box.getWidth() / 2;
-    var offsetY  = this.box.getHeight() / 2;
-    var toCorner = new Point(-offsetX, -offsetY);
-    center[axis] = val;
-    this.setPosition(center.add(toCorner));
-  }
-
-  getAxisForSide(side) {
-    return side === 'top' || side === 'bottom' ? 'y' : 'x';
-  }
-
-  */
-
   isPositioned() {
+    // TODO: static to constant?
     return this.style.position !== 'static';
   }
 
@@ -2930,146 +2137,6 @@ class OutputManager {
     return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
   }
 
-  /*
-  getAllProperties(element) {
-    var cssValues = [element.cssBox, element.cssZIndex, element.cssTransform];
-    return cssValues.filter(cssValue => {
-      return !cssValue.isNull();
-    }).map(cssValue => {
-      return cssValue.getHeader();
-    });
-  }
-
-  getStyles(exclude) {
-    var lines = [];
-
-    // Set exclusion map;
-    this.exclude = exclude;
-
-    function add(l) {
-      lines = lines.concat(l);
-    }
-
-    this.tabCharacter = this.getTabCharacter(settings.get(Settings.TABS));
-    this.selector = this.getSelector();
-
-    if (!this.zIndex.isNull()) {
-      add(this.getStyleLines('z-index', this.zIndex));
-    }
-    add(this.getStyleLines('left', this.box.cssLeft));
-    add(this.getStyleLines('top', this.box.cssTop));
-    add(this.getStyleLines('width', this.box.cssWidth));
-    add(this.getStyleLines('height', this.box.cssHeight));
-    // TODO: backgroundImage needs better naming here than "isNull"
-    if (!this.backgroundImage.isNull()) {
-      add(this.getStyleLines('background-position', this.backgroundImage.getPositionString()));
-    }
-    if (!this.transform.isNull()) {
-      add(this.getStyleLines('rotation', this.getRoundedRotation()));
-    }
-
-    // Clean exclusion map.
-    this.exclude = null;
-
-    if (this.selector && lines.length > 0) {
-      lines.unshift('\n' + this.selector + ' {');
-      return lines.join('\n' + this.tabCharacter) + '\n}';
-    } else {
-      return lines.join(' ');
-    }
-  }
-
-  // TODO: fix
-  getStyleLines(prop, val1, val2) {
-    var isPx, lines = [], str = '';
-    if (this.canIgnoreStyle(prop, val1, val2)) {
-      return lines;
-    }
-    if (prop === 'rotation') {
-      lines.push(this.concatStyle('-webkit-transform', 'rotateZ(' + val1 + 'deg)'));
-      lines.push(this.concatStyle('-moz-transform', 'rotateZ(' + val1 + 'deg)'));
-      lines.push(this.concatStyle('-ms-transform', 'rotateZ(' + val1 + 'deg)'));
-      lines.push(this.concatStyle('transform', 'rotateZ(' + val1 + 'deg)'));
-      return lines;
-    }
-    if (prop === 'left' ||
-       prop === 'top' ||
-       prop === 'width' ||
-       prop === 'height' ||
-       prop === 'background-position') {
-      isPx = true;
-    }
-    str += val1;
-    if (isPx) {
-      str += 'px';
-    }
-    if (val2 !== undefined) {
-      str += ' ' + val2;
-      if (isPx) str += 'px';
-    }
-    lines.push(this.concatStyle(prop, str));
-    return lines;
-  }
-
-  concatStyle(attr, value) {
-    return attr + ': ' + value + ';';
-  }
-
-  canIgnoreStyle(prop, val1, val2) {
-    var excluded = this.exclude && this.exclude[prop];
-    if (settings.get(Settings.OUTPUT_CHANGED_ONLY) && this.propertyIsUnchanged(prop, val1, val2)) {
-      return true;
-    }
-    if (excluded !== undefined) {
-      if (excluded && prop === 'background-position') {
-        return excluded.x === val1 && excluded.y === val2;
-      } else {
-        return excluded === val1;
-      }
-    }
-    return false;
-  }
-  */
-
-  /*
-  propertyIsUnchanged(prop, val1, val2) {
-    var state = this.states[0];
-    if (!state) {
-      return true;
-    }
-    switch(prop) {
-      case 'z-index':
-        return val1 === state.zIndex;
-      case 'top':
-        return val1 === state.box.top;
-      case 'left':
-        return val1 === state.box.left;
-      case 'width':
-        return val1 === state.box.width;
-      case 'height':
-        return val1 === state.box.height;
-      case 'rotation':
-        return val1 === state.transform.getRotation();
-      case 'background-position':
-        var bip = state.backgroundImage.getPosition();
-        return val1 === bip.x && val2 === bip.y;
-    }
-    return false;
-  }
-
-  getExportedProperties() {
-    return {
-      'z-index': this.zIndex,
-      'top': round(this.position.y),
-      'left': round(this.position.x),
-      'width': this.box.getWidth(true),
-      'height': this.box.getHeight(true),
-      'rotation': this.getRoundedRotation(),
-      'background-position': this.backgroundImage.getPosition()
-    }
-  }
-  */
-
   getTab() {
     switch(this.settings.get(Settings.TAB_STYLE)) {
       case Settings.TABS_TWO_SPACES:   return '  ';
@@ -3078,17 +2145,6 @@ class OutputManager {
       case Settings.TABS_TAB:          return '\u0009';
     }
   }
-
-  /*
-  getRoundedRotation() {
-    var r = this.transform.getRotation();
-    if (r % 1 !== 0.5) {
-      r = round(r);
-    }
-    if (r === 360) r = 0;
-    return r;
-  }
-  */
 
 }
 
@@ -3441,8 +2497,6 @@ class AppController {
     this.copyManager = new CopyManager(this);
     this.copyAnimation = new CopyAnimation(uiRoot, this);
     this.loadingAnimation = new LoadingAnimation(uiRoot, this);
-    //this.nudgeManager = new NudgeManager();
-    //this.keyEventManager  = new KeyEventManager();
 
     this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
 
@@ -3804,12 +2858,6 @@ class AppController {
     }
   }
 
-  /*
-  onRotationChanged(rotation) {
-    this.cursorManager.setRotate(rotation);
-  }
-  */
-
   // --- Nudge Events
 
   onNudgeStart() {
@@ -3972,22 +3020,7 @@ class PositionableElementManager {
 
     this.elements = [];
     this.focusedElements = [];
-
-
-    //this.setupEventDelegation();
-
-    //this.copyAnimation = new CopyAnimation();
-
   }
-
-  // --- Setup
-
-  // TODO: wtf is this??
-  /*
-  build() {
-    loadingAnimation.show(this.build.bind(this));
-  }
-  */
 
   setSnap(x, y) {
     this.snapX = x;
@@ -4015,16 +3048,6 @@ class PositionableElementManager {
       });
     }
   }
-
-  /*
-  toggleFocused(element) {
-    if (this.focusedElements.includes(element)) {
-      this.setFocused(this.focusedElements.filter(el => el !== element));
-    } else {
-      this.setFocused(this.focusedElements.concat(element));
-    }
-  }
-  */
 
   lockPeekMode() {
     this.focusedElements.forEach(el => el.lockPeekMode());
@@ -4087,67 +3110,6 @@ class PositionableElementManager {
     this.focusedElements.forEach(el => el.undo());
   }
 
-  /*
-
-  addAllFocused() {
-    this.elements.forEach(function(el) {
-      this.focus(el);
-    }, this);
-  }
-
-  focusAll(toggle) {
-    if (toggle && this.focusedElements.length === this.elements.length) {
-      this.unfocusAll();
-    } else {
-      this.addAllFocused();
-    }
-    this.statusBar.update();
-  }
-
-  // TODO: move to focused?
-  focus(element, toggle) {
-    if (toggle) {
-      this.toggleFocused(element);
-    } else {
-      this.focus(element);
-    }
-    this.statusBar.update();
-  }
-  */
-
-  /*
-  unfocusAll() {
-    this.removeAllFocused();
-    this.statusBar.update();
-  }
-
-  // TODO: not toggling!
-  toggleFocused(element) {
-    if (this.elementIsFocused(element)) {
-      this.unfocus(element);
-    } else {
-      this.focus(element);
-    }
-  }
-
-  setFocused(element, add) {
-    if (!add) {
-      this.focusedElements.filter(el => el !== element).forEach(el => el.unfocus());
-      this.focusedElements = [];
-    }
-    this.focus(element);
-  }
-
-
-  callOnEveryFocused(name, args) {
-    var el, i, len;
-    for(i = 0, len = this.focusedElements.length; i < len; i++) {
-      el = this.focusedElements[i];
-      el[name].apply(el, args);
-    }
-  }
-  */
-
   // --- Element Drag Events
 
   onElementMouseDown(evt, element) {
@@ -4203,29 +3165,6 @@ class PositionableElementManager {
     this.onElementDragStop(evt, element);
     this.listener.onPositionDragStop(evt, handle, element);
   }
-
-  // --- Handle Events
-
-  /*
-  onRotationHandleIntentStart(evt, element) {
-    this.listener.onRotationHandleIntentStart(evt.rotation.abs);
-  }
-
-  onRotationHandleIntentStop(evt, element) {
-    this.listener.onRotationHandleIntentStop(evt.rotation.abs);
-  }
-
-  onRotationStop(evt, element) {
-  }
-
-
-  onHandleIntentStart(evt) {
-    //this.listener.onHandleIntentStart(evt.rotation.abs);
-  }
-
-  onHandleIntentStop(evt) {
-  }
-  */
 
   // --- Resize Drag Events
 
@@ -4292,53 +3231,6 @@ class PositionableElementManager {
   onBackgroundImageSnap() {
     this.listener.onBackgroundImageSnap();
   }
-
-  /*
-  // TODO FIRST!
-  // TODO: no need alternate?
-  delegateToDragging(name, alternate) {
-    // TODO: can this be cleaner?
-    this[name] = function() {
-      // TODO: test this case!
-      if (this.draggingElement && this.draggingElement[name]) {
-        this.draggingElement[name].apply(this.draggingElement, arguments);
-      } else if (alternate) {
-        alternate[name].apply(alternate, arguments);
-      }
-    }.bind(this);
-  }
-  */
-
-  /*
-
-  setupEventDelegation() {
-
-    // Peeking
-    this.delegateToFocused('peek');
-
-    // State
-    this.delegateToFocused('undo');
-    this.delegateToFocused('pushState');
-    this.delegateToFocused('toggleHandles');
-
-    // Position
-    this.delegateToFocused('positionDrag');
-    this.delegateToFocused('backgroundDrag');
-
-    // Nudging
-    this.delegateToFocused('incrementPosition');
-    this.delegateToFocused('incrementBackgroundPosition');
-    this.delegateToFocused('incrementRotation');
-    this.delegateToFocused('incrementZIndex');
-
-    // Resizing
-    this.delegateToFocused('resize');
-
-    // Rotation
-    this.delegateToFocused('rotate');
-
-  }
-  */
 
   findElements(includeSelector, excludeSelector) {
     var els;
@@ -4407,182 +3299,6 @@ class PositionableElementManager {
   elementIsOutOfFlow(style) {
     return style.position === 'absolute' || style.position === 'fixed';
   }
-
-  /*
-  elementIsIncluded(el, includeSelector, excludeSelector) {
-    /*
-    if (excludeSelector && el.webkitMatchesSelector(excludeSelector)) {
-      // Don't include elements that are explicitly excluded.
-      return false;
-    } else if (getClassName(el).match(EXTENSION_CLASS_PREFIX)) {
-      // Don't include elements that are part of the extension itself.
-      return false;
-    } else if (el.style && el.style.background.match(/positionable-extension/)) {
-      // Don't include elements that are part of other chrome extensions.
-      return false;
-    } else if (includeSelector) {
-      // If there is an explicit selector active, then always include.
-      return true;
-    }
-    // Otherwise only include absolute or fixed position elements.
-    var style = window.getComputedStyle(el);
-    return style.position === 'absolute' || style.position === 'fixed';
-  }
-
-  delegateToFocused(name, disallowWhenDragging) {
-    // TODO: can this be cleaner?
-    this[name] = function() {
-      // TODO: test this case!
-      //if (disallowWhenDragging && this.draggingElement) return;
-      this.callOnEveryFocused(name, arguments);
-    }.bind(this);
-  }
-    */
-
-  // --- Alignment
-
-  /*
-  alignTop() {
-    this.alignElements('top', function(el, minTop) {
-      el.box.setPosition(new Point(el.box.left, minTop));
-    });
-  }
-
-  alignLeft() {
-    this.alignElements('left', function(el, minLeft) {
-      el.box.setPosition(new Point(minLeft, el.box.top));
-    });
-  }
-
-  alignRight() {
-    this.alignElements('right', function(el, maxRight) {
-      el.box.setPosition(new Point(maxRight - el.box.width, el.box.top));
-    });
-  }
-
-  alignBottom() {
-    this.alignElements('bottom', function(el, maxBottom) {
-      el.box.setPosition(new Point(el.box.left, maxBottom - el.box.height));
-    });
-  }
-
-  alignHorizontal() {
-    this.alignElements('hcenter', function(el, hcenter) {
-      el.box.setPosition(new Point(hcenter - el.box.width / 2, el.box.top));
-    });
-  }
-
-  alignVertical() {
-    this.alignElements('vcenter', function(el, vcenter) {
-      el.box.setPosition(new Point(el.box.left, vcenter - el.box.height / 2));
-    });
-  }
-
-  alignElements(side, fn) {
-    var amt = this.getAlignAmount(side);
-    this.focusedElements.forEach(function(el) {
-      el.pushState();
-      fn(el, amt);
-      el.updatePosition();
-    });
-  }
-
-  getAlignAmount(side) {
-    switch (side) {
-      case 'left':    return this.getAlignMin(side);
-      case 'top':     return this.getAlignMin(side);
-      case 'right':   return this.getAlignMax(side);
-      case 'bottom':  return this.getAlignMax(side);
-      case 'hcenter': return this.getAlignAverage(side);
-      case 'vcenter': return this.getAlignAverage(side);
-    }
-  };
-
-  getAlignMin(side) {
-    var min = Infinity;
-    this.focusedElements.forEach(function(el) {
-      min = Math.min(min, el.box[side]);
-    });
-    return min;
-  }
-
-  getAlignMax(side) {
-    var max = -Infinity;
-    this.focusedElements.forEach(function(el) {
-      max = Math.max(max, el.box[side]);
-    });
-    return max;
-  }
-
-  getAlignAverage(side) {
-    var sum = 0;
-    this.focusedElements.forEach(function(el) {
-      sum += el.box[side];
-    });
-    return sum / this.focusedElements.length;
-  }
-
-  // --- Distribution
-
-  distributeLeft() {
-    this.distributeElements('left', function(el, left) {
-      el.box.setPosition(new Point(left, el.box.top));
-    });
-  }
-
-  distributeTop() {
-    this.distributeElements('top', function(el, top) {
-      el.box.setPosition(new Point(el.box.left, top));
-    });
-  }
-
-  distributeRight() {
-    this.distributeElements('right', function(el, right) {
-      el.box.setPosition(new Point(right - el.box.width, el.box.top));
-    });
-  }
-
-  distributeBottom() {
-    this.distributeElements('bottom', function(el, bottom) {
-      el.box.setPosition(new Point(el.box.left, bottom - el.box.height));
-    });
-  }
-
-  distributeHorizontal() {
-    this.distributeElements('hcenter', function(el, hcenter) {
-      el.box.setPosition(new Point(hcenter - el.box.width / 2, el.box.top));
-    });
-  }
-
-  distributeVertical() {
-    this.distributeElements('vcenter', function(el, vcenter) {
-      el.box.setPosition(new Point(el.box.left, vcenter - el.box.height / 2));
-    });
-  }
-
-  // The amount to distribute is equal to the span between the edges of the first and
-  // last element divided by one less than the total number of elements. All elements
-  // should be updated to preserve their undo state, as all elements should have been
-  // operated on, even if they do not actually move.
-  distributeElements(side, fn) {
-    var sorted, len, min, max, amt;
-
-    sorted = this.focusedElements.concat().sort(function(a, b) {
-      return a.box[side] - b.box[side];
-    });
-
-    len = sorted.length - 1;
-    min = sorted[0].box[side];
-    max = sorted[len].box[side];
-    amt = (max - min) / len;
-
-    sorted.forEach(function(el, i) {
-      el.pushState();
-      fn(el, min + amt * i);
-      el.updatePosition();
-    });
-  }
-  */
 
   // --- Nudging
 
@@ -4703,68 +3419,6 @@ class PositionableElementManager {
     }
   }
 
-  /*
-  temporarilyFocusDraggingElement() {
-    //if (!this.draggingElement) return;
-    this.previouslyFocusedElements = this.focusedElements;
-    this.focusedElements = [this.getDraggingElement()];
-  }
-
-  releasedFocusedDraggingElement() {
-    if (!this.previouslyFocusedElements) return;
-    this.dragReset();
-    this.focusedElements = this.previouslyFocusedElements;
-    this.previouslyFocusedElements = null;
-  }
-
-  getDraggingElement() {
-    // Currently dragging element may be a handle.
-    var el = this.draggingElement;
-    return el.target || el;
-  }
-  */
-
-  // --- Output
-
-  /*
-  getFocusedElementStyles() {
-    var elements = this.focusedElements, exclude = this.getExclusionMap(elements);
-    var styles = elements.map(function(el) {
-      return el.getStyles(exclude);
-    });
-    return styles.join('\n\n');
-  }
-
-  copy(evt) {
-    var styles = this.getFocusedElementStyles();
-    var hasStyles = styles.replace(/^\s+$/, '').length > 0;
-    evt.preventDefault();
-    evt.clipboardData.clearData();
-    evt.clipboardData.setData('text/plain', styles);
-    this.copyAnimation.animate(hasStyles);
-  }
-
-  save() {
-    var styles = this.getFocusedElementStyles();
-    var link = document.createElement('a');
-    link.href = 'data:text/css;base64,' + btoa(styles);
-    link.download = this.settings.get(Settings.SAVE_FILENAME);
-    link.click();
-  }
-
-  getExclusionMap(elements) {
-    if (elements.length < 2 || !this.settings.get(Settings.OUTPUT_UNIQUE_ONLY)) {
-      return;
-    }
-    var map = elements[0].getExportedProperties();
-    elements.slice(1).forEach(function(el) {
-      map = hashIntersect(map, el.getExportedProperties());
-    }, this);
-    return map;
-  }
-
-  */
-
   releaseAll() {
     this.elements.forEach(el => el.destroy());
     this.elements = [];
@@ -4775,7 +3429,6 @@ class PositionableElementManager {
 
 /*-------------------------] DragSelection [--------------------------*/
 
-// TODO: mouse coords are not aligning with box perfectly (looks like scrollbar issues)
 class DragSelection extends DragTarget {
 
   constructor(root, listener) {
@@ -4839,21 +3492,9 @@ class DragSelection extends DragTarget {
     this.cssBox.render(this.ui.el.style);
   }
 
-  // --- Updating
-
-  /*
-  update(evt) {
-    this.box.left   = evt.originX;
-    this.box.top    = evt.originY;
-    this.box.right  = evt.absX;
-    this.box.bottom = evt.absY;
-    this.render();
-  }
-  */
-
 }
 
-/*-------------------------] Panel [--------------------------*/
+/*-------------------------] ControlPanel [--------------------------*/
 
 class ControlPanel extends DraggableElement {
 
@@ -5526,895 +4167,6 @@ class ControlPanelDefaultArea extends ControlPanelArea {
 
 }
 
-/*-------------------------] ControlPanel [--------------------------*/
-
-// class ControlPanel extends DraggableElement {
-// 
-//   static get FADE_DELAY() { return 200; }
-// 
-//   static get ALIGN_TOP_ICON()        { return 'align-top';     }
-//   static get ALIGN_LEFT_ICON()       { return 'align-left';    }
-//   static get ALIGN_RIGHT_ICON()      { return 'align-right';   }
-//   static get ALIGN_BOTTOM_ICON()     { return 'align-bottom';  }
-//   static get ALIGN_VERTICAL_ICON()   { return 'align-vcenter'; }
-//   static get ALIGN_HORIZONTAL_ICON() { return 'align-hcenter'; }
-// 
-//   static get DISTRIBUTE_TOP_ICON()        { return 'distribute-top';     }
-//   static get DISTRIBUTE_LEFT_ICON()       { return 'distribute-left';    }
-//   static get DISTRIBUTE_RIGHT_ICON()      { return 'distribute-right';   }
-//   static get DISTRIBUTE_BOTTOM_ICON()     { return 'distribute-bottom';  }
-//   static get DISTRIBUTE_VERTICAL_ICON()   { return 'distribute-vcenter'; }
-//   static get DISTRIBUTE_HORIZONTAL_ICON() { return 'distribute-hcenter'; }
-// 
-//   static get ARROW_KEY_ICON() { return 'arrow-key'; }
-// 
-//   static get SHIFT_CHAR()   { return '\u21e7'; }
-//   static get CTRL_CHAR()    { return '\u2303'; }
-//   static get OPTION_CHAR()  { return '\u2325'; }
-//   static get COMMAND_CHAR() { return '\u2318'; }
-// 
-//   // TODO: does this make sense somewhere else?
-//   static getCommandModifierKey() {
-//     return navigator.platform.match(/Mac/) ? ControlPanel.COMMAND_CHAR : ControlPanel.CTRL_CHAR;
-//   }
-// 
-//   constructor(settings) {
-//     super(document.body, 'div', 'control-panel');
-// 
-//     this.settings = settings;
-// 
-//     this.build(settings);
-//     this.currentArea = null;
-// 
-//     // TODO: is this required?
-//     this.getPosition();
-//   }
-// 
-//   build(settings) {
-// 
-//     this.areas = [];
-//     this.inputs = [];
-// 
-//     //this.buildHelpArea();
-//     this.buildDefaultArea();
-//     this.buildGettingStartedArea();
-//     //this.buildElementArea();
-//     //this.buildQuickStartArea();
-//     //this.buildSettingsArea(settings);
-// 
-//     //this.createState('position', 'Move', ControlPanel.POSITION_ICON);
-//     //this.createState('resize', 'Resize', ControlPanel.RESIZE_ICON);
-//     //this.createState('resize-nw', 'Resize', ControlPanel.RESIZE_NW_ICON);
-//     //this.createState('resize-se', 'Resize', ControlPanel.RESIZE_SE_ICON);
-//     //this.createState('background-position', 'Background', ControlPanel.BG_IMAGE_ICON);
-//     //this.createState('z-index', 'Z-Index', ControlPanel.Z_INDEX_ICON);
-//     //this.createState('rotate', 'Rotate', ControlPanel.ROTATE_ICON);
-// 
-//     //this.buildButton(ControlPanel.SETTINGS_ICON, this.settingsArea);
-//     //this.bindEventListener('dblclick', this.resetPosition);
-// 
-//     //this.defaultArea = this.getStartArea();
-//     //this.resetArea();
-//     this.setArea(this.defaultArea);
-//   }
-// 
-//   buildButton(iconId, area) {
-//     var button = new IconElement(this.el, iconId, area.name + '-button');
-//     button.addEventListener('click', this.toggleArea.bind(this, area));
-//   }
-// 
-//   /*
-//   buildArea(upper) {
-//     var camel = upper.slice(0, 1).toLowerCase() + upper.slice(1);
-//     var lower = upper.toLowerCase();
-//     var area = new Element(this.el, 'div', 'area '+ lower +'-area');
-//     area.name = lower;
-//     this[camel + 'Area'] = area;
-//     this.areas.push(area);
-//     this['build' + upper + 'Area'](area);
-//   }
-//   */
-// 
-//   buildGettingStartedArea(area) {
-// 
-//     var area = new ControlPanelArea(this, 'getting-started');
-// 
-//     area.buildBlock('help', function(block) {
-//       block.addIcon(ControlPanel.MOUSE_ICON);
-//       block.addText('Use the mouse to drag, resize, and rotate elements.');
-//       //new IconElement(area.el, ControlPanel.MOUSE_ICON, 'start-icon');
-//       //new Element(area.el, 'div', 'start-help-text').html('Use the mouse to drag, resize, and rotate elements.');
-//     });
-// 
-//     area.buildBlock('help', function(block) {
-//       //var bKey = block.getKeyIconHtml('b');
-//       //var sKey = block.getKeyIconHtml('s');
-//       //var mKey = block.getKeyIconHtml('m');
-//       //var bKey = this.buildInlineKeyIcon('b');
-//       //var sKey = this.buildInlineKeyIcon('s');
-//       //var mKey = this.buildInlineKeyIcon('m');
-//       //var text = 'Arrow keys nudge elements.<br>'+ bKey + sKey + mKey +' change nudge modes.';
-// 
-//       block.addIcon(ControlPanel.KEYBOARD_ICON);
-//       block.addTextWithKeyIcons('Arrow keys nudge elements.<br>:b :s :m change nudge modes.');
-//       //block.addText(text);
-// 
-//     });
-// 
-//     area.buildBlock('help', function(block) {
-//       block.addIcon(ControlPanel.BG_IMAGE_ICON);
-//       block.addText('Double click on a background image to fit sprite dimensions.');
-//     });
-// 
-//     area.buildBlock('help', function(block) {
-// 
-//       var cmd = ControlPanel.getCommandModifierKey();
-//       //var cKey = this.buildInlineKeyIcon('c');
-//       //var sKey = this.buildInlineKeyIcon('s');
-//       //var text = cmdKey + cKey + ' Copy styles to clipboard<br>' + cmdKey + sKey +' Save styles to disk';
-// 
-//       block.addIcon(ControlPanel.DOWNLOAD_ICON);
-//       block.addTextWithKeyIcons(`:${cmd} :c Copy styles to clipboard<br>:${cmd} :s Save styles to disk`, 'text-left');
-//       //new Element(area.el, 'div', 'start-help-text start-help-text-left').html(text);
-//     });
-// 
-//     area.addVisualElement('horizontal-line');
-//     area.addVisualElement('vertical-line');
-// 
-//     area.addLinkAction("Don't Show", 'skip', 'skipStartArea');
-// 
-//     /*
-//     var hide = new Element(this.startArea.el, 'span', 'start-hide-link').html("Don't Show");
-//     hide.addEventListener('click', this.skipStartArea.bind(this));
-//     */
-// 
-//     this.gettingStartedArea = area;
-// 
-//     /*
-//     area.buildBlock('keyboard', function(area) {
-//       var bKey = this.buildInlineKeyIcon('b');
-//       var sKey = this.buildInlineKeyIcon('s');
-//       var mKey = this.buildInlineKeyIcon('m');
-//       var text = 'Arrow keys nudge elements.<br>'+ bKey + sKey + mKey +' change nudge modes.';
-// 
-//       new IconElement(area.el, ControlPanel.KEYBOARD_ICON, 'start-icon');
-//       new Element(area.el, 'div', 'start-help-text').html(text);
-// 
-//     });
-// 
-//     area.buildBlock('sprites', function(area) {
-//       new IconElement(area.el, ControlPanel.BG_IMAGE_ICON, 'start-icon');
-//       new Element(area.el, 'div', 'start-help-text').html('Double click on a background image to fit sprite dimensions.');
-//     });
-// 
-//     area.buildBlock('output', function(area) {
-// 
-//       var cmdKey = this.buildInlineKeyIcon(ControlPanel.getCommandModifierKey());
-//       var cKey = this.buildInlineKeyIcon('c');
-//       var sKey = this.buildInlineKeyIcon('s');
-//       var text = cmdKey + cKey + ' Copy styles to clipboard<br>' + cmdKey + sKey +' Save styles to disk';
-// 
-//       new IconElement(area.el, ControlPanel.DOWNLOAD_ICON, 'start-icon');
-//       new Element(area.el, 'div', 'start-help-text start-help-text-left').html(text);
-//     });
-// 
-//     area.addElement('start-horizontal-line');
-//     area.addElement('start-vertical-line');
-// 
-//     var hide = new Element(this.startArea.el, 'span', 'start-hide-link').html("Don't Show");
-//     hide.addEventListener('click', this.skipStartArea.bind(this));
-//     */
-//   }
-// 
-// 
-//   buildHelpArea(area) {
-// 
-//     this.buildArea('Help');
-// 
-//     // Keyboard help area
-// 
-//     var keyboardHelp = this.buildHelpBlock('keys', 'Keyboard');
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'arrow', function(box, text) {
-//       var box = new Element(box.el, 'div', 'key-icon');
-//       new IconElement(box.el, ControlPanel.ARROW_KEY_ICON, 'arrow-key-icon');
-//       text.html('Use the arrow keys to nudge the element.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'shift', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon shift-key-icon').html(ControlPanel.SHIFT_CHAR);
-//       text.html('Shift: Constrain dragging / nudge multiplier / select multiple.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'ctrl', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon ctrl-key-icon').html(ControlPanel.CTRL_CHAR);
-//       text.html('Ctrl: Move the background image when dragging.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'alt', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon').html(ControlPanel.OPTION_CHAR);
-//       text.html('Option/Alt: Peek at the background image.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'cmd', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon').html(ControlPanel.COMMAND_CHAR);
-//       text.html('Cmd/Win: While dragging, temporarily move a single element.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'b', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('b');
-//       text.html('Toggle background image nudge.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 's', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
-//       text.html('Toggle size nudge.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'm', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('m');
-//       text.html('Toggle position (move) nudge.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'r', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('r');
-//       text.html('Toggle rotation nudge.');
-//     });
-// 
-//     this.buildHelpBox(keyboardHelp.el, 'z', function(box, text) {
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
-//       text.html('Toggle z-index nudge.');
-//     });
-// 
-// 
-//     // Mouse help area
-// 
-//     var mouseHelp = this.buildHelpBlock('mouse', 'Mouse');
-// 
-//     this.buildHelpBox(mouseHelp.el, 'position', function(box, text) {
-//       new Element(box.el, 'div', 'help-element');
-//       new IconElement(box.el, ControlPanel.POSITION_ICON, 'help-icon position-help-icon');
-//       text.html('Drag the middle of the element to move it around.');
-//     });
-//     this.buildHelpBox(mouseHelp.el, 'resize', function(box, text) {
-//       new Element(box.el, 'div', 'help-element');
-//       new Element(box.el, 'div', 'resize-help-icon resize-nw-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-n-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-ne-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-e-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-se-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-s-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-sw-help-icon');
-//       new Element(box.el, 'div', 'resize-help-icon resize-w-help-icon');
-//       text.html('Drag border handles to resize.');
-//     });
-// 
-//     this.buildHelpBox(mouseHelp.el, 'rotate', function(box, text) {
-//       new Element(box.el, 'div', 'help-element');
-//       new Element(box.el, 'div', 'rotate-handle');
-//       text.html('Drag the rotate handle to rotate the element.');
-//     });
-// 
-//     this.buildHelpBox(mouseHelp.el, 'snapping', function(box, text) {
-//       new Element(box.el, 'div', 'help-element');
-//       new IconElement(box.el, ControlPanel.BG_IMAGE_ICON, 'help-icon snapping-help-icon');
-//       new IconElement(box.el, ControlPanel.POINTER_ICON, 'help-icon snapping-help-pointer-icon');
-//       text.html('Double click to snap element dimensions to a background sprite.');
-//     });
-// 
-//     this.buildHelpBox(mouseHelp.el, 'aligning', function(box, text) {
-//       new Element(box.el, 'div', 'help-element multiple-select-help');
-//       new IconElement(box.el, ControlPanel.POINTER_ICON, 'help-icon aligning-pointer-icon');
-//       new Element(box.el, 'div', 'icon help-icon aligning-box-one');
-//       new Element(box.el, 'div', 'icon help-icon aligning-box-two');
-//       text.html('Drag to select multiple elements.');
-//     });
-// 
-// 
-//     // Command help area
-// 
-//     var commandHelp = this.buildHelpBlock('command', 'Commands');
-// 
-//     this.buildHelpBox(commandHelp.el, 'undo', function(box, text) {
-//       box.addClass('command-help-box');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon').html(ControlPanel.getCommandModifierKey());
-//       new Element(box.el, 'span', 'key-plus').html('+');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('z');
-//       text.html('Undo');
-//     });
-// 
-//     this.buildHelpBox(commandHelp.el, 'select-all', function(box, text) {
-//       box.addClass('command-help-box');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon').html(ControlPanel.getCommandModifierKey());
-//       new Element(box.el, 'span', 'key-plus').html('+');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('a');
-//       text.html('Select All');
-//     });
-// 
-//     this.buildHelpBox(commandHelp.el, 'copy', function(box, text) {
-//       box.addClass('command-help-box');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon').html(ControlPanel.getCommandModifierKey());
-//       new Element(box.el, 'span', 'key-plus').html('+');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('c');
-//       text.html('Copy Styles');
-//     });
-// 
-//     this.buildHelpBox(commandHelp.el, 'save', function(box, text) {
-//       box.addClass('command-help-box');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon').html(ControlPanel.getCommandModifierKey());
-//       new Element(box.el, 'span', 'key-plus').html('+');
-//       new Element(box.el, 'div', 'key-icon alt-key-icon letter-key-icon').html('s');
-//       text.html('Save Styles');
-//     });
-// 
-//   }
-// 
-//   buildHelpBox(el, name, fn) {
-//     var help = new Element(el, 'div', 'help ' + name + '-help');
-//     var box  = new Element(help.el, 'div', 'help-box ' + name + '-help-box');
-//     var text = new Element(help.el, 'div', 'help-text ' + name + '-help-text');
-//     fn.call(this, box, text);
-//   }
-// 
-//   buildElementArea(area) {
-//     this.buildArea('Element');
-// 
-//     this.singleElementArea = new Element(area.el, 'div', 'single-element-area');
-//     this.elementHeader     = new Element(this.singleElementArea.el, 'h3', 'single-header');
-// 
-//     this.elementDetails  = new Element(this.singleElementArea.el, 'div', 'details');
-//     this.detailsLeft     = new Element(this.elementDetails.el, 'span').title('Left');
-//     this.detailsComma1   = new Element(this.elementDetails.el, 'span').html(', ');
-//     this.detailsTop      = new Element(this.elementDetails.el, 'span').title('Top');
-//     this.detailsComma2   = new Element(this.elementDetails.el, 'span').html(', ');
-//     this.detailsZIndex   = new Element(this.elementDetails.el, 'span').title('Z-Index');
-//     this.detailsDivider1 = new Element(this.elementDetails.el, 'span').html(' | ');
-//     this.detailsWidth    = new Element(this.elementDetails.el, 'span').title('Width');
-//     this.detailsComma3   = new Element(this.elementDetails.el, 'span').html(', ');
-//     this.detailsHeight   = new Element(this.elementDetails.el, 'span').title('Height');
-//     this.detailsDivider2 = new Element(this.elementDetails.el, 'span').html(' | ');
-//     this.detailsRotation = new Element(this.elementDetails.el, 'span').title('Rotation (other transforms hidden)');
-// 
-//     this.multipleElementArea   = new Element(area.el, 'div', 'multiple-element-area');
-//     this.multipleElementHeader = new Element(this.multipleElementArea.el, 'h3', 'multiple-header');
-//     this.buildAlignActions(area);
-// 
-//     this.elementStates  = new Element(area.el, 'div', 'element-states');
-//     this.stateIcons = [];
-//   }
-// 
-//   buildAlignActions(area) {
-//     this.elementActions = new Element(this.multipleElementArea.el, 'div', 'element-actions');
-// 
-//     this.alignLeft       = this.buildDelegated(ControlPanel.ALIGN_LEFT_ICON, 'Align Left');
-//     this.alignHorizontal = this.buildDelegated(ControlPanel.ALIGN_HORIZONTAL_ICON, 'Align Horizontal');
-//     this.alignRight      = this.buildDelegated(ControlPanel.ALIGN_RIGHT_ICON, 'Align Right');
-//     this.alignTop        = this.buildDelegated(ControlPanel.ALIGN_TOP_ICON, 'Align Top');
-//     this.alignVertical   = this.buildDelegated(ControlPanel.ALIGN_VERTICAL_ICON, 'Align Vertical');
-//     this.alignBottom     = this.buildDelegated(ControlPanel.ALIGN_BOTTOM_ICON, 'Align Bottom');
-// 
-//     this.distributeLeft       = this.buildDelegated(ControlPanel.DISTRIBUTE_LEFT_ICON, 'Distribute Left');
-//     this.distributeHorizontal = this.buildDelegated(ControlPanel.DISTRIBUTE_HORIZONTAL_ICON, 'Distribute Horizontal');
-//     this.distributeRight      = this.buildDelegated(ControlPanel.DISTRIBUTE_RIGHT_ICON, 'Distribute Right');
-//     this.distributeTop        = this.buildDelegated(ControlPanel.DISTRIBUTE_TOP_ICON, 'Distribute Top');
-//     this.distributeVertical   = this.buildDelegated(ControlPanel.DISTRIBUTE_VERTICAL_ICON, 'Distribute Vertical');
-//     this.distributeBottom     = this.buildDelegated(ControlPanel.DISTRIBUTE_BOTTOM_ICON, 'Distribute Bottom');
-// 
-//   }
-// 
-//   buildDelegated(iconId, action) {
-//     var methodName = action.charAt(0).toLowerCase() + action.slice(1).replace(' ', '');
-//     var icon       = new IconElement(this.elementActions.el, iconId, 'element-action');
-//     icon.el.title = action;
-//     icon.addEventListener('click', function() {
-//       elementManager[methodName]();
-//     });
-//   }
-// 
-//   /*
-//   buildElementAlign(type, iconId, title) {
-//     var method = type === 'horizontal' || type === 'vertical' ? 'alignMiddle' : 'alignFocused';
-//     var action = new IconElement(this.elementActions.el, iconId, 'element-action');
-//     action.el.title = title;
-//     action.addEventListener('click', this.delegateElementAction(method, type));
-//   }
-// 
-//   buildElementDistribute(type, iconId, title) {
-//     var action = new IconElement(this.elementActions.el, iconId, 'element-action');
-//     action.el.title = title;
-//     action.addEventListener('click', this.delegateElementAction('alignFocused', type, true));
-//   }
-//   */
-// 
-//   buildSettingsArea(settings) {
-// 
-//     this.buildArea('Settings');
-// 
-//     var header = new Element(this.settingsArea.el, 'h4', 'settings-header').html('Settings');
-// 
-//     this.buildTextField(area, Settings.DOWNLOAD_FILENAME, 'Filename when saving:', 'filename');
-//     this.buildTextField(area, Settings.EXCLUDE_SELECTOR, 'Exclude elements matching:', 'CSS Selector');
-//     this.buildTextField(area, Settings.INCLUDE_SELECTOR, 'Include elements matching:', 'CSS Selector');
-// 
-//     this.buildSelect(area, Settings.TABS, 'Tab style:', [
-//       [Settings.TABS_TAB, 'Tab'],
-//       [Settings.TABS_TWO_SPACES, 'Two Spaces'],
-//       [Settings.TABS_FOUR_SPACES, 'Four Spaces']
-//     ]);
-// 
-//     this.buildSelect(area, Settings.SELECTOR, 'Output Selector:', [
-//       [Settings.SELECTOR_AUTO, 'Auto', 'Element id or first class will be used', '#id | .first { ... }'],
-//       [Settings.SELECTOR_NONE, 'None', 'No selector used. Styles will be inline.', 'width: 200px; height: 200px;...'],
-//       [Settings.SELECTOR_ID, 'Id', 'Element id will be used', '#id { ... }'],
-//       [Settings.SELECTOR_FIRST, 'First Class', 'First class name found will be used', '.first { ... }'],
-//       [Settings.SELECTOR_LONGEST, 'Longest Class', 'Longest class name found will be used', '.long-class-name { ... }'],
-//       [Settings.SELECTOR_ALL, 'All Classes', 'All class names will be output together', '.one.two.three { ... }'],
-//       [Settings.SELECTOR_TAG, 'Tag', 'Only the tag name will be output', 'section { ... }'],
-//       [Settings.SELECTOR_TAG_NTH, 'Tag:nth-child', 'The tag name + tag\'s nth-child selector will be output', 'li:nth-child(3) { ... }'],
-//     ]);
-// 
-//     this.buildCheckboxField(area, Settings.OUTPUT_CHANGED, 'Only output changed styles:');
-//     this.buildCheckboxField(area, Settings.OUTPUT_UNIQUE, 'Exclude styles common to a group:');
-// 
-//     var save  = new Element(this.settingsArea.el, 'button', 'settings-save').html('Save');
-//     var reset = new Element(this.settingsArea.el, 'button', 'settings-reset').html('Reset All');
-//     var help  = new Element(header.el, 'span', 'settings-help-link').html('Help');
-// 
-//     reset.addEventListener('click', this.clearSettings.bind(this));
-//     save.addEventListener('click', this.saveSettings.bind(this));
-//     help.addEventListener('click', this.setArea.bind(this, this.helpArea));
-// 
-//     area.addEventListener('mousedown', this.filterClicks.bind(this));
-//     area.addEventListener('mouseup', this.filterClicks.bind(this));
-//     area.addEventListener('keydown', this.filterKeyboardInput.bind(this));
-//   }
-// 
-//   buildTextField(area, name, label, placeholder) {
-//     this.buildFormControl(area, name, label, function(block) {
-//       var input = new Element(block.el, 'input', 'setting-input setting-text-input');
-//       input.el.type = 'text';
-//       input.el.placeholder = placeholder;
-//       input.el.value = this.settings.get(name);
-//       this.inputs.push(input);
-//       return input;
-//     });
-//   }
-// 
-//   buildCheckboxField(area, name, label) {
-//     this.buildFormControl(area, name, label, function(block) {
-//       var input = new Element(block.el, 'input', 'setting-input setting-text-input');
-//       input.el.type = 'checkbox';
-//       input.el.checked = !!this.settings.get(name);
-//       this.inputs.push(input);
-//       return input;
-//     });
-//   }
-// 
-//   buildSelect(area, name, label, options) {
-//     var select;
-//     this.buildFormControl(area, name, label, function(block) {
-//       select = new Element(block.el, 'select', 'setting-input');
-//       if (options[0].length > 2) {
-//         // Associated descriptions exist so create the elements
-//         this[name + 'Description'] = new Element(block.el, 'div', 'setting-description');
-//         this[name + 'Example'] = new Element(block.el, 'div', 'setting-example');
-//       }
-//       options.forEach(function(o) {
-//         var option = new Element(select.el, 'option', 'setting-option');
-//         option.el.value = o[0];
-//         option.el.textContent = o[1];
-//         if (o[2]) {
-//           option.el.dataset.description = o[2];
-//           option.el.dataset.example = o[3];
-//         }
-//         if (this.settings.get(name) === option.el.value) {
-//           option.el.selected = true;
-//         }
-//       }, this);
-//       return select;
-//     });
-//     this.checkLinkedDescription(select.el);
-//   }
-// 
-//   buildFormControl(area, name, label, fn) {
-//     var field = new Element(area.el, 'fieldset', 'setting-field');
-//     var label = new Element(field.el, 'label', 'setting-label').html(label);
-//     var block = new Element(field.el, 'div', 'setting-block');
-//     var input = fn.call(this, block);
-//     input.el.id = 'setting-' + name;
-//     input.el.name = name;
-//     label.el.htmlFor = input.el.id;
-//     input.el.dataset.name = name;
-//     input.addEventListener('change', this.inputChanged.bind(this));
-//   }
-// 
-//   setFormControl(control) {
-//     var el = control.el;
-//     var value = this.settings.get(el.name);
-//     if (el.type === 'checkbox') {
-//       el.checked = value;
-//     } else {
-//       el.value = value;
-//     }
-//   }
-// 
-//   createState(name, text, iconId) {
-//     var state = new Element(this.elementStates.el, 'div', 'element-state ' + name + '-state');
-//     state.name = name;
-//     new IconElement(state.el, iconId, 'element-state-icon');
-//     new Element(state.el, 'p', 'element-state-text').html(text);
-//     this.stateIcons.push(state);
-//   }
-// 
-// 
-//   // --- Events
-// 
-//   inputChanged(evt) {
-//     var target = evt.target;
-//     this.settings.set(target.dataset.name, target.value);
-//     if (target.selectedIndex !== undefined) {
-//       this.checkLinkedDescription(target);
-//     }
-//   }
-// 
-//   filterClicks(evt) {
-//     evt.stopPropagation();
-//   }
-// 
-//   filterKeyboardInput(evt) {
-//     evt.stopPropagation();
-//     if (evt.keyCode === KeyEventManager.ENTER) {
-//       this.saveSettings();
-//     }
-//   }
-// 
-//   // --- Actions
-// 
-//   setState(name) {
-//     this.stateIcons.forEach(function(i) {
-//       if (i.name === name) {
-//         i.addClass('element-active-state');
-//       } else {
-//         i.removeClass('element-active-state');
-//       }
-//     });
-//   }
-// 
-//   checkLinkedDescription(select) {
-//     var name = select.dataset.name;
-//     var option = select.options[select.selectedIndex];
-//     var description = this[name + 'Description'];
-//     var example = this[name + 'Example'];
-//     if (description && example) {
-//       description.html(option.dataset.description);
-//       example.html(option.dataset.example);
-//     }
-//   }
-// 
-//   setArea(area) {
-//     /*
-//     if (this.currentArea === area) return;
-//     this.areas.forEach(function(a) {
-//       var className = 'control-panel-' + a.name + '-active';
-//       if (a === area) {
-//         this.addClass(className);
-//         a.addClass('active-area');
-//       } else {
-//         this.removeClass(className);
-//         a.removeClass('active-area');
-//       }
-//     }, this);
-//     this.currentArea = area;
-//     if (area === this.elementArea) {
-//       this.defaultArea = this.elementArea;
-//     }
-//     if (area === this.settingsArea) {
-//       this.inputs[0].el.focus();
-//       // Forcing focus can make the scrolling go haywire,
-//       // so need to actively reset the scrolling here.
-//       this.resetScroll();
-//     } else {
-//       document.activeElement.blur();
-//     }
-//     */
-//   }
-// 
-//   /*
-//   toggleArea(area) {
-//     if (this.currentArea !== area) {
-//       this.setArea(area);
-//     } else {
-//       this.resetArea();
-//     }
-//   }
-// 
-//   clearSettings() {
-//     if (confirm('Really clear all settings?')) {
-//       this.settings.clear();
-//       this.inputs.forEach(this.setFormControl, this);
-//       this.setArea(this.defaultArea);
-//       this.checkSelectorUpdate();
-//     }
-//   }
-// 
-//   saveSettings() {
-//     this.setArea(this.defaultArea);
-//     this.checkSelectorUpdate();
-//   }
-// 
-//   checkSelectorUpdate() {
-//     if (this.selectorsChanged()) {
-//       window.currentElementManager.refresh();
-//       this.settings.update(Settings.INCLUDE_SELECTOR);
-//       this.settings.update(Settings.EXCLUDE_SELECTOR);
-//     }
-//   }
-//   */
-// 
-//   selectorsChanged() {
-//     return this.settings.hasChanged(Settings.INCLUDE_SELECTOR) || this.settings.hasChanged(Settings.EXCLUDE_SELECTOR);
-//   }
-// 
-//   /*
-//   resetArea(area) {
-//     this.setArea(this.defaultArea);
-//   }
-// 
-//   getStartArea() {
-//     if (this.settings.get(Settings.SHOW_GET)) {
-//       return this.quickStartArea;
-//     } else {
-//       return this.startArea;
-//     }
-//   }
-// 
-//   showElementArea() {
-//     this.setArea(this.elementArea);
-//   }
-// 
-//   skipStartArea() {
-//     this.settings.set(Settings.SKIP_QUICK_START, '1');
-//     this.defaultArea = this.getStartArea();
-//     this.resetArea();
-//   }
-//   */
-// 
-//   // TODO: clean this up
-//   delegateElementAction(action) {
-//     var args = Array.prototype.slice.call(arguments, 1);
-//     return function () {
-//       elementManager[action].apply(elementManager, args);
-//     }
-//   }
-// 
-//   deactivate() {
-//     if (!this.active) return;
-//     this.active = false;
-//     this.removeClass(ControlPanel.ACTIVE_CLASS);
-//     setTimeout(function() {
-//       this.hide();
-//     }.bind(this), ControlPanel.FADE_DELAY);
-//   }
-// 
-//   // --- Transform
-// 
-//   resetPosition() {
-//     this.position = this.defaultPostion;
-//     this.updatePosition();
-//   }
-// 
-//   setSelectorText(str) {
-//     var html;
-//     if (!str) {
-//       str = '[Inline Selector]';
-//       var className = EXTENSION_CLASS_PREFIX + 'inline-selector';
-//       html = '<span class="'+ className +'">' + str + '</span>';
-//     }
-//     this.elementHeader.html(html || str);
-//     this.elementHeader.el.title = str;
-//   }
-// 
-//   setElementDetails(el) {
-// 
-//     this.detailsLeft.html(el.box.cssLeft);
-//     this.detailsTop.html(el.box.cssTop);
-//     this.detailsWidth.html(el.box.cssWidth);
-//     this.detailsHeight.html(el.box.cssHeight);
-// 
-//     if (el.zIndex.isNull()) {
-//       this.detailsZIndex.hide();
-//       this.detailsComma2.hide();
-//     } else {
-//       this.detailsZIndex.html(el.zIndex);
-//       this.detailsZIndex.show(false);
-//       this.detailsComma2.show(false);
-//     }
-// 
-//     //var rotation = el.getRoundedRotation();
-//     if (el.transform.getRotation()) {
-//       this.detailsRotation.html(el.transform.getRotationString());
-//       this.detailsRotation.show(false);
-//       this.detailsDivider2.show(false);
-//     } else {
-//       this.detailsRotation.hide();
-//       this.detailsDivider2.hide();
-//     }
-// 
-//   }
-// 
-//   setMultipleText(str) {
-//     this.multipleElementHeader.html(str);
-//   }
-// 
-//   update() {
-//     var size = elementManager.getFocusedSize();
-//     if (size === 0) {
-//       this.setArea(this.quickStartArea);
-//       return;
-//     } else if (size === 1) {
-//       this.setSingle(elementManager.getFirstFocused());
-//     } else {
-//       this.setMultiple(elementManager.getAllFocused());
-//     }
-//     this.setState(nudgeManager.mode);
-//     this.showElementArea();
-//   }
-// 
-//   setSingle(el) {
-//     this.setSelectorText(el.getSelector());
-//     this.setElementDetails(el);
-//     this.singleElementArea.show();
-//     this.multipleElementArea.hide();
-//   }
-// 
-//   setMultiple(els) {
-//     this.setMultipleText(els.length + ' elements selected');
-//     this.singleElementArea.hide();
-//     this.multipleElementArea.show();
-//   }
-// 
-// 
-//   // --- Events
-// 
-//   onDragStart(evt) {
-//     this.lastPosition = this.position;
-//   }
-// 
-//   onDragMove(evt) {
-//     this.position = new Point(this.lastPosition.x + evt.dragOffset.x, this.lastPosition.y - evt.dragOffset.y);
-//     this.updatePosition();
-//   }
-// 
-//   // --- Compute
-// 
-//   getPosition() {
-//     var style = window.getComputedStyle(this.el);
-//     this.position = new Point(parseInt(style.left), parseInt(style.bottom));
-//     this.defaultPostion = this.position;
-//   }
-// 
-//   // --- Update
-// 
-//   updatePosition() {
-//     this.el.style.left   = this.position.x + 'px';
-//     this.el.style.bottom = this.position.y + 'px';
-//   }
-// 
-// }
-
-/*-------------------------] Control Panel Components [--------------------------*/
-
-/*
-class ControlPanelComponent extends Element {
-
-  static get KEY_ICON_REG() { return /:(.)/g }
-
-  constructor(parent, className) {
-    super(parent, 'div', className);
-  }
-
-  addText(str, className) {
-    var text = new Element(this.el, 'div', this.getClassName('text'));
-    text.html(str);
-    if (className) {
-      text.addClass(className);
-    }
-  }
-
-  addIcon(id) {
-    var icon = new Element(this.el, 'img', this.getClassName('icon'));
-    icon.el.src = chrome.extension.getURL('images/icons/' + id + '.svg');
-  }
-
-  addVisualElement(className) {
-    new Element(this.el, 'div', this.getClassName(className));
-  }
-
-  addTextWithKeyIcons(str, className) {
-    str = str.replace(ControlPanelComponent.KEY_ICON_REG, function(match, key) {
-      return `<span class="${EXTENSION_CLASS_PREFIX}control-panel-key-icon">${key}</span>`;
-    });
-    this.addText(str, className);
-  }
-
-  addLinkAction(str, className, actionName) {
-    var panel = this.getControlPanel();
-    var link = new Element(this.el, 'a', this.getClassName(className));
-    link.html(str);
-    link.addEventListener('click', function(evt) {
-      panel[actionName].call(panel);
-    });
-    //area.addLinkAction("Don't Show", 'skip', 'skipStartArea');
-//this.
-  }
-
-}
-*/
-
-/*
-class ControlPanelArea extends ControlPanelComponent {
-
-  constructor(panel, name) {
-    super(panel.el, 'control-panel-area');
-    this.panel = panel;
-    this.name  = name;
-  }
-
-  buildBlock(name, fn) {
-    var block = new ControlPanelBlock(this, name);
-    fn(block);
-
-    /*
-    area.buildBlock('mouse', function(block) {
-      block.addIcon('start-icon', ControlPanel.MOUSE_ICON);
-      block.addText('start-help-text', 'Use the mouse to drag, resize, and rotate elements.');
-      //new IconElement(area.el, ControlPanel.MOUSE_ICON, 'start-icon');
-      //new Element(area.el, 'div', 'start-help-text').html('Use the mouse to drag, resize, and rotate elements.');
-    });
-  }
-    */
-
-  /*
-  buildStartBlock(type, fn) {
-    var block = new Element(this.startArea.el, 'div', 'start-help');
-    fn.call(this, block);
-  }
-
-  buildHelpBlock(name, header) {
-    var block = new Element(this.helpArea.el, 'div', 'help-block '+ name +'-help-block');
-    if (header) {
-      new Element(block.el, 'h4', 'help-block-header').html(header);
-    }
-    return block;
-  }
-  getClassName(className) {
-    return `${this.name}-area-${className}`;
-  }
-
-  getControlPanel() {
-    return this.panel;
-  }
-
-}
-
-class ControlPanelBlock extends ControlPanelComponent {
-
-  constructor(area, name) {
-    super(area.el, area.getClassName(name));
-    this.area = area;
-  }
-
-  getClassName(className) {
-    return this.area.getClassName(className);
-  }
-
-  getControlPanel() {
-    return this.area.panel;
-  }
-
-}
-  */
-
 /*-------------------------] Form [--------------------------*/
 
 class Form extends BrowserEventTarget {
@@ -6596,6 +4348,8 @@ class Form extends BrowserEventTarget {
   }
 
 }
+
+/*-------------------------] Settings [--------------------------*/
 
 class Settings {
 
@@ -7142,16 +4896,6 @@ class Point {
     return Point.radToDeg(Math.atan2(this.y, this.x), convert);
   }
 
-/*
-  getRotated(deg) {
-    var rad = Point.degToRad(deg);
-
-
-  setAngle(deg) {
-    return Point.vector(deg, this.getLength());
-  }
-  */
-
   rotate(deg) {
     if (deg === 0) {
       return new Point(this.x, this.y);
@@ -7174,147 +4918,20 @@ class Point {
     return new Point(Math.round(this.x), Math.round(this.y));
   }
 
-/*
-  Point.vectorOLD(deg, len) {
-    var rad = Point.degToRad(deg);
-    return new Point(Math.cos(rad) * len, Math.sin(rad) * len);
-  }
-
-  getAngleOLD() {
-    return Point.radToDeg(Math.atan2(this.y, this.x));
-  }
-
-  setAngleOLD(deg) {
-    return Point.vectorOLD(deg, this.getLengthOLD());
-  }
-
-  getRotatedOLD(deg) {
-    return this.setAngleOLD(this.getAngleOLD() + deg);
-  }
-
-  getLengthOLD() {
-    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
-  }
-  */
-
 }
 
 /*-------------------------] Rectangle [--------------------------*/
 
-// TODO: can't this be merged with CSSBOX somehow?
-// TODO: remove rotation!
 class Rectangle {
 
   constructor(top, right, bottom, left) {
-    this.top      = top    || 0;
-    this.right    = right  || 0;
-    this.bottom   = bottom || 0;
-    this.left     = left   || 0;
-  }
-
-  getWidth(r) {
-    var w = this.right - this.left;
-    return r ? Math.round(w) : w;
-  }
-
-  getHeight(r) {
-    var h = this.bottom - this.top;
-    return r ? Math.round(h) : h;
-  }
-
-  setPosition(point) {
-    var offset = point.subtract(new Point(this.left, this.top));
-    this.left   += offset.x;
-    this.top    += offset.y;
-    this.bottom += offset.y;
-    this.right  += offset.x;
-  }
-
-  add(prop, amount) {
-    if (!prop) return;
-    amount = this.constrainProperty(prop, this[prop] + amount);
-    this[prop] = amount;
-  }
-
-  constrainProperty(prop, amount) {
-    switch(prop) {
-      case 'left':   return Math.min(amount, this.right - 1);
-      case 'right':  return Math.max(amount, this.left + 1);
-      case 'top':    return Math.min(amount, this.bottom - 1);
-      case 'bottom': return Math.max(amount, this.top + 1);
-    }
-  }
-
-  /*
-  getCenter() {
-    return new Point(this.left + (this.getWidth() / 2), this.top + (this.getHeight() / 2));
-  }
-
-  getRatio() {
-    return this.getWidth() / this.getHeight();
-  }
-
-  // The rotated position for a given un-rotated coordinate.
-  getPositionForCoords(coord) {
-    if (!this.rotation) {
-      return coord;
-    }
-    var center = this.getCenter();
-    return coord.subtract(center).rotate(this.rotation).add(center);
-  }
-
-  // The un-rotated coords for a given rotated position.
-  // TODO: consolidate this with CSSBox
-  getCoordsForPosition(position) {
-    if (!this.rotation) return position;
-    var center = this.getCenter();
-    return position.subtract(center).rotate(-this.rotation).add(center);
-  }
-  */
-
-  clone() {
-    return new Rectangle(this.top, this.right, this.bottom, this.left);
+    this.top    = top;
+    this.right  = right;
+    this.bottom = bottom;
+    this.left   = left;
   }
 
 }
-
-/*-------------------------] CSSPoint [--------------------------*/
-
-/*
-class CSSPoint {
-
-  constructor(cssX, cssY) {
-    this.cssX = cssX || new CSSValue(null);
-    this.cssY = cssY || new CSSValue(null);
-  }
-
-  /*
-  isNull() {
-    return this.cssLeft.isNull() && this.cssTop.isNull();
-  }
-
-  getPosition() {
-    return new Point(this.cssLeft.px, this.cssTop.px);
-  }
-
-  setPosition(p) {
-    this.cssLeft.px = p.x;
-    this.cssTop.px = p.y;
-  }
-
-  toString() {
-    return [this.cssLeft, this.cssTop].join(' ');
-  }
-  addOffset(x, y) {
-    return new CSSPoint(this.cssX.addOffset(x), this.cssY.addOffset(y));
-  }
-
-  clone() {
-    return new CSSPoint(this.cssX.clone(), this.cssY.clone());
-  }
-
-}
-  */
 
 /*-------------------------] CSSPositioningProperty [--------------------------*/
 
@@ -7394,93 +5011,6 @@ class CSSPositioningProperty {
   }
 
 }
-
-/*
-class CSSPosition {
-
-  static fromElement(el) {
-    return CSSPosition.fromMatcher(new CSSRuleMatcher(el));
-  }
-
-  static fromMatcher(matcher) {
-    var [cssH, hProp] = this.getAxisFromMatcher(matcher, 'left', 'right');
-    var [cssV, vProp] = this.getAxisFromMatcher(matcher, 'top', 'bottom');
-    return new CSSPosition(cssH, cssV, hProp, vProp);
-  }
-
-  static getAxisFromMatcher(matcher, prop1, prop2) {
-    var prop, val;
-    if (val = this.getPositioningValue(matcher, prop1)) {
-      return [val, prop1];
-    } else if (val = this.getPositioningValue(matcher, prop2)) {
-      return [val, prop2];
-    } else {
-      throw new Error('CSSPosition requires either a ' + prop1 + ' or ' + prop2 + ' property.');
-    }
-  }
-
-  static getPositioningValue(matcher, prop) {
-    var cssValue = matcher.getMatchedCSSValue(prop);
-    return cssValue.val === 'auto' ? null : cssValue;
-  }
-
-  constructor(cssH, cssV, hProp, vProp) {
-    this.cssH = cssH;
-    this.cssV = cssV;
-    this.hProp = hProp;
-    this.vProp = vProp;
-  }
-
-  addXY(x, y) {
-    this.cssH.px += this.getPixelValueForXY(x, 'h');
-    this.cssV.px += this.getPixelValueForXY(y, 'v');
-  }
-
-  hasInvertedAxis(axis) {
-    switch (axis) {
-      case 'h': return this.hProp === 'right';
-      case 'v': return this.vProp === 'bottom';
-    }
-  }
-
-  hasInvertedProperty(prop) {
-  }
-
-  isInvertedProperty() {
-  }
-
-  render(style) {
-    style[this.hProp] = this.cssH;
-    style[this.vProp] = this.cssV;
-  }
-
-  // --- Accessors
-
-  get h() {
-    return this.cssH.px;
-  }
-
-  get v() {
-    return this.cssV.px;
-  }
-
-  set h(px) {
-    this.cssH.px = px;
-  }
-
-  set v(px) {
-    this.cssV.px = px;
-  }
-
-  // --- Private
-
-  getPixelValueForXY(px, axis) {
-    return this.hasInvertedAxis(axis) ? -px : px;
-  }
-
-}
-*/
-
 
 /*-------------------------] CSSBox [--------------------------*/
 
@@ -8923,7 +6453,6 @@ class CSSZIndex {
 
 /*-------------------------] CSSBackgroundImage [--------------------------*/
 
-// TODO: MOVE
 class CSSBackgroundImage {
 
   static get SAME_DOMAIN_REG() { return new RegExp('^' + this.getOrigin().replace(/([/.])/g, '\\$1')); }
