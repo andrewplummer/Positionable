@@ -223,10 +223,11 @@ describe('DragTarget', function() {
     assert.isUndefined(target.lastDragEvent);
   });
 
-  it('should disable user selection while dragging', function() {
+  it('should disable user selection on mousedown and throughout drag', function() {
     setupAbsolute();
-    fireMouseDown(el, 50, 50);
     assert.equal(document.documentElement.style.userSelect, '');
+    fireMouseDown(el, 50, 50);
+    assert.equal(document.documentElement.style.userSelect, 'none');
     fireDocumentMouseMove(50, 100);
     assert.equal(document.documentElement.style.userSelect, 'none');
     fireDocumentMouseUp(50, 100);

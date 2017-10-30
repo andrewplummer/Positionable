@@ -862,6 +862,10 @@ class DragTarget extends BrowserEventTarget {
     this.setupDragIntentEvents();
   }
 
+  setDragThreshold(val) {
+    this.dragThreshold = val;
+  }
+
   setupCtrlKeyReset() {
     this.setupKeyEvents();
     this.resetsOnCtrlKey = true;
@@ -894,7 +898,6 @@ class DragTarget extends BrowserEventTarget {
 
   onDragStart() {
     this.ctrlDoubleClickTimer = null;
-    this.disableUserSelect();
   }
 
   onDragMove(evt)  {
@@ -943,12 +946,17 @@ class DragTarget extends BrowserEventTarget {
       clientY:  evt.clientY
     };
 
+    this.disableUserSelect();
     this.attachDocumentListeners();
     this.attachOptionalKeyListeners();
   }
 
   onMouseMove(evt) {
     this.lastMouseEvent = evt;
+
+    if (!this.canDrag(evt)) {
+      return;
+    }
 
     if (!this.dragging) {
       this.onDragStart(this.lastMouseEvent);
@@ -1052,6 +1060,21 @@ class DragTarget extends BrowserEventTarget {
       };
     }
   }
+
+  canDrag(evt) {
+    return this.dragging || this.hasPassedDragThreshold(evt);
+  }
+
+  hasPassedDragThreshold(evt) {
+    return !this.dragThreshold ||
+           (this.axisIsPastDragThreshold(evt.clientX, this.dragOrigin.clientX) &&
+            this.axisIsPastDragThreshold(evt.clientY, this.dragOrigin.clientY));
+  }
+
+  axisIsPastDragThreshold(pos, origin) {
+    return Math.abs(pos - origin) >= this.dragThreshold;
+  }
+
 
   // --- Drag Intents
 
@@ -1177,13 +1200,13 @@ class DragTarget extends BrowserEventTarget {
 
 class DraggableElement extends DragTarget {
 
-  //static get DRAGGABLE_CLASS()       { return 'draggable-element'; }
-  //static get DRAGGING_ACTIVE_CLASS() { return 'draggable-element--active'; }
+  static get DRAG_THRESHOLD() { return 5; }
 
   constructor(el, isFixed) {
     super(el);
-    this.setupPosition();
     this.isFixed = isFixed;
+    this.setupPosition();
+    this.setDragThreshold(DraggableElement.DRAG_THRESHOLD);
   }
 
   setupPosition() {

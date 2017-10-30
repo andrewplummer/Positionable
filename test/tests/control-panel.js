@@ -35,10 +35,16 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(panel.el.style.height, '');
   });
 
-  it('should be draggable', function() {
-    dragElement(panel.el, 20, 780, 400, 400);
-    assert.equal(panel.el.style.left, '400px');
-    assert.equal(panel.el.style.bottom, '400px');
+  it('should not be draggable before 5px', function() {
+    dragElement(panel.el, 20, 780, 24, 784);
+    assert.equal(panel.el.style.left, '');
+    assert.equal(panel.el.style.bottom, '');
+  });
+
+  it('should be draggable after 5px', function() {
+    dragElement(panel.el, 20, 780, 25, 775);
+    assert.equal(panel.el.style.left, '25px');
+    assert.equal(panel.el.style.bottom, '25px');
   });
 
   it('should not error when or ctrl key depressed', function() {
@@ -51,15 +57,15 @@ describe('ControlPanel', function(uiRoot) {
     assert.equal(panel.el.style.bottom, '400px');
   });
 
-  it('should be stay fixed while scrolling during drag', function() {
+  it('should stay fixed while scrolling during drag', function() {
 
     fireMouseDown(panel.el, 20, 780);
-    fireDocumentMouseMove(20, 580);
+    fireDocumentMouseMove(40, 580);
     whileFakeScrolled(500, () => {
       panel.onScroll();
     });
     fireDocumentMouseUp(20, 580);
-    assert.equal(panel.el.style.left, '20px');
+    assert.equal(panel.el.style.left, '40px');
     assert.equal(panel.el.style.bottom, '220px');
   });
 
