@@ -89,7 +89,7 @@ describe('Settings', function(uiRoot) {
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'styles.css');
     assert.equal(settings.get(Settings.TAB_STYLE),           'two');
     assert.equal(settings.get(Settings.OUTPUT_SELECTOR),     'auto');
-    assert.equal(settings.get(Settings.OUTPUT_GROUPING),     'auto');
+    assert.equal(settings.get(Settings.OUTPUT_GROUPING),     'none');
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR),    '');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR),    '');
     assert.equal(settings.get(Settings.OUTPUT_CHANGED_ONLY), false);
@@ -160,7 +160,7 @@ describe('Settings', function(uiRoot) {
     assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
     assert.equal(settings.get(Settings.TAB_STYLE), 'two');
     assert.equal(settings.get(Settings.OUTPUT_SELECTOR), 'auto');
-    assert.equal(settings.get(Settings.OUTPUT_GROUPING), 'auto');
+    assert.equal(settings.get(Settings.OUTPUT_GROUPING), 'none');
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
     assert.isFalse(settings.get(Settings.OUTPUT_CHANGED_ONLY));
@@ -339,7 +339,7 @@ describe('Settings', function(uiRoot) {
 
   it('should correctly set the grouping map control from stored data', function() {
     chrome.storage.sync.set({
-      [Settings.GROUPING_MAP]: { width: '$foobar' },
+      [Settings.GROUPING_MAP]: { width: '$foobar' }
     });
     setupSettings();
     assert.equal(uiRoot.getElementById('grouping-map').value, 'width: $foobar');

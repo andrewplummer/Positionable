@@ -42,11 +42,11 @@ describe('OutputManager', function(uiRoot) {
 
   function getMockGroupMap() {
     return {
-      top: "$mockTop",
-      left: "$mockLeft",
-      width: "$mockWidth",
-      height: "$mockHeight"
-    }
+      top: '$mockTop',
+      left: '$mockLeft',
+      width: '$mockWidth',
+      height: '$mockHeight'
+    };
   }
 
   function assertSimpleBoxSelector(styles, selector, expected) {

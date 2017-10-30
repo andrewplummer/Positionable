@@ -6,11 +6,9 @@
  *
  * ---------------------------- */
 
-// - TODO: style grouping area
 // - TODO: pro features?
 // - TODO: cleanup!!
 // - TODO: check that each class only knows about itself to as much a degree as possible
-// - TODO: clean these constants up by moving them into AppController
 // - TODO: todos!
 // - TODO: release!
 
@@ -2693,7 +2691,7 @@ class OutputManager {
       lastLine  = lines.pop();
 
       lines = lines.map(line => {
-        return this.getCommonDeclaration(line, commonStyles, groupingMap)
+        return this.getCommonDeclaration(line, commonStyles, groupingMap);
       });
       lines = lines.filter(l => l);
 
@@ -2762,7 +2760,7 @@ class OutputManager {
   }
 
   prependMappedVariableBlock(blocks, commonStyles, groupingMap) {
-    var lines, map;
+    var lines;
 
     lines = Object.keys(commonStyles);
     if (lines.length === 0) {
@@ -2791,7 +2789,7 @@ class OutputManager {
       val: val,
       prop: prop,
       whitespace: whitespace
-    }
+    };
   }
 
   getGroupedSelector(blocks) {
@@ -5121,8 +5119,8 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   static get SIZES() {
     return {
-      default: new Point(620, 400),
-      help:    new Point(650, 530)
+      default: new Point(660, 400),
+      help:    new Point(660, 530)
     };
   }
 

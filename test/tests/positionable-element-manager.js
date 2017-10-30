@@ -11,7 +11,7 @@ describe('PositionableElementManager', function() {
 
     // --- Element Events
 
-    onElementMouseDown(){}
+    onElementMouseDown() {}
 
     // --- Focus Events
 

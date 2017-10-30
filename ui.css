@@ -5,7 +5,7 @@ p {
   margin: 0;
 }
 
-h1,h2,h3,h4 {
+h1,h2,h3,h4,h5,h6 {
   margin: 0;
   font-weight: 300;
   font-family: "Open Sans", sans-serif;
@@ -17,6 +17,23 @@ label {
 
 input, select {
   vertical-align: sub;
+}
+
+fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+textarea {
+  display: block;
+  -webkit-font-smoothing: antialiased;
+  padding: 2px 5px;
+}
+
+code {
+  display: block;
+  white-space: pre;
 }
 
 /*---------------------------] Animations [-----------------------*/
@@ -453,13 +470,12 @@ input, select {
 /*---------------------------] Settings Area Form [-----------------------*/
 
 .settings-field {
-  border: none;
   color: rgba(0,0,0,0.7);
-  margin: 0;
   padding: 4px 0px;
 }
 
-.settings-field--invalid {
+.settings-field--invalid,
+.settings-field--invalid textarea {
   color: #d82323;
 }
 
@@ -489,20 +505,17 @@ input, select {
   color: rgba(0,0,0,0.5);
 }
 
-.settings-area-option {
-  font-size: 12px;
-}
-
-.output-selector-description {
+.linked-select-description {
   margin-top: .5em;
   font-size: 14px;
 }
 
-.output-selector-example {
-  margin-top: .5em;
-  font-family: Courier, monospace;
-  font-size: 14px;
-  color: rgba(0,0,0,0.6);
+.code-line {
+  margin-top: 5px;
+}
+
+.code-block {
+  margin: 5px 0 13px 0;
 }
 
 .snap-control {
@@ -515,6 +528,16 @@ input, select {
 .snap-separator {
   color: rgba(0,0,0,.5);
   vertical-align: sub;
+}
+
+.grouping-map {
+  border-color: #ccc;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.grouping-map::placeholder {
+  color: #999;
 }
 
 .settings-save {
@@ -544,7 +567,7 @@ input, select {
 
 .help-area-block--keyboard {
   top: 0;
-  right: 0;
+  right: 15px;
 }
 
 .help-area-block--commands {

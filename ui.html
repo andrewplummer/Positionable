@@ -165,38 +165,38 @@
                   <option value="tag">Tag</option>
                   <option value="tag-nth">Tag:nth-child</option>
                 </select>
-                <div class="output-selector-description">
+                <div class="linked-select-description">
                   <div class="select-linked-area" data-linked-option="auto">
                     <p>Element id or first class will be used.</p>
-                    <code>#id | .first { ... }</code>
+                    <code class="code-line">#id | .first { ... }</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="none">
                     <p>No selector used. Styles will be inline.</p>
-                    <code>width: 200px; height: 200px;...</code>
+                    <code class="code-line">width: 200px; height: 200px; ...</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="id">
                     <p>Element id will be used.</p>
-                    <code>#id { ... }</code>
+                    <code class="code-line">#id { ... }</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="first">
                     <p>First class name found will be used.</p>
-                    <code>.first { ... }</code>
+                    <code class="code-line">.first { ... }</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="longest">
                     <p>Longest class name found will be used.</p>
-                    <code>.long-class-name { ... }</code>
+                    <code class="code-line">.long-class-name { ... }</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="all">
                     <p>All class names will be output together.</p>
-                    <code>.one.two.three { ... }</code>
+                    <code class="code-line">.one.two.three { ... }</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="tag">
                     <p>Only the tag name will be used.</p>
-                    <code>div { ... }</code>
+                    <code class="code-line">div { ... }</code>
                   </div>
                   <div class="select-linked-area" data-linked-option="tag-nth">
                     <p>Tag name + nth-child selector will be used.</p>
-                    <code>li:nth-child(3) { ... }</code>
+                    <code class="code-line">li:nth-child(3) { ... }</code>
                   </div>
                 </div>
               </div>
@@ -233,32 +233,46 @@
               </div>
               <div class="settings-control">
                 <select id="output-grouping">
-                  <option value="auto" selected>Auto</option>
-                  <option value="remove">Remove</option>
-                  <option value="none">None</option>
+                  <option value="none" selected>None</option>
+                  <option value="auto">Auto</option>
                   <option value="map">Map</option>
+                  <option value="remove">Remove</option>
                 </select>
-                <!-- TODO: change me! -->
-                <div class="output-selector-description">
-                  <div class="select-linked-area" data-linked-option="auto">
-                    <p>AUTO!</p>
-                    <code>...</code>
-                  </div>
+                <div class="linked-select-description">
                   <div class="select-linked-area" data-linked-option="none">
-                    <p>NONE!</p>
-                    <code>...</code>
+                    <p>Common styles will not be grouped.</p>
+                    <div class="code-block">
+                      <code>.one { width: 100px; top:  100px; }</code>
+                      <code>.two { width: 100px; left: 100px; }</code>
+                    </div>
                   </div>
-                  <div class="select-linked-area" data-linked-option="remove">
-                    <p>REMOVE!</p>
-                    <code>...</code>
+                  <div class="select-linked-area" data-linked-option="auto">
+                    <p>Common styles will be grouped by either the longest common class or all selectors together.</p>
+                    <div class="code-block">
+                      <code>.one, .two { width: 100px; }</code>
+                      <code>.one { top:  100px; }</code>
+                      <code>.two { left: 100px; }</code>
+                    </div>
                   </div>
                   <div class="select-linked-area" data-linked-option="map">
-                    <p>MAP!</p>
-                    <code>...</code>
-                    <fieldset name="grouping-map-field">
-                      <label for="grouping-map">Map</label>
-                      <textarea id="grouping-map" rows="8" cols="40"></textarea>
+                    <p>Common styles will be mapped to variables defined in the field below.</p>
+                    <div class="code-block">
+                      <code>$width: 100px;</code>
+                      <code>.one { width: $width; top:  100px; }</code>
+                      <code>.two { width: $width; left: 100px; }</code>
+                    </div>
+                    <fieldset name="grouping-map-field" class="grouping-map-field">
+                      <textarea rows="4" cols="30"
+                                id="grouping-map" class="grouping-map"
+                                placeholder="width: $width;&#10;height: $height;&#10;..."></textarea>
                     </fieldset>
+                  </div>
+                  <div class="select-linked-area" data-linked-option="remove">
+                    <p>Common styles will be removed.</p>
+                    <div class="code-block">
+                      <code>.one { top:  100px; }</code>
+                      <code>.two { left: 100px; }</code>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -309,21 +323,21 @@
           </div>
           <div class="help-area-item">
             <div class="help-area-graphic">
-              <span class="key-icon key-icon--large">b</span>
+              <span class="key-icon key-icon--large">m</span>
             </div>
-            <p class="help-area-text">Background position nudge mode.</p>
+            <p class="help-area-text">Move nudge mode.</p>
           </div>
           <div class="help-area-item">
             <div class="help-area-graphic">
               <span class="key-icon key-icon--large">s</span>
             </div>
-            <p class="help-area-text">Size nudge mode.</p>
+            <p class="help-area-text">Resize nudge mode.</p>
           </div>
           <div class="help-area-item">
             <div class="help-area-graphic">
-              <span class="key-icon key-icon--large">m</span>
+              <span class="key-icon key-icon--large">b</span>
             </div>
-            <p class="help-area-text">Move (position) nudge mode.</p>
+            <p class="help-area-text">Background position nudge mode.</p>
           </div>
           <div class="help-area-item">
             <div class="help-area-graphic">
@@ -447,9 +461,9 @@
     <div class="getting-started-block getting-started-block--keyboard">
       <img class="getting-started-image" src="chrome-extension://__MSG_@@extension_id__/images/icons/keyboard.svg">
       <p>Arrow keys nudge elements.<br>
-        <span class="key-icon">b</span>
-        <span class="key-icon">s</span>
         <span class="key-icon">m</span>
+        <span class="key-icon">s</span>
+        <span class="key-icon">b</span>
         change nudge modes.</p>
     </div>
 
