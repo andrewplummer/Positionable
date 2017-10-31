@@ -3136,7 +3136,7 @@ class ControlPanel extends DraggableElement {
     } else {
       this.showSettingsArea();
     }
-    this.listener.onSettingsClick();
+    this.listener.onShowSettingsClick();
   }
 
   // --- Rendering
@@ -3320,11 +3320,13 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   setBasicMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_BASIC_CLASS);
     this.setSize(this.sizes.default);
+    this.listener.onBasicSettingsClick();
   }
 
   setAdvancedMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
+    this.listener.onAdvancedSettingsClick();
   }
 
 }
@@ -3634,16 +3636,22 @@ class ControlPanelDefaultArea extends ControlPanelArea {
 
 }
 
-/*-------------------------] Form [--------------------------*/
+/*-------------------------] SettingsForm [--------------------------*/
 
-class Form extends BrowserEventTarget {
+class SettingsForm extends BrowserEventTarget {
 
+  // Input Types
   static get TEXT()            { return 'text';       }
   static get NUMBER()          { return 'number';     }
   static get CHECKBOX()        { return 'checkbox';   }
   static get TEXTAREA()        { return 'textarea';   }
   static get SELECT_ONE()      { return 'select-one'; }
-  static get INVALID_CLASS()   { return 'settings-field--invalid';    }
+
+  // Classes
+  static get INVALID_CLASS()   { return 'settings-field--invalid'; }
+  static get ADVANCED_CLASS()  { return 'settings-form--advanced'; }
+
+  // Messages
   static get CONFIRM_MESSAGE() { return 'Really clear all settings?'; }
 
   constructor(el, listener) {
@@ -3660,6 +3668,14 @@ class Form extends BrowserEventTarget {
     this.validState = true;
     this.validations = [];
     this.transforms  = {};
+  }
+
+  setBasic() {
+    this.removeClass(SettingsForm.ADVANCED_CLASS);
+  }
+
+  setAdvanced() {
+    this.addClass(SettingsForm.ADVANCED_CLASS);
   }
 
   addTransform(id, parse, stringify) {
@@ -3681,9 +3697,9 @@ class Form extends BrowserEventTarget {
   getData() {
     var data = {};
     this.forEachControl(control => {
-      if (control.type === Form.CHECKBOX) {
+      if (control.type === SettingsForm.CHECKBOX) {
         data[control.id] = control.checked;
-      } else if (control.type === Form.NUMBER) {
+      } else if (control.type === SettingsForm.NUMBER) {
         data[control.id] = parseInt(control.value) || 0;
       } else {
         data[control.id] = this.getTransformedControlValue(control);
@@ -3698,19 +3714,19 @@ class Form extends BrowserEventTarget {
 
       if (val) {
         switch (control.type) {
-          case Form.SELECT_ONE:
+          case SettingsForm.SELECT_ONE:
             for (var i = 0, option; option = control.options[i]; i++) {
               if (option.value === val) {
                 option.selected = true;
               }
             }
             break;
-          case Form.TEXT:
-          case Form.NUMBER:
-          case Form.TEXTAREA:
+          case SettingsForm.TEXT:
+          case SettingsForm.NUMBER:
+          case SettingsForm.TEXTAREA:
             control.value = val;
             break;
-          case Form.CHECKBOX:
+          case SettingsForm.CHECKBOX:
             control.checked = !!val;
             break;
         }
@@ -3735,7 +3751,7 @@ class Form extends BrowserEventTarget {
   }
 
   onReset(evt) {
-    if (confirm(Form.CONFIRM_MESSAGE)) {
+    if (confirm(SettingsForm.CONFIRM_MESSAGE)) {
       this.listener.onFormReset(evt, this);
       this.blur();
     } else {
@@ -3774,7 +3790,7 @@ class Form extends BrowserEventTarget {
     this.forEachValidation((control, field, validator) => {
       if (!validator(control.value)) {
         validState = false;
-        field.classList.add(Form.INVALID_CLASS);
+        field.classList.add(SettingsForm.INVALID_CLASS);
       }
     });
     this.validState = validState;
@@ -3782,7 +3798,7 @@ class Form extends BrowserEventTarget {
 
   clearInvalid() {
     this.forEachValidation((control, field) => {
-      field.classList.remove(Form.INVALID_CLASS);
+      field.classList.remove(SettingsForm.INVALID_CLASS);
     });
   }
 
@@ -3859,8 +3875,9 @@ class Settings {
   static get GROUPING_MAP_CONTROLS()  { return [Settings.GROUPING_MAP]; }
   static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
 
+
   constructor(listener, root) {
-    this.form = new Form(root.getElementById('settings-form'), this);
+    this.form = new SettingsForm(root.getElementById('settings-form'), this);
     this.listener = listener;
     this.setup(root);
   }
@@ -3876,6 +3893,14 @@ class Settings {
 
   focusForm() {
     this.form.focus();
+  }
+
+  setBasic() {
+    this.form.setBasic();
+  }
+
+  setAdvanced() {
+    this.form.setAdvanced();
   }
 
   // --- Events
@@ -6178,11 +6203,16 @@ class AppController {
     }).join(' ');
   }
 
-  onSettingsClick() {
+  onShowSettingsClick() {
     this.settings.focusForm();
   }
 
+  onBasicSettingsClick() {
+    this.settings.setBasic();
+  }
+
   onAdvancedSettingsClick() {
+    this.settings.setAdvanced();
   }
 
   onQuickstartSkip() {

@@ -6,8 +6,11 @@ describe('ControlPanel', function(uiRoot) {
   class Listener {
 
     onControlPanelDragStart() {}
-    onControlPanelDragStop() {}
-    onSettingsClick() {}
+    onControlPanelDragStop()  {}
+
+    onShowSettingsClick()     {}
+    onBasicSettingsClick()    {}
+    onAdvancedSettingsClick() {}
 
   }
 
