@@ -7,6 +7,7 @@
  * ---------------------------- */
 
 // - TODO: pro features?
+// - TODO: better description
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: cleanup!!
 // - TODO: todos!
