@@ -3332,7 +3332,7 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   }
 
   onMakePaymentClick() {
-    this.listener.onPaymentInitiated();
+    this.listener.onPaymentButtonClick();
   }
 
 }
@@ -6186,22 +6186,41 @@ class CSSBackgroundImage {
 
 class PaymentManager {
 
+  // API Constants
   static get SKU()               { return 'positionable_pro_test'; }
   static get ENVIRONMENT()       { return 'prod';                  }
   static get ACTIVE_STATE()      { return 'ACTIVE';                }
   static get PURCHASE_CANCELED() { return 'PURCHASE_CANCELED';     }
 
+  // User Statuses
+  static get USER_STATUS_NORMAL() { return 'normal'; }
+  static get USER_STATUS_PRO()    { return 'pro';    }
+
+  // Storage Keys
+  static get STORAGE_KEY_USER_STATUS()     { return 'user-status';      }
+  static get STORAGE_KEY_ACTIVATION_DATE() { return 'activation-date';  }
+
+  // Free trial period (60 days)
+  static get FREE_TRIAL_PERIOD() { return 60 * 24 * 60 * 60 * 1000; }
+
   constructor(listener) {
     this.listener = listener;
+
+    this.userStatus     = null;
+    this.activationDate = null;
+
     this.setup();
+    this.fetchStoredUserData();
   }
 
-  initialize(paid) {
-    if (paid == undefined) {
-      this.checkPayment();
-    } else {
-      this.paid = paid;
-    }
+  isProUser() {
+    return this.userStatus === PaymentManager.USER_STATUS_PRO;
+  }
+
+  freeTimeRemaining() {
+    var period  = PaymentManager.FREE_TRIAL_PERIOD;
+    var elapsed = Date.now() - this.activationDate;
+    return Math.max(0, period - elapsed);
   }
 
   initiatePayment() {
@@ -6209,12 +6228,70 @@ class PaymentManager {
   }
 
 
+  // === Protected ===
+
+
+  onStorageDataFetched(data) {
+    this.checkStoredActivationDate(data);
+    this.checkStoredUserStatus(data);
+
+    if (!this.userStatus) {
+      // If there is no stored user status, then go
+      // to the payments API to check for a payment.
+      this.checkPayment();
+    }
+  }
+
+  onStorageDataSaved() {}
+
+
   // === Private ===
 
 
   setup() {
+    this.storageManager      = new ChromeStorageManager(this);
     this.buyOptions          = this.getBuyOptions();
     this.getPurchasesOptions = this.getGetPurchasesOptions();
+  }
+
+  // --- Storage
+
+  fetchStoredUserData() {
+    this.storageManager.fetch([
+      PaymentManager.STORAGE_KEY_USER_STATUS,
+      PaymentManager.STORAGE_KEY_ACTIVATION_DATE
+    ]);
+  }
+
+  saveUserStatus() {
+    var storageKey = PaymentManager.STORAGE_KEY_USER_STATUS;
+    this.storageManager.save(storageKey, this.userStatus);
+  }
+
+  checkStoredUserStatus(data) {
+    var userStatus = data[PaymentManager.STORAGE_KEY_USER_STATUS];
+    if (userStatus) {
+      this.resolveUserStatus(userStatus);
+    }
+  }
+
+  checkStoredActivationDate(data) {
+    var storageKey, activationDate;
+
+    storageKey     = PaymentManager.STORAGE_KEY_ACTIVATION_DATE;
+    activationDate = data[storageKey];
+
+    if (!activationDate) {
+      activationDate = Date.now();
+      this.storageManager.save(storageKey, activationDate);
+    }
+
+    this.activationDate = activationDate;
+  }
+
+  resolveUserStatus(userStatus) {
+    this.userStatus = userStatus;
+    this.listener.onUserStatusUpdated();
   }
 
   // --- Checking Payment
@@ -6224,19 +6301,23 @@ class PaymentManager {
   }
 
   onGetPurchasesSuccess(data) {
-    this.paid = this.hasActivePurchase(data);
-    this.listener.onPaymentStatusUpdated(this.paid);
+    var userStatus = this.getUserStatusFromPurchaseData(data);
+    this.resolveUserStatus(userStatus);
+    this.saveUserStatus();
   }
 
   onGetPurchasesFailure(data) {
     console.error('Could not retreive purchases: ' + data.response.errorType);
   }
 
-  hasActivePurchase(data) {
-    return data.response.details.some(d => {
-      return d.sku === PaymentManager.SKU &&
+  getUserStatusFromPurchaseData(data) {
+    var activePayment = data.response.details.some(d => {
+      return d.sku   === PaymentManager.SKU &&
              d.state === PaymentManager.ACTIVE_STATE;
     });
+    return activePayment ?
+      PaymentManager.USER_STATUS_PRO :
+      PaymentManager.USER_STATUS_NORMAL;
   }
 
   // --- Making Payment
@@ -6246,8 +6327,8 @@ class PaymentManager {
   }
 
   onBuySuccess() {
-    this.paid = true;
-    this.listener.onPaymentStatusUpdated(this.paid);
+    this.resolveUserStatus(PaymentManager.USER_STATUS_PRO);
+    this.saveUserStatus();
   }
 
   onBuyFailure(data) {
@@ -6365,7 +6446,7 @@ class AppController {
     }
   }
 
-  onPaymentStatusUpdated(paid) {
+  onUserStatusUpdated(userStatus) {
   }
 
   getStylesForFocusedElements() {
@@ -6391,7 +6472,7 @@ class AppController {
     this.renderActiveControlPanel();
   }
 
-  onPaymentInitiated() {
+  onPaymentButtonClick() {
     this.paymentManager.initiatePayment();
   }
 
@@ -6406,8 +6487,6 @@ class AppController {
   }
 
   onSettingsInitialized() {
-    this.paymentManager.initialize(
-      this.settings.get(Settings.IS_PRO_USER));
     this.elementManager.setSnap(
       this.settings.get(Settings.SNAP_X),
       this.settings.get(Settings.SNAP_Y)
