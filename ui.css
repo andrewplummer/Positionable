@@ -453,7 +453,7 @@ code {
   transition: opacity 200ms linear;
 }
 
-.settings-form--advanced .settings-form-page-container {
+.settings-form--advanced-visible .settings-form-page-container {
   transform: translateX(-50%);
 }
 
@@ -465,6 +465,10 @@ code {
 .settings-form-page--basic,
 .settings-area--advanced .settings-form-page--advanced {
   opacity: 1;
+}
+
+.settings-form--advanced-disabled .settings-form-page--advanced fieldset {
+  opacity: .6;
 }
 
 /*---------------------------] Settings Area Form [-----------------------*/
@@ -729,6 +733,47 @@ code {
   margin-top: 4px;
 }
 
+
+/*---------------------------] Upgrade Area [-----------------------*/
+
+.upgrade-prompt {
+  position: relative;
+  background: #f9ece0;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px 12px;
+  color: rgba(0,0,0,.5);
+  margin: -12px 0 5px 0;
+  padding-right: 7em;
+}
+
+.upgrade-prompt--trial-expired {
+  background: #f2f2f2;
+}
+
+.upgrade-button {
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  margin-top: -.75em;
+  color: #6da1bb;
+  cursor: pointer;
+}
+
+.upgrade-prompt--pro-user {
+  display: none;
+}
+
+.upgrade-trial-active,
+.upgrade-trial-expired {
+  display: none;
+}
+
+.upgrade-prompt--trial-active .upgrade-trial-active,
+.upgrade-prompt--trial-expired .upgrade-trial-expired {
+  display: inline;
+}
 
 /*---------------------------] Key Icon [-----------------------*/
 

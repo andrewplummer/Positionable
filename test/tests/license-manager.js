@@ -55,11 +55,11 @@ describe('LicenseManager', function(uiRoot) {
   class Listener {
 
     constructor() {
-      this.userStatusUpdatedEvents = 0;
+      this.licenseUpdatedEvents = 0;
     }
 
-    onUserStatusUpdated() {
-      this.userStatusUpdatedEvents += 1;
+    onLicenseUpdated() {
+      this.licenseUpdatedEvents += 1;
     }
 
   }
@@ -111,16 +111,16 @@ describe('LicenseManager', function(uiRoot) {
     googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_UNPAID_USER_RESPONSE);
     setupLicenseManager();
     assertProUser(false);
-    assertDaysRemaining(60);
-    assert.equal(listener.userStatusUpdatedEvents, 1);
+    assertDaysRemaining(30);
+    assert.equal(listener.licenseUpdatedEvents, 1);
   });
 
   it('should correctly identify a pro user on init', function() {
     googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_PAID_USER_RESPONSE);
     setupLicenseManager();
     assertProUser(true);
-    assertDaysRemaining(60);
-    assert.equal(listener.userStatusUpdatedEvents, 1);
+    assertDaysRemaining(30);
+    assert.equal(listener.licenseUpdatedEvents, 1);
   });
 
   it('should set storage after checking a fresh user on init', function() {
@@ -134,7 +134,7 @@ describe('LicenseManager', function(uiRoot) {
     setStorageUserStatus(NORMAL_USER);
     setupLicenseManager();
     assertProUser(false);
-    assertDaysRemaining(60);
+    assertDaysRemaining(30);
   });
 
   it('should set storage after checking a pro user on init', function() {
@@ -148,14 +148,14 @@ describe('LicenseManager', function(uiRoot) {
     setStorageUserStatus(PRO_USER);
     setupLicenseManager();
     assertProUser(true);
-    assertDaysRemaining(60);
+    assertDaysRemaining(30);
   });
 
   it('should identify a normal user whose time is running out', function() {
     setStorageUserStatus(NORMAL_USER);
     setStorageActivationDate(Date.now() - days(24));
     setupLicenseManager();
-    assertDaysRemaining(36);
+    assertDaysRemaining(6);
   });
 
   it('should not allow days remaining to go negative', function() {
@@ -168,12 +168,12 @@ describe('LicenseManager', function(uiRoot) {
   it('should not fire events on init when getPurchases API fails', function() {
     consoleMock.apply();
     setupLicenseManager();
-    assert.equal(listener.userStatusUpdatedEvents, 0);
+    assert.equal(listener.licenseUpdatedEvents, 0);
     assert.equal(consoleMock.getErrorCount(), 1);
     consoleMock.release();
   });
 
-  // --- Making Payment
+  // --- Making a purchase
 
   it('should not fire events on init when buy API fails', function() {
     consoleMock.apply();
@@ -182,7 +182,7 @@ describe('LicenseManager', function(uiRoot) {
 
     manager.purchase();
 
-    assert.equal(listener.userStatusUpdatedEvents, 1);
+    assert.equal(listener.licenseUpdatedEvents, 1);
     assert.equal(consoleMock.getErrorCount(), 1);
     consoleMock.release();
   });
@@ -194,7 +194,7 @@ describe('LicenseManager', function(uiRoot) {
 
     manager.purchase();
 
-    assert.equal(listener.userStatusUpdatedEvents, 2);
+    assert.equal(listener.licenseUpdatedEvents, 2);
     assertProUser(true);
   });
 
@@ -206,7 +206,7 @@ describe('LicenseManager', function(uiRoot) {
 
     manager.purchase();
 
-    assert.equal(listener.userStatusUpdatedEvents, 1);
+    assert.equal(listener.licenseUpdatedEvents, 1);
     assert.equal(consoleMock.getErrorCount(), 0);
     consoleMock.release();
   });

@@ -24,6 +24,10 @@ describe('ControlPanel', function(uiRoot) {
     panel.el.style.bottom = '';
   });
 
+  function getPanelElement(selector) {
+    return getUiElement(document.documentElement, selector);
+  }
+
   function getMockElements(count) {
     // The control panel is only checking the count of the array and making an
     // association on the index, so we can just mock these with null.
@@ -36,24 +40,31 @@ describe('ControlPanel', function(uiRoot) {
     el.style.height = '';
   }
 
-  function assertPanelActive(name) {
-    var el = uiRoot.getElementById(name + '-area');
-    assert.isTrue(el.classList.contains('control-panel-area--active'));
+  function assertPanelElementClass(selector, className, expected) {
+    assert.equal(getPanelElement(selector).classList.contains(className), expected !== false);
+  }
+
+  function assertPanelElementText(selector, expected) {
+    assert.equal(getPanelElement(selector).textContent, expected);
+  }
+
+  function assertAreaActive(name) {
+    assertPanelElementClass('#' + name + '-area', 'control-panel-area--active');
   }
 
   // --- Helpers
 
   it('should show all areas', function() {
     panel.showDefaultArea();
-    assertPanelActive('default');
+    assertAreaActive('default');
     panel.showElementArea();
-    assertPanelActive('element');
+    assertAreaActive('element');
     panel.showMultipleArea();
-    assertPanelActive('multiple');
+    assertAreaActive('multiple');
     panel.showSettingsArea();
-    assertPanelActive('settings');
+    assertAreaActive('settings');
     panel.showQuickstartArea();
-    assertPanelActive('quickstart');
+    assertAreaActive('quickstart');
     resetPanelDimensions();
   });
 
@@ -105,13 +116,12 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   it('should toggle settings when button clicked', function() {
-    var area   = getUiElement(document.documentElement, '#settings-area');
-    var button = getUiElement(document.documentElement, '#control-panel-settings-button');
+    var button = getPanelElement('#control-panel-settings-button');
     panel.showDefaultArea();
     clickElement(button);
-    assert.isTrue(area.classList.contains('control-panel-area--active'));
+    assertAreaActive('settings');
     clickElement(button);
-    assert.isFalse(area.classList.contains('control-panel-area--active'));
+    assertAreaActive('default');
   });
 
   // --- Rendering Element Area
@@ -123,15 +133,15 @@ describe('ControlPanel', function(uiRoot) {
     panel.renderElementDimensions('100px, 100px');
     panel.renderElementZIndex('5');
     panel.renderElementTransform('45deg');
-    assert.equal(getUiElement(document.documentElement, '#element-selector').textContent, '.foo');
-    assert.equal(getUiElement(document.documentElement, '#element-position').textContent, '50px, 50px');
-    assert.equal(getUiElement(document.documentElement, '#element-dimensions').textContent, '100px, 100px');
-    assert.equal(getUiElement(document.documentElement, '#element-zindex').textContent, '5z');
-    assert.equal(getUiElement(document.documentElement, '#element-transform').textContent, '45deg');
+    assertPanelElementText('#element-selector',   '.foo');
+    assertPanelElementText('#element-position',   '50px, 50px');
+    assertPanelElementText('#element-dimensions', '100px, 100px');
+    assertPanelElementText('#element-zindex',     '5z');
+    assertPanelElementText('#element-transform',  '45deg');
   });
 
   it('should not render zIndex when empty empty fields', function() {
-    var zIndexEl = getUiElement(document.documentElement, '#element-zindex');
+    var zIndexEl = getPanelElement('#element-zindex');
     panel.showElementArea();
 
     panel.renderElementZIndex('');
@@ -144,26 +154,20 @@ describe('ControlPanel', function(uiRoot) {
   });
 
   it('should deactivate transform when empty', function() {
-    var areaEl = getUiElement(document.documentElement, '#element-area');
-    var transformEl = getUiElement(document.documentElement, '#element-transform');
-
     panel.showElementArea();
     panel.renderElementTransform('');
-    assert.isFalse(areaEl.classList.contains(ControlPanelElementArea.TRANSFORM_CLASS));
+    assertPanelElementClass('#element-area', 'element-area--transform-active', false);
 
     panel.renderElementTransform('50deg');
-    assert.equal(transformEl.textContent, '50deg');
-    assert.isTrue(areaEl.classList.contains(ControlPanelElementArea.TRANSFORM_CLASS));
+    assertPanelElementText('#element-transform', '50deg');
+    assertPanelElementClass('#element-area', 'element-area--transform-active');
   });
 
   it('should render background position and hide when not active', function() {
-    var areaEl = getUiElement(document.documentElement, '#element-area');
-    var className = ControlPanelElementArea.BACKGROUND_CLASS;
-
     panel.showElementArea();
     panel.renderElementBackgroundPosition('20px 40px');
-    assert.equal(getUiElement(document.documentElement, '#element-background-position').textContent, '20px 40px');
-    assert.isTrue(areaEl.classList.contains(className));
+    assertPanelElementText('#element-background-position', '20px 40px');
+    assertPanelElementClass('#element-area', 'element-area--background-active');
   });
 
   // --- Rendering Nudge Modes
@@ -171,17 +175,17 @@ describe('ControlPanel', function(uiRoot) {
   it('should render mode area', function() {
     panel.showElementArea();
     panel.setNudgeMode('position');
-    assert.equal(getUiElement(document.documentElement, '#mode-position').style.display, 'block');
+    assert.equal(getPanelElement('#mode-position').style.display, 'block');
     panel.setNudgeMode('background');
-    assert.equal(getUiElement(document.documentElement, '#mode-position').style.display, 'none');
-    assert.equal(getUiElement(document.documentElement, '#mode-background').style.display, 'block');
+    assert.equal(getPanelElement('#mode-position').style.display, 'none');
+    assert.equal(getPanelElement('#mode-background').style.display, 'block');
   });
 
   it('should render mode in multiple area', function() {
     panel.showMultipleArea();
-    assert.equal(getUiElement(document.documentElement, '#mode-background').style.display, 'block');
+    assert.equal(getPanelElement('#mode-background').style.display, 'block');
     panel.setNudgeMode('position');
-    var elementAreaPosition = getUiElement(document.documentElement, '#mode-position');
+    var elementAreaPosition = getPanelElement('#mode-position');
     var display = window.getComputedStyle(elementAreaPosition).display;
     assert.equal(display, 'block');
   });
@@ -191,15 +195,44 @@ describe('ControlPanel', function(uiRoot) {
   it('should render multiple selected', function() {
     var elements = getMockElements(5);
     panel.renderMultipleSelected(elements);
-    assert.equal(getUiElement(document.documentElement, '#multiple-header').textContent, '5 elements selected');
-    assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, '');
-    assert.equal(getUiElement(document.documentElement, '#highlight-buttons').children.length, 5);
+    assertPanelElementText('#multiple-header', '5 elements selected');
+    assert.equal(getPanelElement('#distribute-buttons').style.display, '');
+    assert.equal(getPanelElement('#highlight-buttons').children.length, 5);
   });
 
   it('should not render distribute buttons with only 2 elements selected', function() {
     var elements = getMockElements(2);
     panel.renderMultipleSelected(elements);
-    assert.equal(getUiElement(document.documentElement, '#distribute-buttons').style.display, 'none');
+    assert.equal(getPanelElement('#distribute-buttons').style.display, 'none');
+  });
+
+  // --- Rendering Upgrade Prompt
+
+  it('should render the upgrade form for a pro user', function() {
+    panel.renderUpgradeStatus(true, 24 * 60 * 60 * 1000);
+    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--pro-user');
+  });
+
+  it('should render the upgrade form for a user on free trial', function() {
+    panel.renderUpgradeStatus(false, 10 * 24 * 60 * 60 * 1000);
+    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--trial-active');
+    assertPanelElementText('#upgrade-time-remaining', '10 days');
+  });
+
+  it('should render various free trial times', function() {
+    panel.renderUpgradeStatus(false, 1 * 24 * 60 * 60 * 1000);
+    assertPanelElementText('#upgrade-time-remaining', '1 day');
+    panel.renderUpgradeStatus(false, 23 * 60 * 60 * 1000);
+    assertPanelElementText('#upgrade-time-remaining', '23 hours');
+    panel.renderUpgradeStatus(false, 60 * 60 * 1000);
+    assertPanelElementText('#upgrade-time-remaining', '1 hour');
+    panel.renderUpgradeStatus(false, 45 * 1000);
+    assertPanelElementText('#upgrade-time-remaining', 'a few minutes');
+  });
+
+  it('should render the upgrade form for a user whose trial has expired', function() {
+    panel.renderUpgradeStatus(false, 0);
+    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--trial-expired');
   });
 
 });

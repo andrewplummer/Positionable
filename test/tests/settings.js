@@ -84,6 +84,10 @@ describe('Settings', function(uiRoot) {
     assertQuery(query, false);
   }
 
+  function assertInputIsDisabled(selector, expected) {
+    assert.equal(uiRoot.getElementById(selector).disabled, expected);
+  }
+
   it('should fire an event when initialized', function() {
     setupSettings();
     assert.isTrue(listener.settingsInitialized);
@@ -287,7 +291,7 @@ describe('Settings', function(uiRoot) {
     assert.equal(listener.lastSnapY, 5);
   });
 
-  // --- grouping map
+  // --- Grouping Map
 
   it('should have valid initial grouping map data', function() {
     setupSettings();
@@ -329,6 +333,27 @@ describe('Settings', function(uiRoot) {
     chromeMock.setStoredData(Settings.GROUPING_MAP, { width: '$foobar' });
     setupSettings();
     assert.equal(uiRoot.getElementById('grouping-map').value, 'width: $foobar');
+  });
+
+  // --- Other
+
+  it('should disable advanced features', function() {
+    setupSettings();
+    settings.toggleAdvancedFeatures(false);
+    assertInputIsDisabled('snap-x', true);
+    assertInputIsDisabled('snap-y', true);
+    assertInputIsDisabled('output-grouping', true);
+    assertInputIsDisabled('grouping-map', true);
+  });
+
+  it('should re-enable advanced features', function() {
+    setupSettings();
+    settings.toggleAdvancedFeatures(false);
+    settings.toggleAdvancedFeatures(true);
+    assertInputIsDisabled('snap-x', false);
+    assertInputIsDisabled('snap-y', false);
+    assertInputIsDisabled('output-grouping', false);
+    assertInputIsDisabled('grouping-map', false);
   });
 
 });

@@ -213,7 +213,12 @@
             </fieldset>
           </div>
           <div class="settings-form-page settings-form-page--advanced">
-            <div id="upgrade-button">Upgrade</div>
+            <div id="upgrade-prompt" class="upgrade-prompt">
+              <span>Advanced features are available to pro users.</span>
+              <span class="upgrade-trial-active">You have <span id="upgrade-time-remaining"></span> left to try them out.</span>
+              <span class="upgrade-trial-expired">Your trial has expired.</span>
+              <span id="upgrade-button" class="upgrade-button">Upgrade!</span>
+            </div>
             <fieldset class="settings-field" name="snap-field">
               <div class="settings-label">
                 <label for="snap-x">

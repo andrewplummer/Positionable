@@ -9,6 +9,9 @@
 // - TODO: pro features?
 // - TODO: make callbacks ES6 () => style
 // - TODO: one space for private/protected?
+// - TODO: you are a pro user! icon
+// - TODO: test when users trial period elapses
+// - TODO: test re-enabling pro features when purchased
 // - TODO: test if instances of things passed in couldn't just be created inside the classes themselves like ChromeStorageManager
 // - TODO: PositionableElementManager -> ElementManager?
 // - TODO: better description
@@ -3031,6 +3034,10 @@ class ControlPanel extends DraggableElement {
     this.elementArea.renderBackgroundPosition(backgroundPosition);
   }
 
+  renderUpgradeStatus(pro, timeRemaining) {
+    this.settingsArea.renderUpgradeStatus(pro, timeRemaining);
+  }
+
   // --- Other
 
   setNudgeMode(mode) {
@@ -3285,9 +3292,16 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   static get AREA_BASIC_CLASS()    { return 'settings-area--basic';    }
   static get AREA_ADVANCED_CLASS() { return 'settings-area--advanced'; }
 
+  static get PRO_USER_CLASS()      { return 'upgrade-prompt--pro-user';      }
+  static get TRIAL_ACTIVE_CLASS()  { return 'upgrade-prompt--trial-active';  }
+  static get TRIAL_EXPIRED_CLASS() { return 'upgrade-prompt--trial-expired'; }
+
+  static get ONE_DAY()  { return 24 * 60 * 60 * 1000; }
+  static get ONE_HOUR() { return 60 * 60 * 1000;      }
+
   static get SIZES() {
     return {
-      default: new Point(660, 400),
+      default: new Point(680, 400),
       help:    new Point(660, 530)
     };
   }
@@ -3299,12 +3313,24 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     this.setBasicMode();
   }
 
+  renderUpgradeStatus(pro, timeRemaining) {
+    if (pro) {
+      this.upgradePrompt.addClass(ControlPanelSettingsArea.PRO_USER_CLASS);
+    } else if (timeRemaining <= 0) {
+      this.upgradePrompt.addClass(ControlPanelSettingsArea.TRIAL_EXPIRED_CLASS);
+    } else {
+      this.upgradePrompt.addClass(ControlPanelSettingsArea.TRIAL_ACTIVE_CLASS);
+      this.upgradeTime.text(this.getTimeRemainingInWords(timeRemaining));
+    }
+  }
 
   // === Private ===
 
 
   setupElements(root) {
     this.form = new Element(root.getElementById('settings-form'));
+    this.upgradePrompt = new Element(root.getElementById('upgrade-prompt'));
+    this.upgradeTime   = new Element(root.getElementById('upgrade-time-remaining'));
   }
 
   setupButtons(root) {
@@ -3333,6 +3359,24 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   onUpgradeButtonClick() {
     this.listener.onUpgradeClick();
+  }
+
+  getTimeRemainingInWords(ms) {
+    var day, hour, val, suffix;
+
+    day  = ControlPanelSettingsArea.ONE_DAY;
+    hour = ControlPanelSettingsArea.ONE_HOUR;
+
+    if (ms >= day) {
+      val = Math.floor(ms / day);
+      suffix = val === 1 ? 'day' : 'days';
+    } else if (ms >= hour) {
+      val = Math.floor(ms / hour);
+      suffix = val === 1 ? 'hour' : 'hours';
+    } else {
+      return 'a few minutes';
+    }
+    return val + ' ' + suffix;
   }
 
 }
@@ -3654,10 +3698,13 @@ class SettingsForm extends BrowserEventTarget {
   static get SELECT_ONE()      { return 'select-one'; }
 
   // Classes
-  static get INVALID_CLASS()   { return 'settings-field--invalid'; }
-  static get ADVANCED_CLASS()  { return 'settings-form--advanced'; }
+  static get INVALID_CLASS()                    { return 'settings-field--invalid';          }
+  static get ADVANCED_PAGE_CLASS()              { return 'settings-form-page--advanced';     }
+  static get ADVANCED_VISIBLE_CLASS()           { return 'settings-form--advanced-visible';  }
+  static get ADVANCED_FEATURES_DISABLED_CLASS() { return 'settings-form--advanced-disabled'; }
 
-  // Messages
+  // Other
+  static get INPUT_TYPES()     { return ['input', 'select', 'textarea'];    }
   static get CONFIRM_MESSAGE() { return 'Really clear all settings?'; }
 
   constructor(el, listener) {
@@ -3677,11 +3724,19 @@ class SettingsForm extends BrowserEventTarget {
   }
 
   setBasic() {
-    this.removeClass(SettingsForm.ADVANCED_CLASS);
+    this.removeClass(SettingsForm.ADVANCED_VISIBLE_CLASS);
   }
 
   setAdvanced() {
-    this.addClass(SettingsForm.ADVANCED_CLASS);
+    this.addClass(SettingsForm.ADVANCED_VISIBLE_CLASS);
+  }
+
+  toggleAdvancedFeatures(on) {
+    var query = SettingsForm.INPUT_TYPES.map(t => {
+      return '.' + SettingsForm.ADVANCED_PAGE_CLASS + ' ' + t;
+    }).join(',');
+    this.el.querySelectorAll(query).forEach(el => el.disabled = !on);
+    this.toggleClass(SettingsForm.ADVANCED_FEATURES_DISABLED_CLASS, !on);
   }
 
   addTransform(id, parse, stringify) {
@@ -3956,6 +4011,10 @@ class Settings {
 
   setAdvanced() {
     this.form.setAdvanced();
+  }
+
+  toggleAdvancedFeatures(on) {
+    this.form.toggleAdvancedFeatures(on);
   }
 
   // --- Events
@@ -6200,8 +6259,8 @@ class LicenseManager {
   static get STORAGE_KEY_USER_STATUS()     { return 'user-status';      }
   static get STORAGE_KEY_ACTIVATION_DATE() { return 'activation-date';  }
 
-  // Free trial period (60 days)
-  static get FREE_TRIAL_PERIOD() { return 60 * 24 * 60 * 60 * 1000; }
+  // Free trial period (30 days)
+  static get FREE_TRIAL_PERIOD() { return 30 * 24 * 60 * 60 * 1000; }
 
   constructor(listener) {
     this.listener = listener;
@@ -6291,7 +6350,7 @@ class LicenseManager {
 
   resolveUserStatus(userStatus) {
     this.userStatus = userStatus;
-    this.listener.onUserStatusUpdated();
+    this.listener.onLicenseUpdated();
   }
 
   // --- Checking Purchases
@@ -6447,6 +6506,10 @@ class AppController {
   }
 
   onLicenseUpdated() {
+    var pro  = this.licenseManager.isProUser();
+    var time = this.licenseManager.freeTimeRemaining();
+    this.controlPanel.renderUpgradeStatus(pro, time);
+    this.settings.toggleAdvancedFeatures(pro || time);
   }
 
   getStylesForFocusedElements() {
