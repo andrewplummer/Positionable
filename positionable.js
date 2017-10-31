@@ -3310,6 +3310,7 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     this.setupButton(root, 'settings-tab-help', this.setHelpMode);
     this.setupButton(root, 'settings-tab-basic', this.setBasicMode);
     this.setupButton(root, 'settings-tab-advanced', this.setAdvancedMode);
+    this.setupButton(root, 'make-payment-button', this.onMakePaymentClick);
   }
 
   setHelpMode() {
@@ -3325,6 +3326,10 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   setAdvancedMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
+  }
+
+  onMakePaymentClick() {
+    this.listener.onPaymentInitiated();
   }
 
 }
@@ -3821,17 +3826,18 @@ class Form extends BrowserEventTarget {
 class Settings {
 
   // --- Fields
-  static get SAVE_FILENAME()       { return 'save-filename';        }
-  static get INCLUDE_SELECTOR()    { return 'include-selector';     }
-  static get EXCLUDE_SELECTOR()    { return 'exclude-selector';     }
-  static get TAB_STYLE()           { return 'tab-style';            }
-  static get OUTPUT_SELECTOR()     { return 'output-selector';      }
-  static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only';  }
-  static get SNAP_X()              { return 'snap-x';               }
-  static get SNAP_Y()              { return 'snap-y';               }
-  static get OUTPUT_GROUPING()     { return 'output-grouping';      }
-  static get GROUPING_MAP()        { return 'grouping-map';         }
-  static get SKIP_QUICKSTART()     { return 'skip-quickstart';      }
+  static get SAVE_FILENAME()       { return 'save-filename';       }
+  static get INCLUDE_SELECTOR()    { return 'include-selector';    }
+  static get EXCLUDE_SELECTOR()    { return 'exclude-selector';    }
+  static get TAB_STYLE()           { return 'tab-style';           }
+  static get OUTPUT_SELECTOR()     { return 'output-selector';     }
+  static get OUTPUT_CHANGED_ONLY() { return 'output-changed-only'; }
+  static get SNAP_X()              { return 'snap-x';              }
+  static get SNAP_Y()              { return 'snap-y';              }
+  static get OUTPUT_GROUPING()     { return 'output-grouping';     }
+  static get GROUPING_MAP()        { return 'grouping-map';        }
+  static get SKIP_QUICKSTART()     { return 'skip-quickstart';     }
+  static get IS_PRO_USER()         { return 'pro';                 }
 
   // --- Values
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
@@ -6090,6 +6096,106 @@ class CSSBackgroundImage {
 
 }
 
+/*-------------------------] PaymentManager [--------------------------*/
+
+class PaymentManager {
+
+  static get SKU()               { return 'positionable_pro_test'; }
+  static get ENVIRONMENT()       { return 'prod';                  }
+  static get ACTIVE_STATE()      { return 'ACTIVE';                }
+  static get PURCHASE_CANCELED() { return 'PURCHASE_CANCELED';     }
+
+  constructor(listener) {
+    this.listener = listener;
+    this.setup();
+  }
+
+  initialize(paid) {
+    if (paid == undefined) {
+      this.checkPayment();
+    } else {
+      this.paid = paid;
+    }
+  }
+
+  initiatePayment() {
+    this.beginPaymentTransaction();
+  }
+
+
+  // === Private ===
+
+
+  setup() {
+    this.buyOptions          = this.getBuyOptions();
+    this.getPurchasesOptions = this.getGetPurchasesOptions();
+  }
+
+  // --- Checking Payment
+
+  checkPayment() {
+    google.payments.inapp.getPurchases(this.getPurchasesOptions);
+  }
+
+  onGetPurchasesSuccess(data) {
+    this.paid = this.hasActivePurchase(data);
+    this.listener.onPaymentStatusUpdated(this.paid);
+  }
+
+  onGetPurchasesFailure(data) {
+    console.error('Could not retreive purchases: ' + data.response.errorType);
+  }
+
+  hasActivePurchase(data) {
+    return data.response.details.some(d => {
+      return d.sku === PaymentManager.SKU &&
+             d.state === PaymentManager.ACTIVE_STATE;
+    });
+  }
+
+  // --- Making Payment
+
+  beginPaymentTransaction() {
+    google.payments.inapp.buy(this.buyOptions);
+  }
+
+  onBuySuccess() {
+    this.paid = true;
+    this.listener.onPaymentStatusUpdated(this.paid);
+  }
+
+  onBuyFailure(data) {
+    if (data.response.errorType !== PaymentManager.PURCHASE_CANCELED) {
+      console.error('Could not complete purchase: ' + data.response.errorType);
+    }
+  }
+
+  // --- Other
+
+  getBuyOptions() {
+    return Object.assign(this.getDefaultOptions(), {
+      'success': this.onBuySuccess.bind(this),
+      'failure': this.onBuyFailure.bind(this)
+    });
+  }
+
+  getGetPurchasesOptions() {
+    return Object.assign(this.getDefaultOptions(), {
+      'success': this.onGetPurchasesSuccess.bind(this),
+      'failure': this.onGetPurchasesFailure.bind(this)
+    });
+  }
+
+  getDefaultOptions() {
+    return {
+      'parameters': {
+        'env': PaymentManager.ENVIRONMENT
+      }
+    };
+  }
+
+}
+
 /*-------------------------] AppController [--------------------------*/
 
 class AppController {
@@ -6108,6 +6214,7 @@ class AppController {
 
     this.copyManager = new CopyManager(this);
     this.copyAnimation = new CopyAnimation(uiRoot, this);
+    this.paymentManager = new PaymentManager(this);
     this.loadingAnimation = new LoadingAnimation(uiRoot, this);
 
     this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
@@ -6172,6 +6279,9 @@ class AppController {
     }
   }
 
+  onPaymentStatusUpdated(paid) {
+  }
+
   getStylesForFocusedElements() {
     return this.elementManager.getFocusedElements().map(element => {
       return this.settings.getStylesForElement(element);
@@ -6190,6 +6300,10 @@ class AppController {
     this.renderActiveControlPanel();
   }
 
+  onPaymentInitiated() {
+    this.paymentManager.initiatePayment();
+  }
+
   onFormFocus() {
     this.keyManager.setActive(false);
     this.copyManager.setActive(false);
@@ -6201,6 +6315,8 @@ class AppController {
   }
 
   onSettingsInitialized() {
+    this.paymentManager.initialize(
+      this.settings.get(Settings.IS_PRO_USER));
     this.elementManager.setSnap(
       this.settings.get(Settings.SNAP_X),
       this.settings.get(Settings.SNAP_Y)

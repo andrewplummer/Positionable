@@ -26,6 +26,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
 chrome.browserAction.onClicked.addListener(function() {
   chrome.tabs.executeScript(null, {
+    file: 'libs/buy.js'
+  });
+  chrome.tabs.executeScript(null, {
     file: 'positionable.js'
   });
   chrome.tabs.executeScript(null, {
