@@ -351,9 +351,9 @@ code {
   text-align: center;
 }
 
-/*---------------------------] Getting Started Area [-----------------------*/
+/*---------------------------] Quickstart Area [-----------------------*/
 
-.getting-started-block {
+.quickstart-block {
   position: absolute;
   width: 247px;
   height: 115px;
@@ -362,32 +362,32 @@ code {
   font-size: 14px;
 }
 
-.getting-started-block--mouse {
+.quickstart-block--mouse {
   top: 0;
   left: 0;
 }
 
-.getting-started-block--keyboard {
+.quickstart-block--keyboard {
   top: 0;
   right: 0;
 }
 
-.getting-started-block--background {
+.quickstart-block--background {
   bottom: 0;
   left: 0;
 }
 
-.getting-started-block--output {
+.quickstart-block--output {
   bottom: 0;
   right: 0;
 }
 
-.getting-started-image {
+.quickstart-image {
   height: 50px;
   margin-bottom: 5px;
 }
 
-.getting-started-skip-link {
+.quickstart-skip-link {
   position: absolute;
   bottom: -20px;
   right: 2px;

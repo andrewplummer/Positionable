@@ -578,7 +578,7 @@ describe('PositionableElementManager', function() {
       setupBox();
       fireMouseDown(getUiElement(el, '.position-handle'), 50, 50);
       fireMouseMove(getUiElement(el, '.position-handle'), 100, 100);
-      manager.elements[0].positionHandle.onScroll();
+      fireScrollEvent();
       fireDocumentMouseUp(100, 100);
       assert.equal(el.style.left, '150px');
       assert.equal(el.style.top,  '650px');
@@ -607,7 +607,7 @@ describe('PositionableElementManager', function() {
     assert.equal(el.style.top,  '150px');
 
     whileFakeScrolled(500, () => {
-      manager.elements[0].positionHandle.onScroll();
+      fireScrollEvent();
     });
     fireDocumentMouseUp(100, 100);
 

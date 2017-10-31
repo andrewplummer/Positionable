@@ -27,7 +27,32 @@ describe('ControlPanel', function(uiRoot) {
     return new Array(count).fill(null);
   }
 
+  function resetPanelDimensions() {
+    var el = uiRoot.getElementById('control-panel');
+    el.style.width  = '';
+    el.style.height = '';
+  }
+
+  function assertPanelActive(name) {
+    var el = uiRoot.getElementById(name + '-area');
+    assert.isTrue(el.classList.contains('control-panel-area--active'));
+  }
+
   // --- Helpers
+
+  it('should show all areas', function() {
+    panel.showDefaultArea();
+    assertPanelActive('default');
+    panel.showElementArea();
+    assertPanelActive('element');
+    panel.showMultipleArea();
+    assertPanelActive('multiple');
+    panel.showSettingsArea();
+    assertPanelActive('settings');
+    panel.showQuickstartArea();
+    assertPanelActive('quickstart');
+    resetPanelDimensions();
+  });
 
   it('should have auto dimensions', function() {
     panel.render(panel.el.style);

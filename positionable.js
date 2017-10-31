@@ -7,6 +7,9 @@
  * ---------------------------- */
 
 // - TODO: pro features?
+// - TODO: make callbacks ES6 () => style
+// - TODO: one space for private/protected?
+// - TODO: PositionableElementManager -> ElementManager?
 // - TODO: better description
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: cleanup!!
@@ -58,19 +61,25 @@ class NudgeManager {
 
     this.setPositionMode();
     this.setMultiplier(false);
-    this.checkNextNudge = this.checkNextNudge.bind(this);
+    this.bind();
   }
 
-  getCurrentMode() {
-    return this.mode;
-  }
+  // --- Directions
 
   addDirection(dir) {
     if (!this.isNudging()) {
-      this.start();
+      this.onNudgeStart();
     }
     this.vectors[dir] = true;
     this.next();
+  }
+
+  removeDirection(dir) {
+    this.vectors[dir] = false;
+    if (!this.isNudging()) {
+      this.resetTimeout();
+      this.listener.onNudgeStop(this.mode);
+    }
   }
 
   // --- Modes
@@ -101,32 +110,49 @@ class NudgeManager {
     this.multiplier = on ? NudgeManager.MULTIPLIER : 1;
   }
 
-  // --- Private
+  // === Private ===
 
-  dispatchNudge(x, y) {
-    var evt = new CustomEvent('nudge');
-    if (this.isMode(NudgeManager.RESIZE_NW_MODE)) {
-      evt.corner = 'nw';
-    } else if (this.isMode(NudgeManager.RESIZE_SE_MODE)) {
-      evt.corner = 'se';
-    }
-    this.vector.x += x;
-    this.vector.y += y;
-    evt.x = this.vector.x;
-    evt.y = this.vector.y;
-    evt.mode = this.mode;
-    this.listener.onNudgeMove(evt);
+  bind() {
+    this.checkNextNudge = this.checkNextNudge.bind(this);
   }
 
-  removeDirection(dir) {
-    this.vectors[dir] = false;
-    if (!this.isNudging()) {
-      this.resetTimeout();
-      this.listener.onNudgeStop(this.mode);
+  // --- Modes
+
+  isMode(mode) {
+    return this.mode === mode;
+  }
+
+  setMode(mode) {
+    if (this.mode !== mode) {
+      this.mode = mode;
+      this.listener.onNudgeModeChanged(mode);
     }
   }
 
-  start() {
+  toggleMode(mode) {
+    if (this.mode === mode) {
+      // Resize SE -> Resize NW
+      // Resize NW -> Resize SE
+      // All other modes toggle back to position mode.
+      if (mode === NudgeManager.RESIZE_SE_MODE) {
+        mode = NudgeManager.RESIZE_NW_MODE;
+      } else if (mode === NudgeManager.RESIZE_NW_MODE) {
+        mode = NudgeManager.RESIZE_SE_MODE;
+      } else {
+        mode = NudgeManager.POSITION_MODE;
+      }
+    }
+    this.setMode(mode);
+  }
+
+  // --- Nudging
+
+  isNudging() {
+    var vectors = this.vectors;
+    return !!(vectors.up || vectors.down || vectors.left || vectors.right);
+  }
+
+  onNudgeStart() {
     this.vector = new Point(0, 0);
     this.startTime = new Date();
     this.listener.onNudgeStart(this.mode);
@@ -160,43 +186,26 @@ class NudgeManager {
     this.timer = setTimeout(this.checkNextNudge, this.getDelay());
   }
 
+  dispatchNudge(x, y) {
+    var evt = new CustomEvent('nudge');
+    if (this.isMode(NudgeManager.RESIZE_NW_MODE)) {
+      evt.corner = 'nw';
+    } else if (this.isMode(NudgeManager.RESIZE_SE_MODE)) {
+      evt.corner = 'se';
+    }
+    this.vector.x += x;
+    this.vector.y += y;
+    evt.x = this.vector.x;
+    evt.y = this.vector.y;
+    evt.mode = this.mode;
+    this.listener.onNudgeMove(evt);
+  }
+
   checkNextNudge() {
     this.timer = undefined;
     if (this.isNudging()) {
       this.next();
     }
-  }
-
-  isNudging() {
-    var vectors = this.vectors;
-    return !!(vectors.up || vectors.down || vectors.left || vectors.right);
-  }
-
-  setMode(mode) {
-    if (this.mode !== mode) {
-      this.mode = mode;
-      this.listener.onNudgeModeChanged(mode);
-    }
-  }
-
-  toggleMode(mode) {
-    if (this.mode === mode) {
-      // Resize SE -> Resize NW
-      // Resize NW -> Resize SE
-      // All other modes toggle back to position mode.
-      if (mode === NudgeManager.RESIZE_SE_MODE) {
-        mode = NudgeManager.RESIZE_NW_MODE;
-      } else if (mode === NudgeManager.RESIZE_NW_MODE) {
-        mode = NudgeManager.RESIZE_SE_MODE;
-      } else {
-        mode = NudgeManager.POSITION_MODE;
-      }
-    }
-    this.setMode(mode);
-  }
-
-  isMode(mode) {
-    return this.mode === mode;
   }
 
   getDelay() {
@@ -216,6 +225,8 @@ class NudgeManager {
     this.timer = clearTimeout(this.timer);
   }
 
+  // --- Other
+
   destroy() {
     this.resetTimeout();
   }
@@ -224,26 +235,10 @@ class NudgeManager {
 
 /*-------------------------] Element [--------------------------*/
 
-// TODO: cleanup
-// TODO: can we now get away with no creation of elements at all (with the exception of ShadowDomInjector)?
 class Element {
-
-  static create(parent, tag, className) {
-    var el = new Element(parent.appendChild(document.createElement(tag)));
-    if (className) {
-      className.split(' ').forEach(function(name) {
-        el.addClass(name);
-      }, this);
-    }
-    return el;
-  }
 
   constructor(el) {
     this.el = el;
-  }
-
-  delegate(methodName, target) {
-    this[methodName] = target[methodName].bind(target);
   }
 
   addClass(className) {
@@ -262,11 +257,6 @@ class Element {
     this.el.classList.toggle(className, toggle);
   }
 
-  resetScroll() {
-    this.el.scrollTop = 0;
-    this.el.scrollLeft = 0;
-  }
-
   hide() {
     this.el.style.display = 'none';
   }
@@ -283,18 +273,13 @@ class Element {
     this.el.textContent = str;
   }
 
-  title(title) {
-    this.el.title = title;
-    return this;
-  }
-
-  setStyle(name, val) {
-    this.el.style[name] = val;
-  }
-
   getViewportCenter() {
-    var rect = this.el.getBoundingClientRect();
+    var rect = this.getBoundingClientRect();
     return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
+  getBoundingClientRect() {
+    return this.el.getBoundingClientRect();
   }
 
   destroy() {
@@ -308,7 +293,7 @@ class Element {
 
 class ShadowDomInjector {
 
-  static get UI_HOST_CLASS_NAME() { return 'positionable-extension-ui'; }
+  static get UI_HOST_CLASS_NAME()          { return 'positionable-extension-ui'; }
   static get EXTENSION_RELATIVE_PATH_REG() { return /chrome-extension:\/\/__MSG_@@extension_id__\//g; }
 
   static setBasePath(path) {
@@ -321,10 +306,8 @@ class ShadowDomInjector {
   // preload of templates and caching them so they can resolve synchronously.
 
   static preload(templatePath, stylesheetPath) {
-
     this.preloadedTemplatesByPath = this.preloadedTemplatesByPath || {};
-    this.preloadedTemplateTasks = this.preloadedTemplateTasks || [];
-
+    this.preloadedTemplateTasks   = this.preloadedTemplateTasks   || [];
     this.preloadedTemplateTasks.push(this.preloadTemplateAndCache(templatePath, stylesheetPath));
   }
 
@@ -374,7 +357,7 @@ class ShadowDomInjector {
     ShadowDomInjector.getPreloadedTemplateOrFetch(this, fn);
   }
 
-  // --- Private
+  // === Private ===
 
   getUrl(path) {
     return ShadowDomInjector.BASE_PATH + path;
@@ -484,7 +467,16 @@ class CursorManager {
     this.render();
   }
 
-  // --- Private
+
+  // === Private ===
+
+
+  injectStylesheet() {
+    var el = document.createElement('style');
+    document.head.appendChild(el);
+    el.sheet.insertRule('html, html * {}');
+    this.style = el.sheet.rules[0].style;
+  }
 
   getFullCursor(name, isImage) {
     if (isImage) {
@@ -512,55 +504,40 @@ class CursorManager {
     }
   }
 
-  injectStylesheet() {
-    var el = document.createElement('style');
-    document.head.appendChild(el);
-    el.sheet.insertRule('html, html * {}');
-    this.style = el.sheet.rules[0].style;
-  }
-
 }
 
 /*-------------------------] BrowserEventTarget [--------------------------*/
 
 class BrowserEventTarget extends Element {
 
-  constructor(el, tag, className) {
-    super(el, tag, className);
-    this.listeners = {};
+  constructor(el) {
+    super(el);
+    this.listeners = [];
   }
 
   bindEvent(eventName, fn, capture) {
-    // TODO: can remove bindEventListener?
     this.addEventListener(eventName, evt => {
       fn.call(this, evt);
     }, capture);
   }
 
-  stopEventPropagation(evt) {
-    evt.stopPropagation();
+  stopPropagation(eventName) {
+    this.bindEvent(eventName, evt => evt.stopPropagation());
   }
 
   addEventListener(eventName, handler, capture) {
-    this.listeners[eventName] = handler;
+    this.listeners.push({
+      handler: handler,
+      eventName: eventName
+    });
     this.el.addEventListener(eventName, handler, capture);
   }
 
-  removeEventListener(eventName) {
-    this.el.removeEventListener(eventName, this.listeners[eventName]);
-    delete this.listeners[eventName];
-  }
-
   removeAllListeners() {
-    for (var eventName in this.listeners) {
-      if(!this.listeners.hasOwnProperty(eventName)) continue;
-      this.removeEventListener(eventName);
-    }
-  }
-
-  destroy() {
-    this.removeAllListeners();
-    super.destroy();
+    this.listeners.forEach(l => {
+      this.el.removeEventListener(l.eventName, l.handler);
+    });
+    this.listeners = [];
   }
 
 }
@@ -579,11 +556,9 @@ class DragTarget extends BrowserEventTarget {
     this.setupDragEvents();
   }
 
-  // --- Setup
 
-  setupDragIntents() {
-    this.setupDragIntentEvents();
-  }
+  // === Protected ===
+
 
   setDragThreshold(val) {
     this.dragThreshold = val;
@@ -599,16 +574,22 @@ class DragTarget extends BrowserEventTarget {
     this.resetsOnMetaKey = true;
   }
 
+  setupDragIntents() {
+    this.bindEvent('mouseover', this.onMouseOver);
+    this.bindEvent('mouseout',  this.onMouseOut);
+  }
+
   setupDoubleClick() {
-    this.bindEvent('dblclick', this.onDoubleClick);
+    this.bindEvent('dblclick',    this.onDoubleClick);
     this.bindEvent('contextmenu', this.onContextMenu);
   }
 
   setupInteractiveElements() {
     var els = this.el.querySelectorAll(DragTarget.INTERACTIVE_ELEMENTS_SELECTOR);
     for (let i = 0, el; el = els[i]; i++) {
-      el.addEventListener('mousedown', this.stopEventPropagation);
-      el.addEventListener('click', this.stopEventPropagation);
+      var element = new BrowserEventTarget(el);
+      element.stopPropagation('mousedown');
+      element.stopPropagation('click');
     }
   }
 
@@ -632,7 +613,7 @@ class DragTarget extends BrowserEventTarget {
   }
 
 
-  // --- Private
+  // === Private ===
 
 
   // --- Native Events
@@ -798,14 +779,6 @@ class DragTarget extends BrowserEventTarget {
     return Math.abs(pos - origin) >= this.dragThreshold;
   }
 
-
-  // --- Drag Intents
-
-  setupDragIntentEvents() {
-    this.bindEvent('mouseover', this.onMouseOver);
-    this.bindEvent('mouseout', this.onMouseOut);
-  }
-
   // --- Key Resetting
 
   setupKeyEvents() {
@@ -932,11 +905,9 @@ class DraggableElement extends DragTarget {
     this.setDragThreshold(DraggableElement.DRAG_THRESHOLD);
   }
 
-  setupPosition() {
-    var matcher = new CSSRuleMatcher(this.el);
-    this.cssH = CSSPositioningProperty.horizontalFromMatcher(matcher);
-    this.cssV = CSSPositioningProperty.verticalFromMatcher(matcher);
-  }
+
+  // === Protected ===
+
 
   onMouseDown(evt) {
     super.onMouseDown(evt);
@@ -947,7 +918,6 @@ class DraggableElement extends DragTarget {
     super.onDragStart(evt);
     this.dragStartH = this.cssH;
     this.dragStartV = this.cssV;
-    this.addClass(DraggableElement.DRAGGING_ACTIVE_CLASS);
   }
 
   onDragMove(evt) {
@@ -959,9 +929,13 @@ class DraggableElement extends DragTarget {
     this.render();
   }
 
-  onDragStop(evt) {
-    super.onDragStop(evt);
-    this.removeClass(DraggableElement.DRAGGING_ACTIVE_CLASS);
+  // === Private ===
+
+
+  setupPosition() {
+    var matcher = new CSSRuleMatcher(this.el);
+    this.cssH = CSSPositioningProperty.horizontalFromMatcher(matcher);
+    this.cssV = CSSPositioningProperty.verticalFromMatcher(matcher);
   }
 
   render() {
@@ -996,7 +970,9 @@ class PositionHandle extends DragTarget {
     return PositionHandle.CURSOR;
   }
 
-  // --- Events
+
+  // === Protected ===
+
 
   onDragIntentStart(evt) {
     this.listener.onPositionHandleDragIntentStart(evt, this);
@@ -1058,7 +1034,9 @@ class ResizeHandle extends DragTarget {
     return cursor + '-resize';
   }
 
-  // --- Events
+
+  // === Protected ===
+
 
   onDragIntentStart(evt) {
     this.listener.onResizeHandleDragIntentStart(evt, this);
@@ -1121,7 +1099,9 @@ class RotationHandle extends DragTarget {
     return 'rotate-' + grad;
   }
 
-  // --- Private
+
+  // === Protected ===
+
 
   onDragIntentStart(evt) {
     this.listener.onRotationHandleDragIntentStart(evt, this);
@@ -1151,6 +1131,10 @@ class RotationHandle extends DragTarget {
     super.onDragStop(evt);
     this.listener.onRotationHandleDragStop(evt, this);
   }
+
+
+  // === Private ===
+
 
   applyRotation(evt) {
     var r = this.getRotationForEvent(evt);
@@ -1186,8 +1170,6 @@ class RotationHandle extends DragTarget {
 
 class PositionableElement extends BrowserEventTarget {
 
-  // --- Constants
-
   static get UI_FOCUSED_CLASS()   { return 'ui--focused';   }
   static get UI_HIGHLIGHT_CLASS() { return 'ui--highlight'; }
   static get PEEKING_DIMENSIONS() { return 500;             }
@@ -1202,103 +1184,103 @@ class PositionableElement extends BrowserEventTarget {
     this.setup();
   }
 
+  // --- Manipulation
+
+  move(x, y, constrain, snapX, snapY) {
+    this.applyMove(x, y, constrain, snapX, snapY);
+  }
+
+  moveBackground(x, y, constrain) {
+    this.applyBackgroundMove(x, y, constrain);
+  }
+
+  rotate(offset, constrained) {
+    this.applyRotation(offset, constrained);
+  }
+
+  addZIndex(val) {
+    this.applyZIndex(val);
+  }
+
+  resize(x, y, corner, constrain, snapX, snapY) {
+    this.applyResize(x, y, corner, constrain, snapX, snapY);
+  }
+
+  // --- History & State
+
+  pushState() {
+    this.states.push({
+      cssBox: this.cssBox,
+      cssZIndex: this.cssZIndex,
+      cssTransform: this.cssTransform,
+      cssBackgroundImage: this.cssBackgroundImage
+    });
+  }
+
+  undo() {
+    var state = this.states.pop();
+    if (!state) {
+      return;
+    }
+    this.cssBox = state.cssBox;
+    this.cssZIndex = state.cssZIndex;
+    this.cssTransform = state.cssTransform;
+    this.cssBackgroundImage = state.cssBackgroundImage;
+    this.render();
+  }
+
+  // --- CSS Declarations
+
+  getCSSDeclarations() {
+    return this.getCSSDeclarationsForAttributes(
+      this.cssBox,
+      this.cssZIndex,
+      this.cssBackgroundImage,
+      this.cssTransform
+    );
+  }
+
+  getChangedCSSDeclarations() {
+    var firstState, firstDeclarations, currentDeclarations;
+
+    // If there are no states, then nothing has chagned
+    // so return an empty array.
+    if (this.states.length === 0) {
+      return [];
+    }
+
+    firstState = this.states[0];
+
+    firstDeclarations = this.getCSSDeclarationsForAttributes(
+      firstState.cssBox,
+      firstState.cssZIndex,
+      firstState.cssBackgroundImage,
+      firstState.cssTransform
+    );
+
+    currentDeclarations = this.getCSSDeclarations();
+
+    return currentDeclarations.filter((d, i) => {
+      return d !== firstDeclarations[i];
+    });
+  }
+
+  // --- Other
+
+  getRotation() {
+    return this.cssTransform.getRotation();
+  }
+
+  validate() {
+    this.cssBox.validate();
+  }
+
   setHighlightMode(on) {
     if (on) {
       this.ui.addClass(PositionableElement.UI_HIGHLIGHT_CLASS);
     } else {
       this.ui.removeClass(PositionableElement.UI_HIGHLIGHT_CLASS);
     }
-  }
-
-  // --- Setup
-
-  setup() {
-    this.setupEvents();
-    this.setupInitialState();
-    this.injectInterface();
-  }
-
-  injectInterface() {
-    this.injector = new ShadowDomInjector(this.el, true);
-    this.injector.setTemplate('element.html');
-    this.injector.setStylesheet('element.css');
-    this.injector.run(this.onInterfaceInjected.bind(this));
-  }
-
-  onInterfaceInjected(root) {
-    this.ui = new Element(root.getElementById('ui'));
-    this.setupHandles(root);
-  }
-
-  setupEvents() {
-    this.bindEvent('click', this.onClick);
-    this.bindEvent('mousedown', this.onMouseDown);
-  }
-
-  setupInitialState() {
-    var matcher = new CSSRuleMatcher(this.el);
-    this.applyOverrides(matcher);
-    this.cssBox = CSSBox.fromMatcher(matcher);
-    this.cssZIndex = CSSZIndex.fromMatcher(matcher);
-    this.cssTransform = CSSTransform.fromMatcher(matcher);
-    this.cssBackgroundImage = CSSBackgroundImage.fromMatcher(matcher);
-  }
-
-  applyOverrides(matcher) {
-    var position = matcher.getComputedValue('position');
-    if (position === 'static') {
-      this.el.style.position = 'relative';
-    }
-    this.el.style.animation  = 'none';
-    this.el.style.transition = 'none';
-    this.el.style.userSelect = 'none';
-    this.isFixed = position === 'fixed';
-  }
-
-  clearOverrides() {
-    this.el.style.position   = '';
-    this.el.style.animation  = '';
-    this.el.style.transition = '';
-    this.el.style.userSelect = '';
-  }
-
-  setupHandles(root) {
-    /* TODO: do we need an object to hold handles? */
-    // TODO: consolidate order of listener in arguments?
-    // TODO: rename sizingHandles??
-    this.handles = {
-      n:  new ResizeHandle(root, 'n',  this),
-      e:  new ResizeHandle(root, 'e',  this),
-      s:  new ResizeHandle(root, 's',  this),
-      w:  new ResizeHandle(root, 'w',  this),
-      ne: new ResizeHandle(root, 'ne', this),
-      se: new ResizeHandle(root, 'se', this),
-      sw: new ResizeHandle(root, 'sw', this),
-      nw: new ResizeHandle(root, 'nw', this)
-    };
-
-    this.positionHandle = new PositionHandle(root, this);
-    this.rotationHandle = new RotationHandle(root, this);
-  }
-
-  getRotation() {
-    return this.cssTransform.getRotation();
-  }
-
-  setRotation(r) {
-    this.transform.setRotation(r);
-  }
-
-  // --- Mouse Events
-
-  onMouseDown(evt) {
-    evt.stopPropagation();
-    this.listener.onElementMouseDown(evt, this);
-  }
-
-  onClick(evt) {
-    evt.stopPropagation();
-    this.listener.onElementClick(evt, this);
   }
 
   // --- Position Handle Drag Events
@@ -1376,8 +1358,217 @@ class PositionableElement extends BrowserEventTarget {
     this.listener.onRotationDragStop(evt, handle, this);
   }
 
+
+  // === Private ===
+
+
+  setup() {
+    this.setupEvents();
+    this.setupInitialState();
+    this.injectInterface();
+  }
+
+  setupEvents() {
+    this.bindEvent('click', this.onClick);
+    this.bindEvent('mousedown', this.onMouseDown);
+  }
+
+  setupInitialState() {
+    var matcher = new CSSRuleMatcher(this.el);
+    this.applyOverrides(matcher);
+    this.cssBox = CSSBox.fromMatcher(matcher);
+    this.cssZIndex = CSSZIndex.fromMatcher(matcher);
+    this.cssTransform = CSSTransform.fromMatcher(matcher);
+    this.cssBackgroundImage = CSSBackgroundImage.fromMatcher(matcher);
+  }
+
+  injectInterface() {
+    this.injector = new ShadowDomInjector(this.el, true);
+    this.injector.setTemplate('element.html');
+    this.injector.setStylesheet('element.css');
+    this.injector.run(this.onInterfaceInjected.bind(this));
+  }
+
+  onInterfaceInjected(root) {
+    this.ui = new Element(root.getElementById('ui'));
+    this.setupHandles(root);
+  }
+
+  setupHandles(root) {
+    // TODO: consolidate order of listener in arguments?
+    new ResizeHandle(root, 'n',  this);
+    new ResizeHandle(root, 'e',  this);
+    new ResizeHandle(root, 's',  this);
+    new ResizeHandle(root, 'w',  this);
+    new ResizeHandle(root, 'ne', this);
+    new ResizeHandle(root, 'se', this);
+    new ResizeHandle(root, 'sw', this);
+    new ResizeHandle(root, 'nw', this);
+    new PositionHandle(root, this);
+    new RotationHandle(root, this);
+  }
+
+  // --- Events
+
+  onMouseDown(evt) {
+    evt.stopPropagation();
+    this.listener.onElementMouseDown(evt, this);
+  }
+
+  onClick(evt) {
+    evt.stopPropagation();
+    this.listener.onElementClick(evt, this);
+  }
+
+  // --- Focusing
+
+  focus() {
+    this.ui.addClass(PositionableElement.UI_FOCUSED_CLASS);
+    this.setTemporaryZIndex(PositionableElement.TOP_Z_INDEX);
+  }
+
+  unfocus() {
+    this.ui.removeClass(PositionableElement.UI_FOCUSED_CLASS);
+    this.setTemporaryZIndex('');
+    this.renderZIndex();
+  }
+
+  setTemporaryZIndex(zIndex) {
+    var el = this.el;
+    do {
+      el.style.zIndex = zIndex;
+    } while (el = el.offsetParent);
+  }
+
+  // --- Moving
+
+  applyMove(x, y, constrain, snapX, snapY) {
+    var p = this.getConstrainedMovePosition(x, y, constrain);
+    this.cssBox = this.getLastState().cssBox.clone();
+    this.cssBox.move(p.x, p.y);
+    this.cssBox.snapPosition(snapX, snapY);
+    this.renderBox();
+  }
+
+  applyBackgroundMove(x, y, constrain) {
+    var p;
+    if (!this.cssBackgroundImage.hasImage()) {
+      return;
+    }
+    p = this.getConstrainedMovePosition(x, y, constrain, true);
+    this.cssBackgroundImage = this.getLastState().cssBackgroundImage.clone();
+    this.cssBackgroundImage.move(p.x, p.y);
+    this.renderBackgroundPosition();
+  }
+
+  getConstrainedMovePosition(x, y, constrain, removeRotation) {
+    var absX, absY, p;
+
+    if (constrain) {
+      absX = Math.abs(x);
+      absY = Math.abs(y);
+      if (absX < absY) {
+        x = 0;
+      } else {
+        y = 0;
+      }
+    }
+
+    p = new Point(x, y);
+
+    if (removeRotation) {
+      p = p.rotate(-this.getRotation());
+    }
+
+    return p;
+  }
+
+  // --- Resizing
+
+  applyResize(x, y, corner, constrain, snapX, snapY) {
+    var lastState, lastBox, nextBox;
+
+    lastState = this.getLastState();
+    lastBox   = lastState.cssBox;
+    nextBox   = lastBox.clone();
+
+    nextBox.resize(x, y, corner);
+
+    if (constrain) {
+      nextBox.constrain(lastBox.getRatio(), corner);
+    }
+
+    nextBox.snapPosition(snapX, snapY);
+    nextBox.snapDimensions(snapX, snapY);
+
+    // Render the box first so that percentage values can update
+    // below to ensure correct anchor calculations.
+    this.cssBox = nextBox;
+    this.renderBox();
+
+    this.cssTransform = lastState.cssTransform.clone();
+    this.cssBackgroundImage = lastState.cssBackgroundImage.clone();
+
+    // When the box is resized, both the background image and
+    // transform (origin and percentage translations) may change,
+    // so update their values here.
+    this.cssTransform.update();
+    this.cssBackgroundImage.update();
+
+    if (this.cssTransform.getRotation() || this.cssTransform.hasPercentTranslation()) {
+      // If a box is rotated or its transform has a translate using percent
+      // values, then the anchor positions will shift as the box is resized,
+      // so update the translation here to keep them aligned.
+      this.alignAnchors(corner, lastState, this);
+    }
+
+  }
+
+  alignAnchors(corner, lastState, nextState) {
+    var anchorOffset = this.getAnchorShift(corner, lastState, nextState);
+    if (anchorOffset.x || anchorOffset.y) {
+      this.cssTransform.addTranslation(anchorOffset.multiply(-1));
+      this.renderTransform();
+    }
+  }
+
+  getAnchorShift(corner, lastState, nextState) {
+    var lastAnchorPos = this.getAnchorPositionForState(corner, lastState);
+    var nextAnchorPos = this.getAnchorPositionForState(corner, nextState);
+    return nextAnchorPos.subtract(lastAnchorPos);
+  }
+
+  getAnchorPositionForState(corner, state) {
+    var rotation       = state.cssTransform.getRotation();
+    var translation    = state.cssTransform.getTranslation();
+    var rotationOrigin = state.cssTransform.getOrigin();
+    var anchorPosition = state.cssBox.getAnchorPosition(corner, rotation, rotationOrigin);
+    return anchorPosition.add(translation);
+  }
+
+  // --- Rotation
+
+  applyRotation(offset, constrained) {
+    if (constrained) {
+      offset = Math.round(offset / PositionableElement.ROTATION_SNAPPING) * PositionableElement.ROTATION_SNAPPING;
+    }
+    this.cssTransform = this.getLastState().cssTransform.clone();
+    this.cssTransform.addRotation(offset);
+    this.renderTransform();
+  }
+
+  // --- Z-Index
+
+  applyZIndex(val) {
+    this.cssZIndex = this.getLastState().cssZIndex.clone();
+    this.cssZIndex.add(val);
+    this.renderZIndex();
+  }
+
+  // --- Sprite Snapping
+
   snapToSprite(evt) {
-    var rect, center, origin, pos, coords, bounds, dim, cDim, iPos;
+    var center, origin, pos, coords, bounds, dim, cDim, iPos;
 
     if (!this.cssBackgroundImage.hasImage()) {
       return;
@@ -1392,8 +1583,7 @@ class PositionableElement extends BrowserEventTarget {
     // use this to get the coordinates.
 
     // Start by getting the element's center point.
-    rect = this.el.getBoundingClientRect();
-    center = new Point(rect.left + (rect.width / 2), rect.top + (rect.height / 2));
+    center = this.getViewportCenter();
 
     // The non-rotated origin can be found by subtracting the
     // box dimensions from the element's center.
@@ -1445,219 +1635,6 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  // --- Focusing
-
-  focus() {
-    this.ui.addClass(PositionableElement.UI_FOCUSED_CLASS);
-    this.setTemporaryZIndex(PositionableElement.TOP_Z_INDEX);
-  }
-
-  unfocus() {
-    this.ui.removeClass(PositionableElement.UI_FOCUSED_CLASS);
-    this.setTemporaryZIndex('');
-    this.renderZIndex();
-  }
-
-  setTemporaryZIndex(zIndex) {
-    var el = this.el;
-    do {
-      el.style.zIndex = zIndex;
-    } while (el = el.offsetParent);
-  }
-
-  // --- Move Z-Index
-
-  addZIndex(val) {
-    this.cssZIndex = this.getLastState().cssZIndex.clone();
-    this.cssZIndex.add(val);
-    this.renderZIndex();
-  }
-
-  // --- Resizing
-
-  getHandle(handleName) {
-    return this.handles[handleName];
-  }
-
-  getHandleAnchor(handleName) {
-    switch (handleName) {
-      case 'nw': return this.getHandle('se');
-      case 'ne': return this.getHandle('sw');
-      case 'se': return this.getHandle('nw');
-      case 'sw': return this.getHandle('ne');
-      case 'n':  return this.getHandle('s');
-      case 's':  return this.getHandle('n');
-      case 'e':  return this.getHandle('w');
-      case 'w':  return this.getHandle('e');
-    }
-  }
-
-  resize(x, y, corner, constrain, snapX, snapY) {
-    var lastState, lastBox, nextBox;
-
-    lastState = this.getLastState();
-    lastBox   = lastState.cssBox;
-    nextBox   = lastBox.clone();
-
-    nextBox.resize(x, y, corner);
-
-    if (constrain) {
-      nextBox.constrain(lastBox.getRatio(), corner);
-    }
-
-    nextBox.snapPosition(snapX, snapY);
-    nextBox.snapDimensions(snapX, snapY);
-
-    // Render the box first so that percentage values can update
-    // below to ensure correct anchor calculations.
-    this.cssBox = nextBox;
-    this.renderBox();
-
-    this.cssTransform = lastState.cssTransform.clone();
-    this.cssBackgroundImage = lastState.cssBackgroundImage.clone();
-
-    // When the box is resized, both the background image and
-    // transform (origin and percentage translations) may change,
-    // so update their values here.
-    this.cssTransform.update();
-    this.cssBackgroundImage.update();
-
-    if (this.cssTransform.getRotation() || this.cssTransform.hasPercentTranslation()) {
-      // If a box is rotated or its transform has a translate using percent
-      // values, then the anchor positions will shift as the box is resized,
-      // so update the translation here to keep them aligned.
-      this.alignAnchors(corner, lastState, this);
-    }
-
-  }
-
-  validate() {
-    this.cssBox.validate();
-  }
-
-  alignAnchors(corner, lastState, nextState) {
-    var anchorOffset = this.getAnchorShift(corner, lastState, nextState);
-    if (anchorOffset.x || anchorOffset.y) {
-      this.cssTransform.addTranslation(anchorOffset.multiply(-1));
-      this.renderTransform();
-    }
-  }
-
-  getAnchorShift(corner, lastState, nextState) {
-    var lastAnchorPos = this.getAnchorPositionForState(corner, lastState);
-    var nextAnchorPos = this.getAnchorPositionForState(corner, nextState);
-    return nextAnchorPos.subtract(lastAnchorPos);
-  }
-
-  getAnchorPositionForState(corner, state) {
-    var rotation       = state.cssTransform.getRotation();
-    var translation    = state.cssTransform.getTranslation();
-    var rotationOrigin = state.cssTransform.getOrigin();
-    var anchorPosition = state.cssBox.getAnchorPosition(corner, rotation, rotationOrigin);
-    return anchorPosition.add(translation);
-  }
-
-  // --- Rotation
-
-  rotate(offset, constrained) {
-    if (constrained) {
-      offset = Math.round(offset / PositionableElement.ROTATION_SNAPPING) * PositionableElement.ROTATION_SNAPPING;
-    }
-    this.cssTransform = this.getLastState().cssTransform.clone();
-    this.cssTransform.addRotation(offset);
-    this.renderTransform();
-  }
-
-  // --- Position
-
-  move(x, y, constrain, snapX, snapY) {
-    var p = this.getConstrainedMovePosition(x, y, constrain);
-    this.cssBox = this.getLastState().cssBox.clone();
-    this.cssBox.move(p.x, p.y);
-    this.cssBox.snapPosition(snapX, snapY);
-    this.renderBox();
-  }
-
-  moveBackground(x, y, constrain) {
-    var p;
-    if (!this.cssBackgroundImage.hasImage()) {
-      return;
-    }
-    p = this.getConstrainedMovePosition(x, y, constrain, true);
-    this.cssBackgroundImage = this.getLastState().cssBackgroundImage.clone();
-    this.cssBackgroundImage.move(p.x, p.y);
-    this.renderBackgroundPosition();
-  }
-
-  getConstrainedMovePosition(x, y, constrain, removeRotation) {
-    var absX, absY, p;
-
-    if (constrain) {
-      absX = Math.abs(x);
-      absY = Math.abs(y);
-      if (absX < absY) {
-        x = 0;
-      } else {
-        y = 0;
-      }
-    }
-
-    p = new Point(x, y);
-
-    if (removeRotation) {
-      p = p.rotate(-this.getRotation());
-    }
-
-    return p;
-  }
-
-  // TODO: rename? ... this will be called for nudging as well...
-  getDraggedPosition(x, y, constrain, lastPosition) {
-    var pos, absX, absY;
-
-    pos = lastPosition.add(new Point(x, y));
-
-    if (constrain) {
-      absX = Math.abs(x);
-      absY = Math.abs(y);
-      if (absX < absY) {
-        pos.x = lastPosition.x;
-      } else {
-        pos.y = lastPosition.y;
-      }
-    }
-
-    return pos;
-  }
-
-
-  // --- History & State
-
-  pushState() {
-    this.states.push({
-      cssBox: this.cssBox,
-      cssZIndex: this.cssZIndex,
-      cssTransform: this.cssTransform,
-      cssBackgroundImage: this.cssBackgroundImage
-    });
-  }
-
-  getLastState() {
-    return this.states[this.states.length - 1];
-  }
-
-  undo() {
-    var state = this.states.pop();
-    if (!state) {
-      return;
-    }
-    this.cssBox = state.cssBox;
-    this.cssZIndex = state.cssZIndex;
-    this.cssTransform = state.cssTransform;
-    this.cssBackgroundImage = state.cssBackgroundImage;
-    this.render();
-  }
-
   // --- Peeking
 
   setPeekMode(on) {
@@ -1686,6 +1663,28 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
+  // --- Overrides
+
+  applyOverrides(matcher) {
+    var position = matcher.getComputedValue('position');
+    if (position === 'static') {
+      this.el.style.position = 'relative';
+    }
+    this.el.style.animation  = 'none';
+    this.el.style.transition = 'none';
+    this.el.style.userSelect = 'none';
+    this.isFixed = position === 'fixed';
+  }
+
+  clearOverrides() {
+    this.el.style.position   = '';
+    this.el.style.animation  = '';
+    this.el.style.transition = '';
+    this.el.style.userSelect = '';
+  }
+
+  // --- Rendering
+
   render() {
     this.renderBox();
     this.renderTransform();
@@ -1702,58 +1701,19 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  renderBackgroundPosition() {
-    this.cssBackgroundImage.renderPosition(this.el.style);
-  }
-
   renderTransform() {
     this.cssTransform.render(this.el.style);
+  }
+
+  renderBackgroundPosition() {
+    this.cssBackgroundImage.renderPosition(this.el.style);
   }
 
   renderZIndex() {
     this.el.style.zIndex = this.cssZIndex;
   }
 
-  isPositioned() {
-    // TODO: static to constant?
-    return this.style.position !== 'static';
-  }
-
-  getCSSDeclarations() {
-    return this.getCSSDeclarationsForAttributes(
-      this.cssBox,
-      this.cssZIndex,
-      this.cssBackgroundImage,
-      this.cssTransform
-    );
-  }
-
-  getChangedCSSDeclarations() {
-    var firstState, firstDeclarations, currentDeclarations;
-
-    // If there are no states, then nothing has chagned
-    // so return an empty array.
-    if (this.states.length === 0) {
-      return [];
-    }
-
-    firstState = this.states[0];
-
-    firstDeclarations = this.getCSSDeclarationsForAttributes(
-      firstState.cssBox,
-      firstState.cssZIndex,
-      firstState.cssBackgroundImage,
-      firstState.cssTransform
-    );
-
-    currentDeclarations = this.getCSSDeclarations();
-
-    return currentDeclarations.filter((d, i) => {
-      return d !== firstDeclarations[i];
-    });
-  }
-
-  // --- Private
+  // --- CSS Declarations
 
   getCSSDeclarationsForAttributes(cssBox, cssZIndex, cssBackgroundImage, cssTransform) {
     var declarations = [];
@@ -1771,7 +1731,11 @@ class PositionableElement extends BrowserEventTarget {
     }
   }
 
-  // --- Teardown
+  // --- Other
+
+  getLastState() {
+    return this.states[this.states.length - 1];
+  }
 
   destroy() {
     // Choosing not to destroy the rendered styles on the element.
@@ -1797,49 +1761,14 @@ class OutputManager {
   // --- Selectors
 
   getSelector(element) {
-    return this.getSelectorForElement(element);
+    return this.getSelectorFromElement(element);
   }
 
   getSelectorWithDefault(element) {
-    return this.getSelectorForElement(element, true);
+    return this.getSelectorFromElement(element, true);
   }
 
-  getSelectorForElement(element, fallback) {
-    var el, type, selector;
-
-    el   = element.el;
-    type = this.settings.get(Settings.OUTPUT_SELECTOR);
-
-    if (type === Settings.OUTPUT_SELECTOR_AUTO) {
-      type = el.id ? Settings.OUTPUT_SELECTOR_ID : Settings.OUTPUT_SELECTOR_FIRST;
-    }
-    selector = this.getSelectorForType(type, element.el);
-    if (!selector && (fallback || type !== Settings.OUTPUT_SELECTOR_NONE)) {
-      selector = el.tagName.toLowerCase();
-    }
-    return selector;
-  }
-
-  getSelectorForType(type, el) {
-    switch(type) {
-      case Settings.OUTPUT_SELECTOR_NONE:    return '';
-      case Settings.OUTPUT_SELECTOR_ID:      return this.getId(el);
-      case Settings.OUTPUT_SELECTOR_ALL:     return this.getAllClasses(el.classList);
-      case Settings.OUTPUT_SELECTOR_TAG:     return this.getTagName(el);
-      case Settings.OUTPUT_SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(el);
-      case Settings.OUTPUT_SELECTOR_FIRST:   return this.getFirstClass(el.classList);
-      case Settings.OUTPUT_SELECTOR_LONGEST: return this.getLongestClass(el.classList);
-    }
-  }
-
-  saveStyles(styles) {
-    var link = document.createElement('a');
-    link.href = 'data:text/css;base64,' + btoa(styles);
-    link.download = this.settings.get(Settings.SAVE_FILENAME);
-    link.click();
-  }
-
-  // --- Property Headers
+  // --- Headers
 
   getPositionHeader(element) {
     return element.cssBox.getPositionHeader();
@@ -1861,7 +1790,101 @@ class OutputManager {
     return element.cssBackgroundImage.getPositionHeader();
   }
 
+  // --- Styles
+
   getStyles(elements) {
+    return this.getJoinedStyleBlocks(elements);
+  }
+
+  // --- Saving
+
+  saveStyles(styles) {
+    var link = document.createElement('a');
+    link.href = 'data:text/css;base64,' + btoa(styles);
+    link.download = this.settings.get(Settings.SAVE_FILENAME);
+    link.click();
+  }
+
+
+  // === Private ===
+
+
+  // --- Selectors
+
+  getSelectorFromElement(element, fallback) {
+    var el, type, selector;
+
+    el       = element.el;
+    type     = this.getSelectorType(el);
+    selector = this.getSelectorForType(type, el);
+
+    if (!selector && (fallback || type !== Settings.OUTPUT_SELECTOR_NONE)) {
+      selector = el.tagName.toLowerCase();
+    }
+    return selector;
+  }
+
+  getSelectorType(el) {
+    var type = this.settings.get(Settings.OUTPUT_SELECTOR);
+    if (type === Settings.OUTPUT_SELECTOR_AUTO) {
+      type = el.id ? Settings.OUTPUT_SELECTOR_ID : Settings.OUTPUT_SELECTOR_FIRST;
+    }
+    return type;
+  }
+
+  getSelectorForType(type, el) {
+    switch(type) {
+      case Settings.OUTPUT_SELECTOR_NONE:    return '';
+      case Settings.OUTPUT_SELECTOR_ID:      return this.getId(el);
+      case Settings.OUTPUT_SELECTOR_ALL:     return this.getAllClasses(el.classList);
+      case Settings.OUTPUT_SELECTOR_TAG:     return this.getTagName(el);
+      case Settings.OUTPUT_SELECTOR_TAG_NTH: return this.getTagNameWithNthIndex(el);
+      case Settings.OUTPUT_SELECTOR_FIRST:   return this.getFirstClass(el.classList);
+      case Settings.OUTPUT_SELECTOR_LONGEST: return this.getLongestClass(el.classList);
+    }
+  }
+
+  getId(el) {
+    return el.id ? '#' + el.id : null;
+  }
+
+  getFirstClass(list) {
+    var first = list[0];
+    return first ? '.' + first : null;
+  }
+
+  getAllClasses(list) {
+    var str = Array.from(list).join('.');
+    return str ? '.' + str : null;
+  }
+
+  getLongestClass(list) {
+    var classNames = Array.from(list);
+    if (classNames.length > 0) {
+      return '.' + classNames.reduce(function(a, b) {
+        return a.length > b.length ? a : b;
+      });
+    }
+  }
+
+  getTagName(el) {
+    return el.tagName.toLowerCase();
+  }
+
+  getTagNameWithNthIndex(el) {
+    var child = el, i = 1;
+    while ((child = child.previousSibling) != null) {
+      // Count only element nodes.
+      if (child.nodeType == 1) {
+        i++;
+      }
+    }
+    return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
+  }
+
+  // --- Styles
+
+  getJoinedStyleBlocks(elements) {
     var blocks, grouping, lineSeparator, blockSeparator;
 
     blocks   = elements.map(el => this.getElementDeclarationBlock(el));
@@ -1876,17 +1899,6 @@ class OutputManager {
 
     return blocks.map(b => b.lines.join(lineSeparator)).join(blockSeparator);
   }
-
-  getDeclarationSeparators() {
-    var type = this.settings.get(Settings.OUTPUT_SELECTOR);
-    if (type === Settings.OUTPUT_SELECTOR_NONE) {
-      return [' ', '\n'];
-    } else {
-      return ['\n', '\n\n'];
-    }
-  }
-
-  // --- Private
 
   getElementDeclarationBlock(element) {
     var declarations, selector, tab, lines = [];
@@ -2100,50 +2112,21 @@ class OutputManager {
     return commonMap;
   }
 
-  getId(el) {
-    return el.id ? '#' + el.id : null;
-  }
-
-  getFirstClass(list) {
-    var first = list[0];
-    return first ? '.' + first : null;
-  }
-
-  getAllClasses(list) {
-    var str = Array.from(list).join('.');
-    return str ? '.' + str : null;
-  }
-
-  getLongestClass(list) {
-    var classNames = Array.from(list);
-    if (classNames.length > 0) {
-      return '.' + classNames.reduce(function(a, b) {
-        return a.length > b.length ? a : b;
-      });
-    }
-  }
-
-  getTagName(el) {
-    return el.tagName.toLowerCase();
-  }
-
-  getTagNameWithNthIndex(el) {
-    var child = el, i = 1;
-    while ((child = child.previousSibling) != null) {
-      // Count only element nodes.
-      if (child.nodeType == 1) {
-        i++;
-      }
-    }
-    return el.tagName.toLowerCase() + ':nth-child(' + i + ')';
-  }
-
   getTab() {
     switch(this.settings.get(Settings.TAB_STYLE)) {
       case Settings.TABS_TWO_SPACES:   return '  ';
       case Settings.TABS_FOUR_SPACES:  return '    ';
       case Settings.TABS_EIGHT_SPACES: return '        ';
       case Settings.TABS_TAB:          return '\u0009';
+    }
+  }
+
+  getDeclarationSeparators() {
+    var type = this.settings.get(Settings.OUTPUT_SELECTOR);
+    if (type === Settings.OUTPUT_SELECTOR_NONE) {
+      return [' ', '\n'];
+    } else {
+      return ['\n', '\n\n'];
     }
   }
 
@@ -2156,10 +2139,10 @@ class KeyManager extends BrowserEventTarget {
   static get MODIFIER_NONE()    { return 1; }
   static get MODIFIER_COMMAND() { return 2; }
 
-  static get SHIFT_KEY()   { return 'Shift'; }
+  static get ALT_KEY()     { return 'Alt';     }
+  static get META_KEY()    { return 'Meta';    }
   static get CTRL_KEY()    { return 'Control'; }
-  static get ALT_KEY()     { return 'Alt'; }
-  static get META_KEY()    { return 'Meta'; }
+  static get SHIFT_KEY()   { return 'Shift';   }
 
   static get UP_KEY()    { return 'ArrowUp';    }
   static get DOWN_KEY()  { return 'ArrowDown';  }
@@ -2177,12 +2160,12 @@ class KeyManager extends BrowserEventTarget {
   constructor(listener, isMacOS) {
     super(document.documentElement);
     this.listener = listener;
+    this.isMacOS  = isMacOS;
 
     this.handledKeys = {};
-    this.setupEvents();
     this.active = true;
 
-    this.isMacOS = isMacOS;
+    this.setupEvents();
   }
 
   setupKey(key) {
@@ -2201,7 +2184,9 @@ class KeyManager extends BrowserEventTarget {
     this.exceptedCommandKey = key;
   }
 
-  // --- Private
+
+  // === Private ===
+
 
   setupEvents() {
     this.bindEvent('keydown', this.onKeyDown);
@@ -2212,6 +2197,8 @@ class KeyManager extends BrowserEventTarget {
     var current = this.handledKeys[key] || 0;
     this.handledKeys[key] = current + modifier;
   }
+
+  // --- Events
 
   onKeyDown(evt) {
     var flag = this.getMaskedFlag(evt);
@@ -2233,13 +2220,7 @@ class KeyManager extends BrowserEventTarget {
     }
   }
 
-  getMaskedFlag(evt) {
-    var flag = this.handledKeys[evt.key];
-    if (!flag || this.isDisabled(evt)) {
-      return;
-    }
-    return flag;
-  }
+  // --- Other
 
   isDisabled(evt) {
     return !this.active && !this.isExceptedCommandKey(evt);
@@ -2259,6 +2240,14 @@ class KeyManager extends BrowserEventTarget {
     return this.isMacOS ?
             evt.metaKey && !evt.shiftKey && !evt.ctrlKey && !evt.altKey :
             evt.ctrlKey && !evt.shiftKey && !evt.metaKey && !evt.altKey;
+  }
+
+  getMaskedFlag(evt) {
+    var flag = this.handledKeys[evt.key];
+    if (!flag || this.isDisabled(evt)) {
+      return;
+    }
+    return flag;
   }
 
 }
@@ -2285,7 +2274,11 @@ class AlignmentManager {
     this.distributeElements(elements, edge);
   }
 
-  // --- Private
+
+  // === Private ===
+
+
+  // --- Align
 
   alignEdge(elements, edge, max) {
     var elementMoves, edgeVal;
@@ -2317,6 +2310,8 @@ class AlignmentManager {
     this.executeElementMoves(elementMoves, edge);
   }
 
+  // --- Distribute
+
   distributeElements(elements, edge) {
     var elementMoves, minClose, maxClose, maxFar, totalSize, totalSpace,
         distributeAmount, first, last;
@@ -2335,7 +2330,7 @@ class AlignmentManager {
     elementMoves = elements.map(element => {
       var rect, minEdge, maxEdge, size;
 
-      rect = element.el.getBoundingClientRect();
+      rect = element.getBoundingClientRect();
 
       minEdge = rect[edge === 'hcenter' ? 'left' : 'top'];
       maxEdge = rect[edge === 'hcenter' ? 'right' : 'bottom'];
@@ -2411,6 +2406,17 @@ class AlignmentManager {
     this.executeElementMoves(elementMoves, edge);
   }
 
+  // --- Element Moves
+
+  getElementMoves(elements, edge) {
+    return elements.map(element => {
+      return {
+        element: element,
+        current: this.getElementEdgeValue(element, edge)
+      };
+    });
+  }
+
   executeElementMoves(elementMoves, edge) {
     elementMoves.forEach(em => {
       em.element.pushState();
@@ -2424,23 +2430,13 @@ class AlignmentManager {
     });
   }
 
-  getElementMoves(elements, edge) {
-    return elements.map(element => {
-      return {
-        element: element,
-        current: this.getElementEdgeValue(element, edge)
-      };
-    });
-  }
-
   getElementEdgeValue(element, edge) {
-    var rect = element.el.getBoundingClientRect(), val;
-    if (edge === 'hcenter') {
-      val = rect.left + rect.width / 2;
-    } else if (edge === 'vcenter') {
-      val = rect.top + rect.height / 2;
+    var val, center;
+    if (edge === 'hcenter' || edge === 'vcenter') {
+      center = element.getViewportCenter();
+      val = edge === 'hcenter' ? center.x : center.y;
     } else {
-      val = rect[edge];
+      val = element.getBoundingClientRect()[edge];
     }
     return Math.round(val);
   }
@@ -2456,20 +2452,13 @@ class AlignmentManager {
 class CopyManager {
 
   constructor(listener) {
-    window.addEventListener('copy', this.onCopyEvent.bind(this));
     this.listener = listener;
     this.active = true;
+    this.setup();
   }
 
   setActive(on) {
     this.active = on;
-  }
-
-  onCopyEvent(evt) {
-    if (this.active) {
-      evt.preventDefault();
-      this.listener.onCopyEvent(evt);
-    }
   }
 
   setCopyData(evt, str) {
@@ -2477,536 +2466,20 @@ class CopyManager {
     evt.clipboardData.setData('text/plain', str);
   }
 
-}
 
-/*-------------------------] AppController [--------------------------*/
+  // === Private ===
 
-class AppController {
 
-  static get PLATFORM_IS_MAC() { return /mac/i.test(navigator.platform); }
-  static get HOST_CLASS_NAME() { return 'positionble-extension-ui'; }
-
-  constructor(uiRoot) {
-
-    this.uiRoot = uiRoot;
-    this.settings = new Settings(this, uiRoot);
-    this.outputManager = new OutputManager(this.settings);
-    this.alignmentManager = new AlignmentManager();
-
-    this.body = new Element(document.body);
-
-    this.copyManager = new CopyManager(this);
-    this.copyAnimation = new CopyAnimation(uiRoot, this);
-    this.loadingAnimation = new LoadingAnimation(uiRoot, this);
-
-    this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
-
-    // TODO: order here?
-    this.elementManager = new PositionableElementManager(this, ShadowDomInjector.UI_HOST_CLASS_NAME);
-    this.controlPanel   = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
-    this.nudgeManager   = new NudgeManager(this);
-
-    this.setupKeyManager();
-
-    new DragSelection(uiRoot, this);
-    this.loadingAnimation.show();
-  }
-
-  setupKeyManager() {
-    this.keyManager = new KeyManager(this, AppController.PLATFORM_IS_MAC);
-
-    this.keyManager.setupKey(KeyManager.SHIFT_KEY);
-    this.keyManager.setupKey(KeyManager.CTRL_KEY);
-    this.keyManager.setupKey(KeyManager.META_KEY);
-    this.keyManager.setupKey(KeyManager.ALT_KEY);
-
-    this.keyManager.setupKey(KeyManager.A_KEY);
-    this.keyManager.setupKey(KeyManager.B_KEY);
-    this.keyManager.setupKey(KeyManager.M_KEY);
-    this.keyManager.setupKey(KeyManager.S_KEY);
-    this.keyManager.setupKey(KeyManager.R_KEY);
-    this.keyManager.setupKey(KeyManager.Z_KEY);
-
-    this.keyManager.setupKey(KeyManager.UP_KEY);
-    this.keyManager.setupKey(KeyManager.LEFT_KEY);
-    this.keyManager.setupKey(KeyManager.DOWN_KEY);
-    this.keyManager.setupKey(KeyManager.RIGHT_KEY);
-
-    this.keyManager.setupCommandKey(KeyManager.A_KEY);
-    this.keyManager.setupCommandKey(KeyManager.S_KEY);
-    this.keyManager.setupCommandKey(KeyManager.Z_KEY);
-
-    // Command S for save works regardless of where you are,
-    // other command keys should be able to disable as they
-    // do other things in the context of the settings form.
-    this.keyManager.setupCommandKeyException(KeyManager.S_KEY);
-  }
-
-  onFocusedElementsChanged() {
-    this.renderActiveControlPanel();
-  }
-
-  onElementMouseDown() {
-    this.controlPanel.closeSettings();
-  }
-
-  renderActiveControlPanel() {
-    var elements = this.elementManager.getFocusedElements();
-    if (elements.length > 1) {
-      this.renderMultipleArea(elements);
-    } else if (elements.length === 1) {
-      this.renderElementArea();
-    } else {
-      this.controlPanel.showDefaultArea();
-    }
-  }
-
-  getStylesForFocusedElements() {
-    return this.elementManager.getFocusedElements().map(element => {
-      return this.settings.getStylesForElement(element);
-    }).join(' ');
-  }
-
-  onSettingsClick() {
-    this.settings.focusForm();
-  }
-
-  onAdvancedSettingsClick() {
-  }
-
-  onQuickstartSkip() {
-    this.settings.set(Settings.SKIP_GETTING_STARTED, true);
-    this.renderActiveControlPanel();
-  }
-
-  onFormFocus() {
-    this.keyManager.setActive(false);
-    this.copyManager.setActive(false);
-  }
-
-  onFormBlur() {
-    this.keyManager.setActive(true);
-    this.copyManager.setActive(true);
-  }
-
-  onSettingsInitialized() {
-    this.elementManager.setSnap(
-      this.settings.get(Settings.SNAP_X),
-      this.settings.get(Settings.SNAP_Y)
-    );
-  }
-
-  onSelectorUpdated() {
-    this.elementManager.releaseAll();
-    this.loadingAnimation.show();
-  }
-
-  onSnappingUpdated(x, y) {
-    this.elementManager.setSnap(x, y);
-  }
-
-  onSettingsUpdated() {
-    this.renderActiveControlPanel();
-  }
-
-  onAlignButtonClick(edge) {
-    this.alignmentManager.align(this.elementManager.getFocusedElements(), edge);
-  }
-
-  onDistributeButtonClick(edge) {
-    this.alignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
-  }
-
-  // --- Loading Animation Events
-
-  onLoadingAnimationTaskReady() {
-    this.elementManager.findElements(
-      this.settings.get(Settings.INCLUDE_SELECTOR),
-      this.settings.get(Settings.EXCLUDE_SELECTOR)
-    );
-    this.controlPanel.activate();
-    if (this.settings.get(Settings.SKIP_GETTING_STARTED)) {
-      this.controlPanel.showDefaultArea();
-    } else {
-      this.controlPanel.showQuickstartArea();
-    }
-  }
-
-  // --- Position Drag Events
-
-  onPositionDragIntentStart(evt, handle) {
-    this.setHoverCursor(handle);
-  }
-
-  onPositionDragIntentStop() {
-    this.clearHoverCursor();
-  }
-
-  onPositionDragStart(evt, handle) {
-    this.setDragCursor(handle);
-  }
-
-  onPositionDragMove() {
-  }
-
-  onPositionDragStop() {
-    this.clearDragCursor();
-  }
-
-  // --- Resize Drag Events
-
-  onResizeDragIntentStart(evt, handle, element) {
-    this.setHoverCursor(handle, element.getRotation());
-    this.currentFocusedHandle = handle;
-  }
-
-  onResizeDragIntentStop() {
-    this.cursorManager.clearHoverCursor();
-    this.currentFocusedHandle = null;
-  }
-
-  onResizeDragStart(evt, handle, element) {
-    this.isResizing = !evt.ctrlKey;
-    this.setDragCursor(handle, element.getRotation());
-  }
-
-  onResizeDragMove() {
-  }
-
-  onResizeDragStop() {
-    this.clearDragCursor();
-    this.isResizing = false;
-  }
-
-  // --- Rotation Drag Events
-
-  onRotationDragIntentStart(evt, handle, element) {
-    this.setHoverCursor(handle, element.getRotation());
-    this.currentFocusedHandle = handle;
-  }
-
-  onRotationDragIntentStop() {
-    this.clearHoverCursor();
-    this.currentFocusedHandle = null;
-  }
-
-  onRotationDragStart() {
-    this.isRotating = true;
-  }
-
-  onRotationDragMove(evt, handle) {
-    this.setDragCursor(handle, evt.rotation.abs);
-  }
-
-  onRotationDragStop(evt, handle, element) {
-    this.isRotating = false;
-    this.clearDragCursor();
-    if (this.currentFocusedHandle) {
-      this.setHoverCursor(this.currentFocusedHandle, element.getRotation());
-    }
-  }
-
-  // --- Cursors
-
-  setHoverCursor(handle, rotation) {
-    var img = handle.hasImageCursor();
-    var cursor = handle.getCursor(rotation);
-    this.cursorManager.setHoverCursor(cursor, img);
-  }
-
-  setDragCursor(handle, rotation) {
-    var img = handle.hasImageCursor();
-    var cursor = handle.getCursor(rotation);
-    this.cursorManager.setDragCursor(cursor, img);
-  }
-
-  clearHoverCursor() {
-    this.cursorManager.clearHoverCursor();
-  }
-
-  clearDragCursor() {
-    this.cursorManager.clearDragCursor();
-  }
-
-  // --- Background Image Events
-
-  onBackgroundImageSnap() {
-    this.renderFocusedPosition();
-    this.renderFocusedDimensions();
-    this.renderFocusedTransform();
-    this.renderFocusedBackgroundPosition();
-  }
-
-  // --- Dimensions Updated Events
-
-  onPositionUpdated() {
-    this.renderFocusedPosition();
-  }
-
-  onDimensionsUpdated() {
-    this.renderFocusedDimensions();
-    this.renderFocusedTransform();
-  }
-
-  onBackgroundPositionUpdated() {
-    this.renderFocusedBackgroundPosition();
-  }
-
-  onRotationUpdated() {
-    this.renderFocusedTransform();
-  }
-
-  onZIndexUpdated() {
-    this.renderFocusedZIndex();
-  }
-
-  // --- Key Events
-
-  onKeyDown(evt) {
-    // Note mode resetting is handled by DragTarget
-
-    switch (evt.key) {
-
-      // Meta Keys
-      case KeyManager.SHIFT_KEY:
-        this.nudgeManager.setMultiplier(true);
-        break;
-      case KeyManager.CTRL_KEY:
-        this.cursorManager.setPriorityHoverCursor('move');
-        break;
-      case KeyManager.ALT_KEY:
-        if (this.canPeek()) {
-          this.elementManager.setPeekMode(true);
-        }
-        break;
-
-      // Arrow Keys
-      case KeyManager.UP_KEY:    this.nudgeManager.addDirection('up');    break;
-      case KeyManager.DOWN_KEY:  this.nudgeManager.addDirection('down');  break;
-      case KeyManager.LEFT_KEY:  this.nudgeManager.addDirection('left');  break;
-      case KeyManager.RIGHT_KEY: this.nudgeManager.addDirection('right'); break;
-
-      // Other Keys
-      case KeyManager.M_KEY: this.nudgeManager.setPositionMode();      break;
-      case KeyManager.S_KEY: this.nudgeManager.toggleResizeMode();     break;
-      case KeyManager.R_KEY: this.nudgeManager.toggleRotateMode();     break;
-      case KeyManager.Z_KEY: this.nudgeManager.toggleZIndexMode();     break;
-      case KeyManager.B_KEY: this.nudgeManager.toggleBackgroundMode(); break;
-    }
-  }
-
-  onKeyUp(evt) {
-
-    switch (evt.key) {
-
-      // Meta Keys
-      case KeyManager.SHIFT_KEY:
-        this.nudgeManager.setMultiplier(false);
-        break;
-      case KeyManager.CTRL_KEY:
-        this.cursorManager.clearPriorityHoverCursor('move');
-        break;
-      case KeyManager.ALT_KEY:
-        if (this.canPeek()) {
-          this.elementManager.setPeekMode(false);
-        }
-        break;
-
-      // Arrow Keys
-      case KeyManager.UP_KEY:    this.nudgeManager.removeDirection('up');    break;
-      case KeyManager.DOWN_KEY:  this.nudgeManager.removeDirection('down');  break;
-      case KeyManager.LEFT_KEY:  this.nudgeManager.removeDirection('left');  break;
-      case KeyManager.RIGHT_KEY: this.nudgeManager.removeDirection('right'); break;
-
-    }
-  }
-
-  canPeek() {
-    return !this.isResizing && !this.isRotating;
-  }
-
-  onCommandKeyDown(evt) {
-    // Note that copying is handled by the copy event not key events.
-
-    switch (evt.key) {
-      case KeyManager.S_KEY:
-        this.saveStyles();
-        break;
-      case KeyManager.A_KEY:
-        this.elementManager.focusAll();
-        break;
-      case KeyManager.Z_KEY:
-        if (this.elementManager.hasFocusedElements()) {
-          this.elementManager.undo();
-          this.renderActiveControlPanel();
-        }
-        break;
-    }
+  setup() {
+    this.onCopyEvent = this.onCopyEvent.bind(this);
+    window.addEventListener('copy', this.onCopyEvent.bind(this));
   }
 
   onCopyEvent(evt) {
-    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
-    this.copyManager.setCopyData(evt, styles);
-    this.copyAnimation.show(!!styles);
-  }
-
-  saveStyles() {
-    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
-    if (styles) {
-      this.outputManager.saveStyles(styles);
-    } else {
-      this.copyAnimation.show(false);
+    if (this.active) {
+      evt.preventDefault();
+      this.listener.onCopyEvent(evt);
     }
-  }
-
-  // --- Nudge Events
-
-  onNudgeStart() {
-    this.elementManager.pushFocusedStates();
-  }
-
-  onNudgeMove(evt) {
-    switch (evt.mode) {
-      case NudgeManager.POSITION_MODE:
-        this.elementManager.applyPositionNudge(evt.x, evt.y);
-        break;
-      case NudgeManager.RESIZE_SE_MODE:
-      case NudgeManager.RESIZE_NW_MODE:
-        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.corner);
-        break;
-      case NudgeManager.BACKGROUND_MODE:
-        this.elementManager.applyBackgroundNudge(evt.x, evt.y);
-        break;
-
-      // Flip the y value for single values
-      case NudgeManager.ROTATE_MODE:
-        this.elementManager.applyRotationNudge(-evt.y);
-        break;
-      case NudgeManager.Z_INDEX_MODE:
-        this.elementManager.applyZIndexNudge(-evt.y);
-        break;
-    }
-  }
-
-  onNudgeStop() {
-  }
-
-  onNudgeModeChanged(mode) {
-    this.controlPanel.setNudgeMode(mode);
-  }
-
-  // --- Control Panel Drag Events
-
-  onControlPanelDragStart() {
-    this.cursorManager.setDragCursor('move');
-  }
-
-  onControlPanelDragStop() {
-    this.cursorManager.clearDragCursor();
-  }
-
-  // --- Drag Selection Events
-
-  onDragSelectionStart() {
-    this.cursorManager.setDragCursor('crosshair');
-  }
-
-  onDragSelectionMove(selection) {
-    this.elementManager.setFocused(element => selection.contains(element.el));
-  }
-
-  onDragSelectionStop() {
-    this.cursorManager.clearDragCursor();
-  }
-
-  onDragSelectionClear() {
-    this.elementManager.unfocusAll();
-  }
-
-  // --- Control Panel Element Rendering
-
-  renderMultipleArea(elements) {
-    this.controlPanel.showMultipleArea();
-    this.controlPanel.renderMultipleSelected(elements);
-  }
-
-  renderElementArea() {
-    this.controlPanel.showElementArea();
-    this.renderFocusedSelector();
-    this.renderFocusedPosition();
-    this.renderFocusedDimensions();
-    this.renderFocusedZIndex();
-    this.renderFocusedTransform();
-    this.renderFocusedBackgroundPosition();
-  }
-
-  renderFocusedSelector() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementSelector(this.outputManager.getSelectorWithDefault(el));
-    });
-  }
-
-  renderFocusedPosition() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementPosition(this.outputManager.getPositionHeader(el));
-    });
-  }
-
-  renderFocusedDimensions() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementDimensions(this.outputManager.getDimensionsHeader(el));
-    });
-  }
-
-  renderFocusedZIndex() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementZIndex(this.outputManager.getZIndexHeader(el));
-    });
-  }
-
-  renderFocusedTransform() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementTransform(this.outputManager.getTransformHeader(el));
-    });
-  }
-
-  renderFocusedBackgroundPosition() {
-    this.withSingleFocusedElement(el => {
-      this.controlPanel.renderElementBackgroundPosition(this.outputManager.getBackgroundPositionHeader(el));
-    });
-  }
-
-  withSingleFocusedElement(fn) {
-    var focusedElements = this.elementManager.getFocusedElements();
-    if (focusedElements.length === 1) {
-      fn(focusedElements[0]);
-    }
-  }
-
-  onElementHighlightMouseOver(index) {
-    var element = this.elementManager.focusedElements[index], selector;
-    selector = this.outputManager.getSelectorWithDefault(element);
-    this.controlPanel.renderMultipleHeader(selector);
-    element.setHighlightMode(true);
-  }
-
-  onElementHighlightMouseOut(index) {
-    var element = this.elementManager.focusedElements[index];
-    element.setHighlightMode(false);
-    this.controlPanel.renderMultipleHeader();
-  }
-
-  onElementHighlightClick(index) {
-    var element = this.elementManager.focusedElements[index];
-    element.setHighlightMode(false);
-    this.elementManager.setFocused([element]);
-  }
-
-  // --- Control Panel Align Rendering
-
-  destroy() {
-    this.elementManager.releaseAll();
-    this.uiRoot.host.remove();
   }
 
 }
@@ -3023,81 +2496,13 @@ class PositionableElementManager {
     this.focusedElements = [];
   }
 
-  setSnap(x, y) {
-    this.snapX = x;
-    this.snapY = y;
+  // --- Finding Elements
+
+  findElements(includeSelector, excludeSelector) {
+    this.executeFindElements(includeSelector, excludeSelector);
   }
 
   // --- Focusing
-
-  getFocusedElements() {
-    return this.focusedElements;
-  }
-
-  focus(element) {
-    if (!this.elementIsFocused(element)) {
-      element.focus();
-      this.focusedElements.push(element);
-    }
-  }
-
-  unfocus(element) {
-    if (this.elementIsFocused(element)) {
-      element.unfocus();
-      this.focusedElements = this.focusedElements.filter(function(el) {
-        return el !== element;
-      });
-    }
-  }
-
-  lockPeekMode() {
-    this.focusedElements.forEach(el => el.lockPeekMode());
-  }
-
-  setPeekMode(on) {
-    this.focusedElements.forEach(el => el.setPeekMode(on));
-  }
-
-  pushFocusedStates() {
-    this.focusedElements.forEach(el => el.pushState());
-  }
-
-  isFocused(element) {
-    return this.focusedElements.some(el => el === element);
-  }
-
-  addFocused(element) {
-    this.setFocused(this.focusedElements.concat(element));
-  }
-
-  removeFocused(element) {
-    this.setFocused(this.focusedElements.filter(el => el !== element));
-  }
-
-  setFocused(arg) {
-    var prev, next, incoming, outgoing;
-
-    prev = this.getFocusedElements();
-
-    if (typeof arg === 'function') {
-      next = this.elements.filter(arg);
-    } else if (Array.isArray(arg)) {
-      next = arg;
-    } else {
-      next = [arg];
-    }
-
-    incoming = next.filter(el => !prev.includes(el));
-    outgoing = prev.filter(el => !next.includes(el));
-
-    if (incoming.length || outgoing.length) {
-      outgoing.forEach(e => this.unfocus(e));
-      incoming.forEach(e => this.focus(e));
-      this.listener.onFocusedElementsChanged();
-      this.focusedElements = next;
-    }
-
-  }
 
   focusAll() {
     this.setFocused(this.elements);
@@ -3107,11 +2512,34 @@ class PositionableElementManager {
     this.setFocused([]);
   }
 
+  getFocusedElements() {
+    return this.focusedElements;
+  }
+
+  hasFocusedElements() {
+    return this.focusedElements.length > 0;
+  }
+
+  pushFocusedStates() {
+    this.focusedElements.forEach(el => el.pushState());
+  }
+
+  // --- Other
+
   undo() {
     this.focusedElements.forEach(el => el.undo());
   }
 
-  // --- Element Drag Events
+  setSnap(x, y) {
+    this.snapX = x;
+    this.snapY = y;
+  }
+
+
+  // === Protected ===
+
+
+  // --- Element Mouse Events
 
   onElementMouseDown(evt, element) {
     if (evt.shiftKey) {
@@ -3121,17 +2549,6 @@ class PositionableElementManager {
       this.setFocused(element);
     }
     this.listener.onElementMouseDown();
-  }
-
-  onElementDragStart(evt, element) {
-    this.setDraggingElements(evt, element);
-  }
-
-  onElementDragMove() {
-    this.removeOnClick = false;
-  }
-
-  onElementDragStop() {
   }
 
   onElementClick(evt, element) {
@@ -3233,7 +2650,84 @@ class PositionableElementManager {
     this.listener.onBackgroundImageSnap();
   }
 
-  findElements(includeSelector, excludeSelector) {
+
+  // === Private ===
+
+
+  // --- Focusing
+
+  addFocused(element) {
+    this.setFocused(this.focusedElements.concat(element));
+  }
+
+  removeFocused(element) {
+    this.setFocused(this.focusedElements.filter(el => el !== element));
+  }
+
+  isFocused(element) {
+    return this.focusedElements.some(el => el === element);
+  }
+
+  setFocused(arg) {
+    var prev, next, incoming, outgoing;
+
+    prev = this.getFocusedElements();
+
+    if (typeof arg === 'function') {
+      next = this.elements.filter(arg);
+    } else if (Array.isArray(arg)) {
+      next = arg;
+    } else {
+      next = [arg];
+    }
+
+    incoming = next.filter(el => !prev.includes(el));
+    outgoing = prev.filter(el => !next.includes(el));
+
+    if (incoming.length || outgoing.length) {
+      outgoing.forEach(e => this.unfocus(e));
+      incoming.forEach(e => this.focus(e));
+      this.listener.onFocusedElementsChanged();
+      this.focusedElements = next;
+    }
+
+  }
+
+  focus(element) {
+    if (!this.elementIsFocused(element)) {
+      element.focus();
+      this.focusedElements.push(element);
+    }
+  }
+
+  unfocus(element) {
+    if (this.elementIsFocused(element)) {
+      element.unfocus();
+      this.focusedElements = this.focusedElements.filter(function(el) {
+        return el !== element;
+      });
+    }
+  }
+
+  elementIsFocused(element) {
+    return this.focusedElements.some(el => el === element);
+  }
+
+  // --- Element Drag Events
+
+  onElementDragStart(evt, element) {
+    this.setDraggingElements(evt, element);
+  }
+
+  onElementDragMove() {
+    this.removeOnClick = false;
+  }
+
+  onElementDragStop() {}
+
+  // --- Finding Elements
+
+  executeFindElements(includeSelector, excludeSelector) {
     var els;
 
     try {
@@ -3262,30 +2756,6 @@ class PositionableElementManager {
       }
     }
 
-    // TODO: is this needed now?
-    this.active = true;
-
-  }
-
-  refresh() {
-    this.destroyElements();
-    this.startBuild();
-  }
-
-  destroyElements() {
-    this.elements.forEach(function(e) {
-      e.destroy();
-    }, this);
-  }
-
-  toggleActive() {
-    if (this.active) {
-      this.destroyElements();
-      this.statusBar.deactivate();
-      this.active = false;
-    } else {
-      this.startBuild();
-    }
   }
 
   canAutoAddElement(el) {
@@ -3301,43 +2771,7 @@ class PositionableElementManager {
     return style.position === 'absolute' || style.position === 'fixed';
   }
 
-  // --- Nudging
-
-  applyPositionNudge(x, y) {
-    x *= this.snapX || 1;
-    y *= this.snapY || 1;
-    this.focusedElements.forEach(el => el.move(x, y));
-    this.listener.onPositionUpdated();
-  }
-
-  applyResizeNudge(x, y, corner) {
-    x *= this.snapX || 1;
-    y *= this.snapY || 1;
-    this.focusedElements.forEach(el => {
-      el.resize(x, y, corner);
-    });
-    this.listener.onPositionUpdated();
-    this.listener.onDimensionsUpdated();
-  }
-
-  applyBackgroundNudge(x, y) {
-    this.focusedElements.forEach(el => {
-      el.moveBackground(x, y);
-    });
-    this.listener.onBackgroundPositionUpdated();
-  }
-
-  applyRotationNudge(val) {
-    this.focusedElements.forEach(el => el.rotate(val));
-    this.listener.onRotationUpdated();
-  }
-
-  applyZIndexNudge(val) {
-    this.focusedElements.forEach(el => el.addZIndex(val));
-    this.listener.onZIndexUpdated();
-  }
-
-  // --- Position Dragging
+  // --- Dragging
 
   applyPositionDrag(evt, isBackground) {
     var constrained = evt.drag.constrained;
@@ -3378,6 +2812,7 @@ class PositionableElementManager {
     this.draggingElements.forEach(el => {
       el.resize(vector.x, vector.y, corner, constrained, this.snapX, this.snapY);
     });
+
     // Position may also shift as the result of dragging a box's
     // nw corner, or in the case of reflecting.
     this.listener.onPositionUpdated();
@@ -3389,28 +2824,6 @@ class PositionableElementManager {
     this.listener.onRotationUpdated();
   }
 
-  // --- Calculations
-
-  elementIsFocused(element) {
-    return this.focusedElements.some(el => el === element);
-  }
-
-  getFocusedSize() {
-    return this.focusedElements.length;
-  }
-
-  hasFocusedElements() {
-    return this.focusedElements.length > 0;
-  }
-
-  getAllFocused() {
-    return this.focusedElements;
-  }
-
-  getFirstFocused() {
-    return this.focusedElements[0];
-  }
-
   setDraggingElements(evt, element) {
     this.metaKeyActive = evt.metaKey;
     if (this.metaKeyActive) {
@@ -3420,10 +2833,62 @@ class PositionableElementManager {
     }
   }
 
+  // --- Nudging
+
+  applyPositionNudge(x, y) {
+    x *= this.snapX || 1;
+    y *= this.snapY || 1;
+    this.focusedElements.forEach(el => el.move(x, y));
+    this.listener.onPositionUpdated();
+  }
+
+  applyResizeNudge(x, y, corner) {
+    x *= this.snapX || 1;
+    y *= this.snapY || 1;
+    this.focusedElements.forEach(el => {
+      el.resize(x, y, corner);
+    });
+    this.listener.onPositionUpdated();
+    this.listener.onDimensionsUpdated();
+  }
+
+  applyBackgroundNudge(x, y) {
+    this.focusedElements.forEach(el => {
+      el.moveBackground(x, y);
+    });
+    this.listener.onBackgroundPositionUpdated();
+  }
+
+  applyRotationNudge(val) {
+    this.focusedElements.forEach(el => el.rotate(val));
+    this.listener.onRotationUpdated();
+  }
+
+  applyZIndexNudge(val) {
+    this.focusedElements.forEach(el => el.addZIndex(val));
+    this.listener.onZIndexUpdated();
+  }
+
+  // --- Peeking
+
+  lockPeekMode() {
+    this.focusedElements.forEach(el => el.lockPeekMode());
+  }
+
+  setPeekMode(on) {
+    this.focusedElements.forEach(el => el.setPeekMode(on));
+  }
+
+  // --- Other
+
   releaseAll() {
     this.elements.forEach(el => el.destroy());
     this.elements = [];
     this.focusedElements = [];
+  }
+
+  destroy() {
+    this.releaseAll();
   }
 
 }
@@ -3438,11 +2903,19 @@ class DragSelection extends DragTarget {
     this.setupInterface(root);
   }
 
-  setupInterface(root) {
-    this.ui = new Element(root.getElementById('drag-selection'));
+  contains(el) {
+    var center = new Element(el).getViewportCenter();
+    var rect   = this.ui.getBoundingClientRect();
+
+    return rect.left   <= center.x &&
+           rect.right  >= center.x &&
+           rect.top    <= center.y &&
+           rect.bottom >= center.y;
   }
 
-  // --- Events
+
+  // === Protected ===
+
 
   onDragStart(evt) {
     super.onDragStart(evt);
@@ -3453,40 +2926,28 @@ class DragSelection extends DragTarget {
 
   onDragMove(evt) {
     super.onDragMove(evt);
-
     this.cssBox = this.dragStartBox.clone();
     this.cssBox.resize(evt.drag.x, evt.drag.y, 'se');
     this.render();
-    // TODO: consolidate this listener model with other things that
-    // are just binding an instances methods onto their own... which is better?
     this.listener.onDragSelectionMove(this);
   }
 
   onDragStop(evt) {
     super.onDragStop(evt);
-    this.listener.onDragSelectionStop(this);
     this.ui.hide();
+    this.listener.onDragSelectionStop(this);
   }
 
   onClick() {
     this.listener.onDragSelectionClear();
   }
 
-  contains(el) {
 
-    var center = this.getCenterForElement(el);
-    var rect = this.ui.el.getBoundingClientRect();
+  // === Private ===
 
-    return rect.left   <= center.x &&
-           rect.right  >= center.x &&
-           rect.top    <= center.y &&
-           rect.bottom >= center.y;
 
-  }
-
-  getCenterForElement(el) {
-    var rect = el.getBoundingClientRect();
-    return new Point(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  setupInterface(root) {
+    this.ui = new Element(root.getElementById('drag-selection'));
   }
 
   render() {
@@ -3499,12 +2960,11 @@ class DragSelection extends DragTarget {
 
 class ControlPanel extends DraggableElement {
 
-  static get ACTIVE_CLASS()     { return 'control-panel--active'; }
-  static get WINDOWS_CLASS()    { return 'control-panel--win';    }
+  static get ACTIVE_CLASS()  { return 'control-panel--active'; }
+  static get WINDOWS_CLASS() { return 'control-panel--win';    }
 
   constructor(root, listener, isMac) {
     super(root.getElementById('control-panel'), true);
-    this.setupInteractiveElements();
     this.listener = listener;
     this.setup(root, isMac);
   }
@@ -3514,13 +2974,7 @@ class ControlPanel extends DraggableElement {
     this.addClass(ControlPanel.ACTIVE_CLASS);
   }
 
-  closeSettings() {
-    if (this.activeArea === this.settingsArea) {
-      this.showLastArea();
-    }
-  }
-
-  // --- Toggling
+  // --- Areas
 
   showDefaultArea() {
     this.showArea(this.defaultArea);
@@ -3576,13 +3030,39 @@ class ControlPanel extends DraggableElement {
     this.elementArea.renderBackgroundPosition(backgroundPosition);
   }
 
-  // --- Mode Indicator
+  // --- Other
 
   setNudgeMode(mode) {
     this.modeIndicator.setMode(mode);
   }
 
-  // --- Private
+  closeSettings() {
+    if (this.activeArea === this.settingsArea) {
+      this.showLastArea();
+    }
+  }
+
+
+  // === Protected ===
+
+
+  onDragStart(evt) {
+    super.onDragStart(evt);
+    this.listener.onControlPanelDragStart(evt);
+  }
+
+  onDragStop(evt) {
+    super.onDragStop(evt);
+    this.listener.onControlPanelDragStop(evt);
+  }
+
+  onAreaSizeChanged() {
+    this.renderArea();
+  }
+
+
+  // === Private ===
+
 
   setup(root, isMac) {
     this.setupDimensions();
@@ -3590,6 +3070,7 @@ class ControlPanel extends DraggableElement {
     this.setupButtons(root);
     this.setupModeIndicator(root);
     this.setupWindowsKeys(isMac);
+    this.setupInteractiveElements();
     this.setupDoubleClick();
   }
 
@@ -3601,11 +3082,11 @@ class ControlPanel extends DraggableElement {
   }
 
   setupAreas(root) {
-    this.defaultArea    = new ControlPanelDefaultArea(this, this.listener, root);
-    this.elementArea    = new ControlPanelElementArea(this, this.listener, root);
-    this.multipleArea   = new ControlPanelMultipleArea(this, this.listener, root);
-    this.settingsArea   = new ControlPanelSettingsArea(this, this.listener, root);
-    this.quickstartArea = new ControlPanelQuickstartArea(this, this.listener, root);
+    this.defaultArea    = new ControlPanelDefaultArea(root, this, this.listener);
+    this.elementArea    = new ControlPanelElementArea(root, this, this.listener);
+    this.multipleArea   = new ControlPanelMultipleArea(root, this, this.listener);
+    this.settingsArea   = new ControlPanelSettingsArea(root, this, this.listener);
+    this.quickstartArea = new ControlPanelQuickstartArea(root, this, this.listener);
   }
 
   setupButtons(root) {
@@ -3623,7 +3104,7 @@ class ControlPanel extends DraggableElement {
     }
   }
 
-  // --- Toggling
+  // --- Areas
 
   showArea(area) {
     if (this.activeArea) {
@@ -3643,16 +3124,6 @@ class ControlPanel extends DraggableElement {
 
   // --- Events
 
-  onDragStart(evt) {
-    super.onDragStart(evt);
-    this.listener.onControlPanelDragStart(evt);
-  }
-
-  onDragStop(evt) {
-    super.onDragStop(evt);
-    this.listener.onControlPanelDragStop(evt);
-  }
-
   onDoubleClick() {
     this.cssH = this.defaultH;
     this.cssV = this.defaultV;
@@ -3666,10 +3137,6 @@ class ControlPanel extends DraggableElement {
       this.showSettingsArea();
     }
     this.listener.onSettingsClick();
-  }
-
-  onAreaSizeChanged() {
-    this.renderArea();
   }
 
   // --- Rendering
@@ -3721,7 +3188,7 @@ class ControlPanelModeIndicator extends Element {
     this.currentElement = el;
   }
 
-  // --- Private
+  // === Private ===
 
   setupElements(root) {
     this.position   = new Element(root.getElementById('mode-position'));
@@ -3752,7 +3219,7 @@ class ControlPanelArea extends Element {
 
   static get ACTIVE_CLASS() { return 'control-panel-area--active'; }
 
-  constructor(panel, listener, root, name, sizes) {
+  constructor(root, name, panel, listener, sizes) {
     super(root.getElementById(name + '-area'));
     this.panel    = panel;
     this.listener = listener;
@@ -3776,7 +3243,14 @@ class ControlPanelArea extends Element {
     return false;
   }
 
-  // --- Protected
+
+  // === Protected ===
+
+
+  setupButton(root, id, handler) {
+    var el = root.getElementById(id);
+    el.addEventListener('click', handler.bind(this));
+  }
 
   setSize(size) {
     if (size !== this.size) {
@@ -3799,13 +3273,6 @@ class ControlPanelArea extends Element {
     this.currentExtraClass = null;
   }
 
-  // --- Private
-
-  setupButton(root, id, handler) {
-    var el = root.getElementById(id);
-    el.addEventListener('click', handler.bind(this));
-  }
-
 }
 
 /*-------------------------] ControlPanelSettingsArea [--------------------------*/
@@ -3816,7 +3283,6 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   static get AREA_HELP_CLASS()     { return 'settings-area--help';     }
   static get AREA_BASIC_CLASS()    { return 'settings-area--basic';    }
   static get AREA_ADVANCED_CLASS() { return 'settings-area--advanced'; }
-  static get FORM_ADVANCED_CLASS() { return 'settings-form--advanced'; }
 
   static get SIZES() {
     return {
@@ -3825,14 +3291,16 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     };
   }
 
-  constructor(panel, listener, root) {
-    super(panel, listener, root, 'settings', ControlPanelSettingsArea.SIZES);
+  constructor(root, panel, listener) {
+    super(root, 'settings', panel, listener, ControlPanelSettingsArea.SIZES);
     this.setupElements(root);
     this.setupButtons(root);
     this.setBasicMode();
   }
 
-  // --- Private
+
+  // === Private ===
+
 
   setupElements(root) {
     this.form = new Element(root.getElementById('settings-form'));
@@ -3851,13 +3319,11 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   setBasicMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_BASIC_CLASS);
-    this.form.removeClass(ControlPanelSettingsArea.FORM_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
   }
 
   setAdvancedMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
-    this.form.addClass(ControlPanelSettingsArea.FORM_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
   }
 
@@ -3883,8 +3349,8 @@ class ControlPanelElementArea extends ControlPanelArea {
     };
   }
 
-  constructor(panel, listener, root) {
-    super(panel, listener, root, 'element', ControlPanelElementArea.SIZES);
+  constructor(root, panel, listener) {
+    super(root, 'element', panel, listener, ControlPanelElementArea.SIZES);
     this.setupElements(root);
   }
 
@@ -3932,7 +3398,7 @@ class ControlPanelElementArea extends ControlPanelArea {
     this.setSize();
   }
 
-  // --- Private
+  // === Private ===
 
   setupElements(root) {
     this.selector           = new Element(root.getElementById('element-selector'));
@@ -3983,8 +3449,8 @@ class ControlPanelMultipleArea extends ControlPanelArea {
     };
   }
 
-  constructor(panel, listener, root) {
-    super(panel, listener, root, 'multiple', ControlPanelMultipleArea.SIZES);
+  constructor(root, panel, listener) {
+    super(root, 'multiple', panel, listener, ControlPanelMultipleArea.SIZES);
     this.setupButtons(root);
   }
 
@@ -4010,7 +3476,7 @@ class ControlPanelMultipleArea extends ControlPanelArea {
     this.renderHeader();
   }
 
-  // --- Private
+  // === Private ===
 
   setupButtons(root) {
     // UI Buttons
@@ -4133,15 +3599,15 @@ class ControlPanelQuickstartArea extends ControlPanelArea {
     };
   }
 
-  constructor(panel, listener, root) {
-    super(panel, listener, root, 'getting-started', ControlPanelQuickstartArea.SIZES);
+  constructor(root, panel, listener) {
+    super(root, 'quickstart', panel, listener, ControlPanelQuickstartArea.SIZES);
     this.setupButtons(root);
   }
 
-  // --- Private
+  // === Private ===
 
   setupButtons(root) {
-    this.setupButton(root, 'getting-started-skip-link', this.onSkipClick);
+    this.setupButton(root, 'quickstart-skip-link', this.onSkipClick);
   }
 
   // --- Events
@@ -4162,8 +3628,8 @@ class ControlPanelDefaultArea extends ControlPanelArea {
     };
   }
 
-  constructor(panel, listener, root) {
-    super(panel, listener, root, 'default', ControlPanelDefaultArea.SIZES);
+  constructor(root, panel, listener) {
+    super(root, 'default', panel, listener, ControlPanelDefaultArea.SIZES);
   }
 
 }
@@ -4189,7 +3655,7 @@ class Form extends BrowserEventTarget {
     this.bindEvent('blur', this.onBlur, true);
 
     // Stop propagation on interactive events
-    this.bindEvent('click', this.stopEventPropagation);
+    this.stopPropagation('click');
 
     this.validState = true;
     this.validations = [];
@@ -4257,7 +3723,7 @@ class Form extends BrowserEventTarget {
     setTimeout(() => this.getFirstControl().focus(), 200);
   }
 
-  // --- Private
+  // === Private ===
 
   onSubmit(evt) {
     evt.preventDefault();
@@ -4364,7 +3830,8 @@ class Settings {
   static get SNAP_X()              { return 'snap-x';               }
   static get SNAP_Y()              { return 'snap-y';               }
   static get OUTPUT_GROUPING()     { return 'output-grouping';      }
-  static get GROUPING_MAP()        { return 'grouping-map'; }
+  static get GROUPING_MAP()        { return 'grouping-map';         }
+  static get SKIP_QUICKSTART()     { return 'skip-quickstart';      }
 
   // --- Values
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
@@ -4443,7 +3910,7 @@ class Settings {
     this.clearData();
   }
 
-  // --- Private
+  // === Private ===
 
   setup(root) {
     this.setupForm(root);
@@ -4767,7 +4234,7 @@ class SpriteRecognizer {
     return bounds;
   }
 
-  // --- Private
+  // === Private ===
 
   onImageLoaded() {
     var img = this.img, canvas, context;
@@ -5160,11 +4627,7 @@ class CSSBox {
     );
   }
 
-
-  // ---------------
-  //     Private
-  // ---------------
-
+  // === Private ===
 
   // --- Manipulation
 
@@ -5449,7 +4912,7 @@ class CSSRuleMatcher {
     return this.computedStyle[name];
   }
 
-  // --- Private
+  // === Private ===
 
   getMatchedRules(el) {
     // Note: This API is deprecated and may be removed.
@@ -5540,7 +5003,7 @@ class CSSProperty {
            this.name === CSSProperty.HEIGHT;
   }
 
-  // --- Private
+  // === Private ===
 
   normalize() {
     // We need to normalize values here so that they can all be tested.
@@ -5801,7 +5264,7 @@ class CSSTransform {
     return new CSSTransform(functions, this.cssTransformOrigin.clone());
   }
 
-  // --- Private
+  // === Private ===
 
   getRotationFunction() {
     return this.functions.find(f => f.isZRotate());
@@ -5929,7 +5392,7 @@ class CSSTransformFunction {
     return new CSSTransformFunction(this.name, values, this.canMutate);
   }
 
-  // --- Private
+  // === Private ===
 
   getHeaderJoin() {
     return this.isMatrix() ? ',' : ', ';
@@ -6344,7 +5807,7 @@ class CSSPercentValue extends CSSValue {
       this.size);
   }
 
-  // --- Private
+  // === Private ===
 
   initialize() {
     if (this.size === undefined) {
@@ -6623,6 +6086,539 @@ class CSSBackgroundImage {
 
   destroy(style) {
     style.backgroundPosition = '';
+  }
+
+}
+
+/*-------------------------] AppController [--------------------------*/
+
+class AppController {
+
+  static get PLATFORM_IS_MAC() { return /mac/i.test(navigator.platform); }
+  static get HOST_CLASS_NAME() { return 'positionble-extension-ui'; }
+
+  constructor(uiRoot) {
+
+    this.uiRoot = uiRoot;
+    this.settings = new Settings(this, uiRoot);
+    this.outputManager = new OutputManager(this.settings);
+    this.alignmentManager = new AlignmentManager();
+
+    this.body = new Element(document.body);
+
+    this.copyManager = new CopyManager(this);
+    this.copyAnimation = new CopyAnimation(uiRoot, this);
+    this.loadingAnimation = new LoadingAnimation(uiRoot, this);
+
+    this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
+
+    // TODO: order here?
+    this.elementManager = new PositionableElementManager(this, ShadowDomInjector.UI_HOST_CLASS_NAME);
+    this.controlPanel   = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
+    this.nudgeManager   = new NudgeManager(this);
+
+    this.setupKeyManager();
+
+    new DragSelection(uiRoot, this);
+    this.loadingAnimation.show();
+  }
+
+  setupKeyManager() {
+    this.keyManager = new KeyManager(this, AppController.PLATFORM_IS_MAC);
+
+    this.keyManager.setupKey(KeyManager.SHIFT_KEY);
+    this.keyManager.setupKey(KeyManager.CTRL_KEY);
+    this.keyManager.setupKey(KeyManager.META_KEY);
+    this.keyManager.setupKey(KeyManager.ALT_KEY);
+
+    this.keyManager.setupKey(KeyManager.A_KEY);
+    this.keyManager.setupKey(KeyManager.B_KEY);
+    this.keyManager.setupKey(KeyManager.M_KEY);
+    this.keyManager.setupKey(KeyManager.S_KEY);
+    this.keyManager.setupKey(KeyManager.R_KEY);
+    this.keyManager.setupKey(KeyManager.Z_KEY);
+
+    this.keyManager.setupKey(KeyManager.UP_KEY);
+    this.keyManager.setupKey(KeyManager.LEFT_KEY);
+    this.keyManager.setupKey(KeyManager.DOWN_KEY);
+    this.keyManager.setupKey(KeyManager.RIGHT_KEY);
+
+    this.keyManager.setupCommandKey(KeyManager.A_KEY);
+    this.keyManager.setupCommandKey(KeyManager.S_KEY);
+    this.keyManager.setupCommandKey(KeyManager.Z_KEY);
+
+    // Command S for save works regardless of where you are,
+    // other command keys should be able to disable as they
+    // do other things in the context of the settings form.
+    this.keyManager.setupCommandKeyException(KeyManager.S_KEY);
+  }
+
+  onFocusedElementsChanged() {
+    this.renderActiveControlPanel();
+  }
+
+  onElementMouseDown() {
+    this.controlPanel.closeSettings();
+  }
+
+  renderActiveControlPanel() {
+    var elements = this.elementManager.getFocusedElements();
+    if (elements.length > 1) {
+      this.renderMultipleArea(elements);
+    } else if (elements.length === 1) {
+      this.renderElementArea();
+    } else {
+      this.controlPanel.showDefaultArea();
+    }
+  }
+
+  getStylesForFocusedElements() {
+    return this.elementManager.getFocusedElements().map(element => {
+      return this.settings.getStylesForElement(element);
+    }).join(' ');
+  }
+
+  onSettingsClick() {
+    this.settings.focusForm();
+  }
+
+  onAdvancedSettingsClick() {
+  }
+
+  onQuickstartSkip() {
+    this.settings.set(Settings.SKIP_QUICKSTART, true);
+    this.renderActiveControlPanel();
+  }
+
+  onFormFocus() {
+    this.keyManager.setActive(false);
+    this.copyManager.setActive(false);
+  }
+
+  onFormBlur() {
+    this.keyManager.setActive(true);
+    this.copyManager.setActive(true);
+  }
+
+  onSettingsInitialized() {
+    this.elementManager.setSnap(
+      this.settings.get(Settings.SNAP_X),
+      this.settings.get(Settings.SNAP_Y)
+    );
+  }
+
+  onSelectorUpdated() {
+    this.elementManager.releaseAll();
+    this.loadingAnimation.show();
+  }
+
+  onSnappingUpdated(x, y) {
+    this.elementManager.setSnap(x, y);
+  }
+
+  onSettingsUpdated() {
+    this.renderActiveControlPanel();
+  }
+
+  onAlignButtonClick(edge) {
+    this.alignmentManager.align(this.elementManager.getFocusedElements(), edge);
+  }
+
+  onDistributeButtonClick(edge) {
+    this.alignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
+  }
+
+  // --- Loading Animation Events
+
+  onLoadingAnimationTaskReady() {
+    this.elementManager.findElements(
+      this.settings.get(Settings.INCLUDE_SELECTOR),
+      this.settings.get(Settings.EXCLUDE_SELECTOR)
+    );
+    this.controlPanel.activate();
+    if (this.settings.get(Settings.SKIP_QUICKSTART)) {
+      this.controlPanel.showDefaultArea();
+    } else {
+      this.controlPanel.showQuickstartArea();
+    }
+  }
+
+  // --- Position Drag Events
+
+  onPositionDragIntentStart(evt, handle) {
+    this.setHoverCursor(handle);
+  }
+
+  onPositionDragIntentStop() {
+    this.clearHoverCursor();
+  }
+
+  onPositionDragStart(evt, handle) {
+    this.setDragCursor(handle);
+  }
+
+  onPositionDragMove() {
+  }
+
+  onPositionDragStop() {
+    this.clearDragCursor();
+  }
+
+  // --- Resize Drag Events
+
+  onResizeDragIntentStart(evt, handle, element) {
+    this.setHoverCursor(handle, element.getRotation());
+    this.currentFocusedHandle = handle;
+  }
+
+  onResizeDragIntentStop() {
+    this.cursorManager.clearHoverCursor();
+    this.currentFocusedHandle = null;
+  }
+
+  onResizeDragStart(evt, handle, element) {
+    this.isResizing = !evt.ctrlKey;
+    this.setDragCursor(handle, element.getRotation());
+  }
+
+  onResizeDragMove() {
+  }
+
+  onResizeDragStop() {
+    this.clearDragCursor();
+    this.isResizing = false;
+  }
+
+  // --- Rotation Drag Events
+
+  onRotationDragIntentStart(evt, handle, element) {
+    this.setHoverCursor(handle, element.getRotation());
+    this.currentFocusedHandle = handle;
+  }
+
+  onRotationDragIntentStop() {
+    this.clearHoverCursor();
+    this.currentFocusedHandle = null;
+  }
+
+  onRotationDragStart() {
+    this.isRotating = true;
+  }
+
+  onRotationDragMove(evt, handle) {
+    this.setDragCursor(handle, evt.rotation.abs);
+  }
+
+  onRotationDragStop(evt, handle, element) {
+    this.isRotating = false;
+    this.clearDragCursor();
+    if (this.currentFocusedHandle) {
+      this.setHoverCursor(this.currentFocusedHandle, element.getRotation());
+    }
+  }
+
+  // --- Cursors
+
+  setHoverCursor(handle, rotation) {
+    var img = handle.hasImageCursor();
+    var cursor = handle.getCursor(rotation);
+    this.cursorManager.setHoverCursor(cursor, img);
+  }
+
+  setDragCursor(handle, rotation) {
+    var img = handle.hasImageCursor();
+    var cursor = handle.getCursor(rotation);
+    this.cursorManager.setDragCursor(cursor, img);
+  }
+
+  clearHoverCursor() {
+    this.cursorManager.clearHoverCursor();
+  }
+
+  clearDragCursor() {
+    this.cursorManager.clearDragCursor();
+  }
+
+  // --- Background Image Events
+
+  onBackgroundImageSnap() {
+    this.renderFocusedPosition();
+    this.renderFocusedDimensions();
+    this.renderFocusedTransform();
+    this.renderFocusedBackgroundPosition();
+  }
+
+  // --- Dimensions Updated Events
+
+  onPositionUpdated() {
+    this.renderFocusedPosition();
+  }
+
+  onDimensionsUpdated() {
+    this.renderFocusedDimensions();
+    this.renderFocusedTransform();
+  }
+
+  onBackgroundPositionUpdated() {
+    this.renderFocusedBackgroundPosition();
+  }
+
+  onRotationUpdated() {
+    this.renderFocusedTransform();
+  }
+
+  onZIndexUpdated() {
+    this.renderFocusedZIndex();
+  }
+
+  // --- Key Events
+
+  onKeyDown(evt) {
+    // Note mode resetting is handled by DragTarget
+
+    switch (evt.key) {
+
+      // Meta Keys
+      case KeyManager.SHIFT_KEY:
+        this.nudgeManager.setMultiplier(true);
+        break;
+      case KeyManager.CTRL_KEY:
+        this.cursorManager.setPriorityHoverCursor('move');
+        break;
+      case KeyManager.ALT_KEY:
+        if (this.canPeek()) {
+          this.elementManager.setPeekMode(true);
+        }
+        break;
+
+      // Arrow Keys
+      case KeyManager.UP_KEY:    this.nudgeManager.addDirection('up');    break;
+      case KeyManager.DOWN_KEY:  this.nudgeManager.addDirection('down');  break;
+      case KeyManager.LEFT_KEY:  this.nudgeManager.addDirection('left');  break;
+      case KeyManager.RIGHT_KEY: this.nudgeManager.addDirection('right'); break;
+
+      // Other Keys
+      case KeyManager.M_KEY: this.nudgeManager.setPositionMode();      break;
+      case KeyManager.S_KEY: this.nudgeManager.toggleResizeMode();     break;
+      case KeyManager.R_KEY: this.nudgeManager.toggleRotateMode();     break;
+      case KeyManager.Z_KEY: this.nudgeManager.toggleZIndexMode();     break;
+      case KeyManager.B_KEY: this.nudgeManager.toggleBackgroundMode(); break;
+    }
+  }
+
+  onKeyUp(evt) {
+
+    switch (evt.key) {
+
+      // Meta Keys
+      case KeyManager.SHIFT_KEY:
+        this.nudgeManager.setMultiplier(false);
+        break;
+      case KeyManager.CTRL_KEY:
+        this.cursorManager.clearPriorityHoverCursor('move');
+        break;
+      case KeyManager.ALT_KEY:
+        if (this.canPeek()) {
+          this.elementManager.setPeekMode(false);
+        }
+        break;
+
+      // Arrow Keys
+      case KeyManager.UP_KEY:    this.nudgeManager.removeDirection('up');    break;
+      case KeyManager.DOWN_KEY:  this.nudgeManager.removeDirection('down');  break;
+      case KeyManager.LEFT_KEY:  this.nudgeManager.removeDirection('left');  break;
+      case KeyManager.RIGHT_KEY: this.nudgeManager.removeDirection('right'); break;
+
+    }
+  }
+
+  canPeek() {
+    return !this.isResizing && !this.isRotating;
+  }
+
+  onCommandKeyDown(evt) {
+    // Note that copying is handled by the copy event not key events.
+
+    switch (evt.key) {
+      case KeyManager.S_KEY:
+        this.saveStyles();
+        break;
+      case KeyManager.A_KEY:
+        this.elementManager.focusAll();
+        break;
+      case KeyManager.Z_KEY:
+        if (this.elementManager.hasFocusedElements()) {
+          this.elementManager.undo();
+          this.renderActiveControlPanel();
+        }
+        break;
+    }
+  }
+
+  onCopyEvent(evt) {
+    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
+    this.copyManager.setCopyData(evt, styles);
+    this.copyAnimation.show(!!styles);
+  }
+
+  saveStyles() {
+    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
+    if (styles) {
+      this.outputManager.saveStyles(styles);
+    } else {
+      this.copyAnimation.show(false);
+    }
+  }
+
+  // --- Nudge Events
+
+  onNudgeStart() {
+    this.elementManager.pushFocusedStates();
+  }
+
+  onNudgeMove(evt) {
+    switch (evt.mode) {
+      case NudgeManager.POSITION_MODE:
+        this.elementManager.applyPositionNudge(evt.x, evt.y);
+        break;
+      case NudgeManager.RESIZE_SE_MODE:
+      case NudgeManager.RESIZE_NW_MODE:
+        this.elementManager.applyResizeNudge(evt.x, evt.y, evt.corner);
+        break;
+      case NudgeManager.BACKGROUND_MODE:
+        this.elementManager.applyBackgroundNudge(evt.x, evt.y);
+        break;
+
+      // Flip the y value for single values
+      case NudgeManager.ROTATE_MODE:
+        this.elementManager.applyRotationNudge(-evt.y);
+        break;
+      case NudgeManager.Z_INDEX_MODE:
+        this.elementManager.applyZIndexNudge(-evt.y);
+        break;
+    }
+  }
+
+  onNudgeStop() {
+  }
+
+  onNudgeModeChanged(mode) {
+    this.controlPanel.setNudgeMode(mode);
+  }
+
+  // --- Control Panel Drag Events
+
+  onControlPanelDragStart() {
+    this.cursorManager.setDragCursor('move');
+  }
+
+  onControlPanelDragStop() {
+    this.cursorManager.clearDragCursor();
+  }
+
+  // --- Drag Selection Events
+
+  onDragSelectionStart() {
+    this.cursorManager.setDragCursor('crosshair');
+  }
+
+  onDragSelectionMove(selection) {
+    this.elementManager.setFocused(element => selection.contains(element.el));
+  }
+
+  onDragSelectionStop() {
+    this.cursorManager.clearDragCursor();
+  }
+
+  onDragSelectionClear() {
+    this.elementManager.unfocusAll();
+  }
+
+  // --- Control Panel Element Rendering
+
+  renderMultipleArea(elements) {
+    this.controlPanel.showMultipleArea();
+    this.controlPanel.renderMultipleSelected(elements);
+  }
+
+  renderElementArea() {
+    this.controlPanel.showElementArea();
+    this.renderFocusedSelector();
+    this.renderFocusedPosition();
+    this.renderFocusedDimensions();
+    this.renderFocusedZIndex();
+    this.renderFocusedTransform();
+    this.renderFocusedBackgroundPosition();
+  }
+
+  renderFocusedSelector() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementSelector(this.outputManager.getSelectorWithDefault(el));
+    });
+  }
+
+  renderFocusedPosition() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementPosition(this.outputManager.getPositionHeader(el));
+    });
+  }
+
+  renderFocusedDimensions() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementDimensions(this.outputManager.getDimensionsHeader(el));
+    });
+  }
+
+  renderFocusedZIndex() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementZIndex(this.outputManager.getZIndexHeader(el));
+    });
+  }
+
+  renderFocusedTransform() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementTransform(this.outputManager.getTransformHeader(el));
+    });
+  }
+
+  renderFocusedBackgroundPosition() {
+    this.withSingleFocusedElement(el => {
+      this.controlPanel.renderElementBackgroundPosition(this.outputManager.getBackgroundPositionHeader(el));
+    });
+  }
+
+  withSingleFocusedElement(fn) {
+    var focusedElements = this.elementManager.getFocusedElements();
+    if (focusedElements.length === 1) {
+      fn(focusedElements[0]);
+    }
+  }
+
+  onElementHighlightMouseOver(index) {
+    var element = this.elementManager.focusedElements[index], selector;
+    selector = this.outputManager.getSelectorWithDefault(element);
+    this.controlPanel.renderMultipleHeader(selector);
+    element.setHighlightMode(true);
+  }
+
+  onElementHighlightMouseOut(index) {
+    var element = this.elementManager.focusedElements[index];
+    element.setHighlightMode(false);
+    this.controlPanel.renderMultipleHeader();
+  }
+
+  onElementHighlightClick(index) {
+    var element = this.elementManager.focusedElements[index];
+    element.setHighlightMode(false);
+    this.elementManager.setFocused([element]);
+  }
+
+  // --- Control Panel Align Rendering
+
+  destroy() {
+    this.elementManager.destroy();
+    this.nudgeManager.destroy();
+    this.uiRoot.host.remove();
   }
 
 }

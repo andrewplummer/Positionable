@@ -226,11 +226,17 @@
   /*-------------------------] Form Events [--------------------------*/
 
   function fireSubmitEvent(el) {
-    el.dispatchEvent(new CustomEvent('submit'));
+    el.dispatchEvent(new Event('submit'));
   }
 
   function fireResetEvent(el) {
-    el.dispatchEvent(new CustomEvent('reset'));
+    el.dispatchEvent(new Event('reset'));
+  }
+
+  /*-------------------------] Form Events [--------------------------*/
+
+  function fireScrollEvent() {
+    document.dispatchEvent(new Event('scroll'));
   }
 
   /*-------------------------] Export [--------------------------*/
@@ -272,5 +278,7 @@
 
   window.fireSubmitEvent = fireSubmitEvent;
   window.fireResetEvent  = fireResetEvent;
+
+  window.fireScrollEvent = fireScrollEvent;
 
 })();

@@ -47,14 +47,6 @@ describe('NudgeManager', function() {
     setTimeoutMock.release();
   });
 
-  it('should report the current mode', function() {
-    assert.equal(manager.getCurrentMode(), 'position');
-    manager.toggleRotateMode();
-    assert.equal(manager.getCurrentMode(), 'rotate');
-    manager.toggleRotateMode();
-    assert.equal(manager.getCurrentMode(), 'position');
-  });
-
   it('should start and stop events when nudging starts', function() {
 
     assert.equal(listener.nudgeStartEvents, 0);

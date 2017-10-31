@@ -44,14 +44,6 @@ describe('BrowserEventTarget', function() {
     assert.equal(target.mousedown, true);
   });
 
-  it('should allow removing event listeners by name', function() {
-    setupDivTarget();
-    target.bindEvent('click', target.onClick);
-    target.removeEventListener('click');
-    clickElement(el);
-    assert.equal(target.clicked, false);
-  });
-
   it('should allow removing all event listeners', function() {
     setupDivTarget();
     target.bindEvent('click', target.onClick);
