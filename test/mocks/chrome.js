@@ -20,6 +20,21 @@
       fakeResponse = response;
     }
 
+    getStoredData(key) {
+      if (key) {
+        return storageData[key];
+      } else {
+        return storageData;
+      }
+    }
+
+    setStoredData(key, val) {
+      if (!storageData) {
+        storageData = {};
+      }
+      storageData[key] = val;
+    }
+
   }
 
   mockChrome = {
@@ -35,30 +50,42 @@
 
         get: function(arg, fn) {
           var data = {};
+
+          function copyData(key) {
+            // Can't use Object.assign here as it will
+            // overwrite undefined values that should
+            // not exist.
+            if (key in storageData) {
+              data[key] = storageData[key];
+            }
+          }
+
           if (!arg) {
             data = Object.assign(storageData);
           } else if (Array.isArray(arg)) {
-            arg.forEach(s => data[s] = storageData[s]);
+            arg.forEach(key => copyData(key));
           } else if (typeof arg === 'string') {
-            data[arg] = storageData[arg];
+            copyData(arg);
           } else if (typeof arg === 'object') {
-            data = Object.assign(storageData, arg);
+            for (var key in obj) {
+              if(!obj.hasOwnProperty(key)) continue;
+              copyData(key);
+            };
           }
           fn(data);
         },
 
         set: function(data, fn) {
           storageData = Object.assign(storageData, data);
-          if (fn) {
-            fn();
-          }
+          fn();
         },
 
-        clear: function(fn) {
-          storageData = {};
-          if (fn) {
-            fn();
-          }
+        remove: function(arg, fn) {
+          var arr = typeof arg === 'string' ? [arg] : arg;
+          arr.forEach(key =>  {
+            delete storageData[key];
+          });
+          fn();
         }
 
       }

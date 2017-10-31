@@ -9,6 +9,7 @@
 // - TODO: pro features?
 // - TODO: make callbacks ES6 () => style
 // - TODO: one space for private/protected?
+// - TODO: test if instances of things passed in couldn't just be created inside the classes themselves like ChromeStorageManager
 // - TODO: PositionableElementManager -> ElementManager?
 // - TODO: better description
 // - TODO: check that each class only knows about itself to as much a degree as possible
@@ -3837,6 +3838,40 @@ class SettingsForm extends BrowserEventTarget {
 
 }
 
+/*-------------------------] ChromeStorageManager [--------------------------*/
+
+class ChromeStorageManager {
+
+  constructor(listener) {
+    this.listener = listener;
+  }
+
+  fetch(arg) {
+    chrome.storage.sync.get(arg, data => {
+      this.listener.onStorageDataFetched(data);
+    });
+  }
+
+  save(arg1, arg2) {
+    var data;
+    if (arguments.length === 1) {
+      data = arg1;
+    } else {
+      data = { [arg1]: arg2 };
+    }
+    chrome.storage.sync.set(data, () => {
+      this.listener.onStorageDataSaved(data);
+    });
+  }
+
+  remove(arg) {
+    chrome.storage.sync.remove(arg, () => {
+      this.listener.onStorageDataRemoved();
+    });
+  }
+
+}
+
 /*-------------------------] Settings [--------------------------*/
 
 class Settings {
@@ -3853,7 +3888,6 @@ class Settings {
   static get OUTPUT_GROUPING()     { return 'output-grouping';     }
   static get GROUPING_MAP()        { return 'grouping-map';        }
   static get SKIP_QUICKSTART()     { return 'skip-quickstart';     }
-  static get IS_PRO_USER()         { return 'pro';                 }
 
   // --- Values
   static get OUTPUT_SELECTOR_ID()      { return 'id';      }
@@ -3881,11 +3915,26 @@ class Settings {
   static get GROUPING_MAP_CONTROLS()  { return [Settings.GROUPING_MAP]; }
   static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
 
+  static get FIELDS() {
+    return [
+      this.SAVE_FILENAME,
+      this.INCLUDE_SELECTOR,
+      this.EXCLUDE_SELECTOR,
+      this.TAB_STYLE,
+      this.OUTPUT_SELECTOR,
+      this.OUTPUT_CHANGED_ONLY,
+      this.SNAP_X,
+      this.SNAP_Y,
+      this.OUTPUT_GROUPING,
+      this.GROUPING_MAP,
+      this.SKIP_QUICKSTART
+    ];
+  }
 
   constructor(listener, root) {
-    this.form = new SettingsForm(root.getElementById('settings-form'), this);
     this.listener = listener;
     this.setup(root);
+    this.fetchSettings();
   }
 
   get(name) {
@@ -3893,8 +3942,8 @@ class Settings {
   }
 
   set(name, val) {
-    var data = Object.assign({}, this.data, { [name]: val });
-    this.pushData(data);
+    this.data[name] = val;
+    this.storageManager.save(name, val);
   }
 
   focusForm() {
@@ -3911,18 +3960,18 @@ class Settings {
 
   // --- Events
 
-  onDataUpdated(data) {
-    if (this.selectorChanged(data)) {
-      this.listener.onSelectorUpdated();
-    }
-    if (this.snapChanged(data)) {
-      this.listener.onSnappingUpdated(
-        data[Settings.SNAP_X],
-        data[Settings.SNAP_Y]
-      );
-    }
-    this.data = data;
-    this.listener.onSettingsUpdated();
+
+  onStorageDataFetched(data) {
+    this.data = Object.assign({}, this.defaultData, data);
+    this.onInitialized();
+  }
+
+  onStorageDataSaved(data) {
+    this.onSettingsUpdated(data);
+  }
+
+  onStorageDataRemoved() {
+    this.onSettingsUpdated(this.defaultData);
   }
 
   onFormFocus(evt) {
@@ -3934,22 +3983,24 @@ class Settings {
   }
 
   onFormSubmit(evt, form) {
-    this.pushData(form.getData());
+    this.saveSettings(form.getData());
   }
 
   onFormReset() {
-    this.clearData();
+    this.clearSettings();
   }
 
   // === Private ===
 
   setup(root) {
     this.setupForm(root);
+    this.setupStorage();
     this.defaultData = this.form.getData();
-    this.fetchSettings();
   }
 
   setupForm(root) {
+    this.form = new SettingsForm(root.getElementById('settings-form'), this);
+
     this.isValidQuery         = this.isValidQuery.bind(this);
     this.isValidSnap          = this.isValidSnap.bind(this);
     this.isValidGroupingMap   = this.isValidGroupingMap.bind(this);
@@ -3965,6 +4016,10 @@ class Settings {
     this.groupingLinkedSelect = new LinkedSelect(root.getElementById('output-grouping'));
   }
 
+  setupStorage() {
+    this.storageManager = new ChromeStorageManager(this);
+  }
+
   onInitialized() {
     this.form.setControlsFromData(this.data);
     this.selectorLinkedSelect.update();
@@ -3973,23 +4028,29 @@ class Settings {
   }
 
   fetchSettings() {
-    chrome.storage.sync.get(Settings.DEFAULTS, data => {
-      // Merge the initial form data with the fetched settings data.
-      this.data = Object.assign({}, this.defaultData, data);
-      this.onInitialized();
-    });
+    this.storageManager.fetch(Settings.FIELDS);
   }
 
-  pushData(data) {
-    chrome.storage.sync.set(data, () => {
-      this.onDataUpdated(data);
-    });
+  saveSettings(data) {
+    this.storageManager.save(data);
   }
 
-  clearData() {
-    chrome.storage.sync.clear(() => {
-      this.onDataUpdated(this.defaultData);
-    });
+  clearSettings() {
+    this.storageManager.remove(Settings.FIELDS);
+  }
+
+  onSettingsUpdated(data) {
+    if (this.selectorChanged(data)) {
+      this.listener.onSelectorUpdated();
+    }
+    if (this.snapChanged(data)) {
+      this.listener.onSnappingUpdated(
+        data[Settings.SNAP_X],
+        data[Settings.SNAP_Y]
+      );
+    }
+    Object.assign(this.data, data);
+    this.listener.onSettingsUpdated();
   }
 
   isValidQuery(query) {

@@ -1,5 +1,5 @@
 
-fdescribe('PaymentManager', function(uiRoot) {
+describe('PaymentManager', function(uiRoot) {
 
   var manager, listener;
 

@@ -63,11 +63,16 @@ describe('Settings', function(uiRoot) {
     setTimeoutMock.tick(100);
   }
 
-  function getStoredData(name) {
-    var val;
-    chrome.storage.sync.get(null, (data) => val = data[name]);
-    return val;
+  function setDefaultStorageData() {
+    chromeMock.setStoredData(Settings.SAVE_FILENAME,      'bar.css');
+    chromeMock.setStoredData(Settings.TAB_STYLE,           Settings.TABS_FOUR_SPACES);
+    chromeMock.setStoredData(Settings.OUTPUT_SELECTOR,     Settings.OUTPUT_SELECTOR_TAG);
+    chromeMock.setStoredData(Settings.OUTPUT_GROUPING,     Settings.OUTPUT_GROUPING_AUTO);
+    chromeMock.setStoredData(Settings.INCLUDE_SELECTOR,   'p');
+    chromeMock.setStoredData(Settings.EXCLUDE_SELECTOR,   'h2');
+    chromeMock.setStoredData(Settings.OUTPUT_CHANGED_ONLY, true);
   }
+
   function assertQuery(query, expected) {
     assert.equal(settings.isValidQuery(query), expected);
   }
@@ -96,15 +101,7 @@ describe('Settings', function(uiRoot) {
   });
 
   it('should initialize with stored settings', function() {
-    chrome.storage.sync.set({
-      [Settings.SAVE_FILENAME]:       'bar.css',
-      [Settings.TAB_STYLE]:           Settings.TABS_FOUR_SPACES,
-      [Settings.OUTPUT_SELECTOR]:     Settings.OUTPUT_SELECTOR_TAG,
-      [Settings.OUTPUT_GROUPING]:     Settings.OUTPUT_GROUPING_AUTO,
-      [Settings.INCLUDE_SELECTOR]:   'p',
-      [Settings.EXCLUDE_SELECTOR]:   'h2',
-      [Settings.OUTPUT_CHANGED_ONLY]: true
-    });
+    setDefaultStorageData();
     setupSettings();
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'bar.css');
     assert.equal(settings.get(Settings.TAB_STYLE),           Settings.TABS_FOUR_SPACES);
@@ -117,15 +114,7 @@ describe('Settings', function(uiRoot) {
 
   it('should set form fields with stored settings', function() {
     var form = getForm();
-    chrome.storage.sync.set({
-      [Settings.SAVE_FILENAME]:      'bar.css',
-      [Settings.TAB_STYLE]:           Settings.TABS_FOUR_SPACES,
-      [Settings.OUTPUT_SELECTOR]:     Settings.OUTPUT_SELECTOR_TAG,
-      [Settings.OUTPUT_GROUPING]:     Settings.OUTPUT_GROUPING_AUTO,
-      [Settings.INCLUDE_SELECTOR]:   'p',
-      [Settings.EXCLUDE_SELECTOR]:   'h2',
-      [Settings.OUTPUT_CHANGED_ONLY]: true
-   });
+    setDefaultStorageData();
     setupSettings();
     assert.equal(form.elements[Settings.SAVE_FILENAME].value,        'bar.css');
     assert.equal(form.elements[Settings.TAB_STYLE].value,             Settings.TABS_FOUR_SPACES);
@@ -140,7 +129,7 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     uiRoot.getElementById('output-changed-only').checked = true;
     submitForm();
-    assert.equal(getStoredData('output-changed-only'), true);
+    assert.equal(chromeMock.getStoredData('output-changed-only'), true);
   });
 
   it('should receive submit event', function() {
@@ -149,7 +138,7 @@ describe('Settings', function(uiRoot) {
     form.elements['save-filename'].value = 'foo.css';
     submitForm();
     assert.equal(listener.settingsUpdatedCount, 1);
-    assert.equal(getStoredData('save-filename'), 'foo.css');
+    assert.equal(chromeMock.getStoredData('save-filename'), 'foo.css');
   });
 
   it('should reset the form', function() {
@@ -191,6 +180,7 @@ describe('Settings', function(uiRoot) {
     assert.equal(listener.selectorUpdatedCount, 1);
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR), 'p');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), 'h2');
+
   });
 
   it('should fire correct events when the selector changed', function() {
@@ -226,9 +216,7 @@ describe('Settings', function(uiRoot) {
   });
 
   it('should be able to revert back to defaults', function() {
-    chrome.storage.sync.set({
-      [Settings.SAVE_FILENAME]: 'test.css'
-    });
+    chromeMock.setStoredData(Settings.SAVE_FILENAME, 'test.css');
     setupSettings();
     resetForm();
     assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
@@ -313,7 +301,7 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     textarea.value = 'width: $foobar';
     submitForm();
-    map = getStoredData('grouping-map');
+    map = chromeMock.getStoredData('grouping-map');
     assert.equal(Object.keys(map).length, 1);
     assert.equal(map.width, '$foobar');
   });
@@ -324,7 +312,7 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     textarea.value = 'width: $foobar;';
     submitForm();
-    map = getStoredData('grouping-map');
+    map = chromeMock.getStoredData('grouping-map');
     assert.equal(map.width, '$foobar');
   });
 
@@ -338,9 +326,7 @@ describe('Settings', function(uiRoot) {
   });
 
   it('should correctly set the grouping map control from stored data', function() {
-    chrome.storage.sync.set({
-      [Settings.GROUPING_MAP]: { width: '$foobar' }
-    });
+    chromeMock.setStoredData(Settings.GROUPING_MAP, { width: '$foobar' });
     setupSettings();
     assert.equal(uiRoot.getElementById('grouping-map').value, 'width: $foobar');
   });
