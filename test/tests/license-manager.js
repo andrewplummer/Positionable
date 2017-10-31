@@ -1,5 +1,5 @@
 
-describe('PaymentManager', function(uiRoot) {
+describe('LicenseManager', function(uiRoot) {
 
   var manager, listener;
 
@@ -65,10 +65,10 @@ describe('PaymentManager', function(uiRoot) {
   }
 
   // Just to make things clearer
-  const PRO_USER            = PaymentManager.USER_STATUS_PRO;
-  const NORMAL_USER         = PaymentManager.USER_STATUS_NORMAL;
-  const USER_STATUS_KEY     = PaymentManager.STORAGE_KEY_USER_STATUS;
-  const ACTIVATION_DATE_KEY = PaymentManager.STORAGE_KEY_ACTIVATION_DATE;
+  const PRO_USER            = LicenseManager.USER_STATUS_PRO;
+  const NORMAL_USER         = LicenseManager.USER_STATUS_NORMAL;
+  const USER_STATUS_KEY     = LicenseManager.STORAGE_KEY_USER_STATUS;
+  const ACTIVATION_DATE_KEY = LicenseManager.STORAGE_KEY_ACTIVATION_DATE;
 
   function days(n) {
     return n * 24 * 60 * 60 * 1000;
@@ -82,9 +82,9 @@ describe('PaymentManager', function(uiRoot) {
     chromeMock.setStoredData(ACTIVATION_DATE_KEY, date);
   }
 
-  function setupPaymentManager() {
+  function setupLicenseManager() {
     listener = new Listener();
-    manager  = new PaymentManager(listener);
+    manager  = new LicenseManager(listener);
   }
 
   function assertProUser(expected) {
@@ -109,7 +109,7 @@ describe('PaymentManager', function(uiRoot) {
 
   it('should correctly identify a fresh user on init', function() {
     googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_UNPAID_USER_RESPONSE);
-    setupPaymentManager();
+    setupLicenseManager();
     assertProUser(false);
     assertDaysRemaining(60);
     assert.equal(listener.userStatusUpdatedEvents, 1);
@@ -117,7 +117,7 @@ describe('PaymentManager', function(uiRoot) {
 
   it('should correctly identify a pro user on init', function() {
     googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_PAID_USER_RESPONSE);
-    setupPaymentManager();
+    setupLicenseManager();
     assertProUser(true);
     assertDaysRemaining(60);
     assert.equal(listener.userStatusUpdatedEvents, 1);
@@ -125,28 +125,28 @@ describe('PaymentManager', function(uiRoot) {
 
   it('should set storage after checking a fresh user on init', function() {
     googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_UNPAID_USER_RESPONSE);
-    setupPaymentManager();
+    setupLicenseManager();
     assertStorageUserStatus(NORMAL_USER);
     assertStorageActivationDate(Date.now());
   });
 
   it('should read storage before checking a fresh user on init', function() {
     setStorageUserStatus(NORMAL_USER);
-    setupPaymentManager();
+    setupLicenseManager();
     assertProUser(false);
     assertDaysRemaining(60);
   });
 
   it('should set storage after checking a pro user on init', function() {
     googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_PAID_USER_RESPONSE);
-    setupPaymentManager();
+    setupLicenseManager();
     assertStorageUserStatus(PRO_USER);
     assertStorageActivationDate(Date.now());
   });
 
   it('should read storage before checking a pro user on init', function() {
     setStorageUserStatus(PRO_USER);
-    setupPaymentManager();
+    setupLicenseManager();
     assertProUser(true);
     assertDaysRemaining(60);
   });
@@ -154,20 +154,20 @@ describe('PaymentManager', function(uiRoot) {
   it('should identify a normal user whose time is running out', function() {
     setStorageUserStatus(NORMAL_USER);
     setStorageActivationDate(Date.now() - days(24));
-    setupPaymentManager();
+    setupLicenseManager();
     assertDaysRemaining(36);
   });
 
   it('should not allow days remaining to go negative', function() {
     setStorageUserStatus(NORMAL_USER);
     setStorageActivationDate(Date.now() - days(100));
-    setupPaymentManager();
+    setupLicenseManager();
     assertDaysRemaining(0);
   });
 
   it('should not fire events on init when getPurchases API fails', function() {
     consoleMock.apply();
-    setupPaymentManager();
+    setupLicenseManager();
     assert.equal(listener.userStatusUpdatedEvents, 0);
     assert.equal(consoleMock.getErrorCount(), 1);
     consoleMock.release();
@@ -178,9 +178,9 @@ describe('PaymentManager', function(uiRoot) {
   it('should not fire events on init when buy API fails', function() {
     consoleMock.apply();
     setStorageUserStatus(NORMAL_USER);
-    setupPaymentManager();
+    setupLicenseManager();
 
-    manager.initiatePayment();
+    manager.purchase();
 
     assert.equal(listener.userStatusUpdatedEvents, 1);
     assert.equal(consoleMock.getErrorCount(), 1);
@@ -190,9 +190,9 @@ describe('PaymentManager', function(uiRoot) {
   it('should fire an event when payment successfully completed', function() {
     setStorageUserStatus(NORMAL_USER);
     googlePaymentsMock.setBuySuccessResponse(BUY_SUCCESS_RESPONSE);
-    setupPaymentManager();
+    setupLicenseManager();
 
-    manager.initiatePayment();
+    manager.purchase();
 
     assert.equal(listener.userStatusUpdatedEvents, 2);
     assertProUser(true);
@@ -202,9 +202,9 @@ describe('PaymentManager', function(uiRoot) {
     consoleMock.apply();
     setStorageUserStatus(NORMAL_USER);
     googlePaymentsMock.setBuyFailureResponse(BUY_CANCELED_RESPONSE);
-    setupPaymentManager();
+    setupLicenseManager();
 
-    manager.initiatePayment();
+    manager.purchase();
 
     assert.equal(listener.userStatusUpdatedEvents, 1);
     assert.equal(consoleMock.getErrorCount(), 0);

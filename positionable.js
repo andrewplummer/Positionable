@@ -3311,7 +3311,7 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     this.setupButton(root, 'settings-tab-help', this.setHelpMode);
     this.setupButton(root, 'settings-tab-basic', this.setBasicMode);
     this.setupButton(root, 'settings-tab-advanced', this.setAdvancedMode);
-    this.setupButton(root, 'make-payment-button', this.onMakePaymentClick);
+    this.setupButton(root, 'upgrade-button', this.onUpgradeButtonClick);
   }
 
   setHelpMode() {
@@ -3331,8 +3331,8 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     this.listener.onAdvancedSettingsClick();
   }
 
-  onMakePaymentClick() {
-    this.listener.onPaymentButtonClick();
+  onUpgradeButtonClick() {
+    this.listener.onUpgradeClick();
   }
 
 }
@@ -6182,9 +6182,9 @@ class CSSBackgroundImage {
 
 }
 
-/*-------------------------] PaymentManager [--------------------------*/
+/*-------------------------] LicenseManager [--------------------------*/
 
-class PaymentManager {
+class LicenseManager {
 
   // API Constants
   static get SKU()               { return 'positionable_pro_test'; }
@@ -6214,17 +6214,17 @@ class PaymentManager {
   }
 
   isProUser() {
-    return this.userStatus === PaymentManager.USER_STATUS_PRO;
+    return this.userStatus === LicenseManager.USER_STATUS_PRO;
   }
 
   freeTimeRemaining() {
-    var period  = PaymentManager.FREE_TRIAL_PERIOD;
+    var period  = LicenseManager.FREE_TRIAL_PERIOD;
     var elapsed = Date.now() - this.activationDate;
     return Math.max(0, period - elapsed);
   }
 
-  initiatePayment() {
-    this.beginPaymentTransaction();
+  purchase() {
+    this.beginPurchaseTransaction();
   }
 
 
@@ -6236,9 +6236,9 @@ class PaymentManager {
     this.checkStoredUserStatus(data);
 
     if (!this.userStatus) {
-      // If there is no stored user status, then go
-      // to the payments API to check for a payment.
-      this.checkPayment();
+      // If there is no stored user status, then go to the
+      // in-app payments API to check for an active purchase.
+      this.checkPurchases();
     }
   }
 
@@ -6258,18 +6258,18 @@ class PaymentManager {
 
   fetchStoredUserData() {
     this.storageManager.fetch([
-      PaymentManager.STORAGE_KEY_USER_STATUS,
-      PaymentManager.STORAGE_KEY_ACTIVATION_DATE
+      LicenseManager.STORAGE_KEY_USER_STATUS,
+      LicenseManager.STORAGE_KEY_ACTIVATION_DATE
     ]);
   }
 
   saveUserStatus() {
-    var storageKey = PaymentManager.STORAGE_KEY_USER_STATUS;
+    var storageKey = LicenseManager.STORAGE_KEY_USER_STATUS;
     this.storageManager.save(storageKey, this.userStatus);
   }
 
   checkStoredUserStatus(data) {
-    var userStatus = data[PaymentManager.STORAGE_KEY_USER_STATUS];
+    var userStatus = data[LicenseManager.STORAGE_KEY_USER_STATUS];
     if (userStatus) {
       this.resolveUserStatus(userStatus);
     }
@@ -6278,7 +6278,7 @@ class PaymentManager {
   checkStoredActivationDate(data) {
     var storageKey, activationDate;
 
-    storageKey     = PaymentManager.STORAGE_KEY_ACTIVATION_DATE;
+    storageKey     = LicenseManager.STORAGE_KEY_ACTIVATION_DATE;
     activationDate = data[storageKey];
 
     if (!activationDate) {
@@ -6294,9 +6294,9 @@ class PaymentManager {
     this.listener.onUserStatusUpdated();
   }
 
-  // --- Checking Payment
+  // --- Checking Purchases
 
-  checkPayment() {
+  checkPurchases() {
     google.payments.inapp.getPurchases(this.getPurchasesOptions);
   }
 
@@ -6311,28 +6311,28 @@ class PaymentManager {
   }
 
   getUserStatusFromPurchaseData(data) {
-    var activePayment = data.response.details.some(d => {
-      return d.sku   === PaymentManager.SKU &&
-             d.state === PaymentManager.ACTIVE_STATE;
+    var activePurchase = data.response.details.some(d => {
+      return d.sku   === LicenseManager.SKU &&
+             d.state === LicenseManager.ACTIVE_STATE;
     });
-    return activePayment ?
-      PaymentManager.USER_STATUS_PRO :
-      PaymentManager.USER_STATUS_NORMAL;
+    return activePurchase ?
+      LicenseManager.USER_STATUS_PRO :
+      LicenseManager.USER_STATUS_NORMAL;
   }
 
-  // --- Making Payment
+  // --- Making Purchase
 
-  beginPaymentTransaction() {
+  beginPurchaseTransaction() {
     google.payments.inapp.buy(this.buyOptions);
   }
 
   onBuySuccess() {
-    this.resolveUserStatus(PaymentManager.USER_STATUS_PRO);
+    this.resolveUserStatus(LicenseManager.USER_STATUS_PRO);
     this.saveUserStatus();
   }
 
   onBuyFailure(data) {
-    if (data.response.errorType !== PaymentManager.PURCHASE_CANCELED) {
+    if (data.response.errorType !== LicenseManager.PURCHASE_CANCELED) {
       console.error('Could not complete purchase: ' + data.response.errorType);
     }
   }
@@ -6356,7 +6356,7 @@ class PaymentManager {
   getDefaultOptions() {
     return {
       'parameters': {
-        'env': PaymentManager.ENVIRONMENT
+        'env': LicenseManager.ENVIRONMENT
       }
     };
   }
@@ -6381,7 +6381,7 @@ class AppController {
 
     this.copyManager = new CopyManager(this);
     this.copyAnimation = new CopyAnimation(uiRoot, this);
-    this.paymentManager = new PaymentManager(this);
+    this.licenseManager = new LicenseManager(this);
     this.loadingAnimation = new LoadingAnimation(uiRoot, this);
 
     this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
@@ -6446,7 +6446,7 @@ class AppController {
     }
   }
 
-  onUserStatusUpdated(userStatus) {
+  onLicenseUpdated() {
   }
 
   getStylesForFocusedElements() {
@@ -6472,8 +6472,8 @@ class AppController {
     this.renderActiveControlPanel();
   }
 
-  onPaymentButtonClick() {
-    this.paymentManager.initiatePayment();
+  onUpgradeClick() {
+    this.licenseManager.purchase();
   }
 
   onFormFocus() {
