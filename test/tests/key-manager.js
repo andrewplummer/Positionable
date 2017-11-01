@@ -32,7 +32,7 @@ describe('KeyManager', function() {
   });
 
   teardown(function() {
-    manager.removeAllListeners();
+    manager.destroy();
   });
 
   function setupManager(isWindows) {
