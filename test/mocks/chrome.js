@@ -70,7 +70,7 @@
             for (var key in obj) {
               if(!obj.hasOwnProperty(key)) continue;
               copyData(key);
-            };
+            }
           }
           fn(data);
         },

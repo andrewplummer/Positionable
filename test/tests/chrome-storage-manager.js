@@ -1,5 +1,5 @@
 
-describe('ChromeStorageManager', function(uiRoot) {
+describe('ChromeStorageManager', function() {
 
   var manager, listener;
 

@@ -6,8 +6,6 @@
  *
  * ---------------------------- */
 
-// - TODO: one space for private/protected?
-// - TODO: test if instances of things passed in couldn't just be created inside the classes themselves like ChromeStorageManager
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: cleanup!!
 // - TODO: todos!
@@ -4215,7 +4213,7 @@ class Settings {
 
   resetAdvancedFeatures() {
     Settings.ADVANCED_FIELDS.forEach(f => {
-      this.data[f] = this.defaultData[f]
+      this.data[f] = this.defaultData[f];
     });
   }
 
@@ -7064,3 +7062,5 @@ class AppController {
   }
 
 }
+
+window.AppController = AppController;
