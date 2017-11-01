@@ -6,11 +6,8 @@
  *
  * ---------------------------- */
 
-// - TODO: make callbacks ES6 () => style
 // - TODO: one space for private/protected?
 // - TODO: test if instances of things passed in couldn't just be created inside the classes themselves like ChromeStorageManager
-// - TODO: PositionableElementManager -> ElementManager?
-// - TODO: better description
 // - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: cleanup!!
 // - TODO: todos!
@@ -365,7 +362,7 @@ class ShadowDomInjector {
   }
 
   fetchFile(filePath) {
-    return fetch(this.getUrl(filePath)).then(function(response) {
+    return fetch(this.getUrl(filePath)).then(response => {
       return response.text();
     });
   }
@@ -383,7 +380,7 @@ class ShadowDomInjector {
       // Pass through if no stylesheet.
       return Promise.resolve(templateHtml);
     }
-    return this.fetchFile(this.stylesheetPath).then(function(styles) {
+    return this.fetchFile(this.stylesheetPath).then(styles => {
       var styleHtml = '<style>' + styles + '</style>';
       return styleHtml + templateHtml;
     });
@@ -1870,7 +1867,7 @@ class OutputManager {
   getLongestClass(list) {
     var classNames = Array.from(list);
     if (classNames.length > 0) {
-      return '.' + classNames.reduce(function(a, b) {
+      return '.' + classNames.reduce((a, b) => {
         return a.length > b.length ? a : b;
       });
     }
@@ -2712,7 +2709,7 @@ class PositionableElementManager {
   unfocus(element) {
     if (this.elementIsFocused(element)) {
       element.unfocus();
-      this.focusedElements = this.focusedElements.filter(function(el) {
+      this.focusedElements = this.focusedElements.filter(el => {
         return el !== element;
       });
     }
