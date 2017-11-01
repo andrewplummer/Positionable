@@ -35,6 +35,20 @@ describe('LicenseManager', function() {
     }
   };
 
+  const GET_PURCHASES_PENDING_RESPONSE = {
+    response: {
+      details: [
+        {
+          kind: 'chromewebstore#payment',
+          itemId: 'ejjblkkckapifkameijedjhnobkjkejn',
+          sku: 'positionable_pro_test',
+          createdTime: '1509447490638',
+          state: 'PENDING'
+        }
+      ]
+    }
+  };
+
   const BUY_SUCCESS_RESPONSE = {
     jwt: 'xxx',
     request: {
@@ -127,7 +141,7 @@ describe('LicenseManager', function() {
     assert.equal(requests[0].sku, SKU);
   }
 
-  // --- Querying Status
+  // --- Querying GetPurchases
 
   it('should correctly identify a fresh license on init', function() {
     googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
@@ -139,6 +153,14 @@ describe('LicenseManager', function() {
 
   it('should correctly identify a pro license on init', function() {
     googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
+    setupLicenseManager();
+    assertProLicense(true);
+    assertDaysRemaining(30);
+    assert.equal(listener.licenseUpdatedEvents, 1);
+  });
+
+  it('should correctly identify a pro license with a pending status', function() {
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_PENDING_RESPONSE);
     setupLicenseManager();
     assertProLicense(true);
     assertDaysRemaining(30);

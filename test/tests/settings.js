@@ -8,6 +8,7 @@ describe('Settings', function(uiRoot) {
     constructor () {
       this.settingsUpdatedCount = 0;
       this.selectorUpdatedCount = 0;
+      this.snapUpdatedCount     = 0;
     }
 
     onSettingsInitialized() {
@@ -25,6 +26,7 @@ describe('Settings', function(uiRoot) {
     onSnappingUpdated(x, y) {
       this.lastSnapX = x;
       this.lastSnapY = y;
+      this.snapUpdatedCount += 1;
     }
 
   }
@@ -369,5 +371,13 @@ describe('Settings', function(uiRoot) {
     assert.equal(Object.keys(settings.get(Settings.GROUPING_MAP)).length, 0);
     assert.equal(listener.settingsUpdatedCount, 0);
   });
+
+  it('should not fire a other change events when updating quickstart setting', function() {
+    setupSettings();
+    settings.set(Settings.SKIP_QUICKSTART, true);
+    assert.equal(listener.selectorUpdatedCount, 0);
+    assert.equal(listener.snapUpdatedCount,     0);
+  });
+
 
 });

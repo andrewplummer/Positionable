@@ -106,7 +106,9 @@ class NudgeManager {
     this.multiplier = on ? NudgeManager.MULTIPLIER : 1;
   }
 
+
   // === Private ===
+
 
   bind() {
     this.checkNextNudge = this.checkNextNudge.bind(this);
@@ -353,7 +355,9 @@ class ShadowDomInjector {
     ShadowDomInjector.getPreloadedTemplateOrFetch(this, fn);
   }
 
+
   // === Private ===
+
 
   getUrl(path) {
     return ShadowDomInjector.BASE_PATH + path;
@@ -925,6 +929,7 @@ class DraggableElement extends DragTarget {
     this.render();
   }
 
+
   // === Private ===
 
 
@@ -1278,6 +1283,10 @@ class PositionableElement extends BrowserEventTarget {
       this.ui.removeClass(PositionableElement.UI_HIGHLIGHT_CLASS);
     }
   }
+
+
+  // === Protected ===
+
 
   // --- Position Handle Drag Events
 
@@ -3200,7 +3209,9 @@ class ControlPanelModeIndicator extends Element {
     this.currentElement = el;
   }
 
+
   // === Private ===
+
 
   setupElements(root) {
     this.position   = new Element(root.getElementById('mode-position'));
@@ -3463,7 +3474,9 @@ class ControlPanelElementArea extends ControlPanelArea {
     this.setSize();
   }
 
+
   // === Private ===
+
 
   setupElements(root) {
     this.selector           = new Element(root.getElementById('element-selector'));
@@ -3541,7 +3554,9 @@ class ControlPanelMultipleArea extends ControlPanelArea {
     this.renderHeader();
   }
 
+
   // === Private ===
+
 
   setupButtons(root) {
     // UI Buttons
@@ -3669,7 +3684,9 @@ class ControlPanelQuickstartArea extends ControlPanelArea {
     this.setupButtons(root);
   }
 
+
   // === Private ===
+
 
   setupButtons(root) {
     this.setupButton(root, 'quickstart-skip-link', this.onSkipClick);
@@ -3704,11 +3721,11 @@ class ControlPanelDefaultArea extends ControlPanelArea {
 class SettingsForm extends BrowserEventTarget {
 
   // Input Types
-  static get TEXT()            { return 'text';       }
-  static get NUMBER()          { return 'number';     }
-  static get CHECKBOX()        { return 'checkbox';   }
-  static get TEXTAREA()        { return 'textarea';   }
-  static get SELECT_ONE()      { return 'select-one'; }
+  static get TEXT()       { return 'text';       }
+  static get NUMBER()     { return 'number';     }
+  static get CHECKBOX()   { return 'checkbox';   }
+  static get TEXTAREA()   { return 'textarea';   }
+  static get SELECT_ONE() { return 'select-one'; }
 
   // Classes
   static get INVALID_CLASS()                    { return 'settings-field--invalid';          }
@@ -3717,8 +3734,8 @@ class SettingsForm extends BrowserEventTarget {
   static get ADVANCED_FEATURES_DISABLED_CLASS() { return 'settings-form--advanced-disabled'; }
 
   // Other
-  static get INPUT_TYPES()     { return ['input', 'select', 'textarea'];    }
-  static get CONFIRM_MESSAGE() { return 'Really clear all settings?'; }
+  static get INPUT_TYPES()     { return ['input', 'select', 'textarea']; }
+  static get CONFIRM_MESSAGE() { return 'Really clear all settings?';    }
 
   constructor(el, listener) {
     super(el);
@@ -3736,6 +3753,8 @@ class SettingsForm extends BrowserEventTarget {
     this.transforms  = {};
   }
 
+  // --- Modes
+
   setBasic() {
     this.removeClass(SettingsForm.ADVANCED_VISIBLE_CLASS);
   }
@@ -3752,6 +3771,8 @@ class SettingsForm extends BrowserEventTarget {
     this.toggleClass(SettingsForm.ADVANCED_FEATURES_DISABLED_CLASS, !on);
   }
 
+  // --- Transform and Validations
+
   addTransform(id, parse, stringify) {
     var transform = {
       parse: parse,
@@ -3767,6 +3788,8 @@ class SettingsForm extends BrowserEventTarget {
       validator: validator
     });
   }
+
+  // --- Data Handling
 
   getData() {
     var data = {};
@@ -3808,12 +3831,18 @@ class SettingsForm extends BrowserEventTarget {
     });
   }
 
+  // --- Other
+
   focus() {
     // Set a bit of a timeout to focus to avoid rendering bugs.
     setTimeout(() => this.getFirstControl().focus(), 200);
   }
 
+
   // === Private ===
+
+
+  // --- Events
 
   onSubmit(evt) {
     evt.preventDefault();
@@ -3841,11 +3870,7 @@ class SettingsForm extends BrowserEventTarget {
     this.listener.onFormBlur(evt);
   }
 
-  blur() {
-    if (document.activeElement) {
-      document.activeElement.blur();
-    }
-  }
+  // --- Transform and Validations
 
   getTransformedControlValue(control) {
     var transform = this.transforms[control.id];
@@ -3886,6 +3911,8 @@ class SettingsForm extends BrowserEventTarget {
     });
   }
 
+  // --- Other
+
   getFirstControl() {
     var els = this.el.elements;
     for (var i = 0, control; control = els[i]; i++) {
@@ -3901,6 +3928,12 @@ class SettingsForm extends BrowserEventTarget {
       if (control.id) {
         fn(control);
       }
+    }
+  }
+
+  blur() {
+    if (document.activeElement) {
+      document.activeElement.blur();
     }
   }
 
@@ -3975,13 +4008,17 @@ class Settings {
   static get TABS_EIGHT_SPACES()       { return 'eight';   }
   static get TABS_TAB()                { return 'tab';     }
 
-  // --- Validations
-  static get SNAP_FIELD()             { return 'snap-field';       }
-  static get GROUPING_MAP_FIELD()     { return 'grouping-map-field'; }
-  static get SNAP_CONTROLS()          { return [Settings.SNAP_X, Settings.SNAP_Y]; }
+  // --- Validation
+  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi;    }
+
+  // --- Controls
+  static get SNAP_CONTROLS()          { return [Settings.SNAP_X, Settings.SNAP_Y];                     }
   static get QUERY_CONTROLS()         { return [Settings.INCLUDE_SELECTOR, Settings.EXCLUDE_SELECTOR]; }
-  static get GROUPING_MAP_CONTROLS()  { return [Settings.GROUPING_MAP]; }
-  static get ATTRIBUTE_SELECTOR_REG() { return /\[[^\]]+(\])?/gi; }
+  static get GROUPING_MAP_CONTROLS()  { return [Settings.GROUPING_MAP];                                }
+
+  // --- Fields
+  static get SNAP_FIELD()             { return 'snap-field';         }
+  static get GROUPING_MAP_FIELD()     { return 'grouping-map-field'; }
 
   static get FIELDS() {
     return [
@@ -4041,8 +4078,11 @@ class Settings {
     this.checkAdvancedFeaturesReset();
   }
 
-  // --- Events
 
+  // === Protected ===
+
+
+  // --- Events
 
   onStorageDataFetched(data) {
     this.data = Object.assign({}, this.defaultData, data);
@@ -4059,11 +4099,11 @@ class Settings {
   }
 
   onFormFocus(evt) {
-    this.listener.onFormFocus(evt);
+    this.listener.onSettingsFormFocus(evt);
   }
 
   onFormBlur(evt) {
-    this.listener.onFormBlur(evt);
+    this.listener.onSettingsFormBlur(evt);
   }
 
   onFormSubmit(evt, form) {
@@ -4105,23 +4145,13 @@ class Settings {
     this.storageManager = new ChromeStorageManager(this);
   }
 
+  // --- Events
+
   onInitialized() {
     this.form.setControlsFromData(this.data);
     this.selectorLinkedSelect.update();
     this.groupingLinkedSelect.update();
     this.listener.onSettingsInitialized();
-  }
-
-  fetchSettings() {
-    this.storageManager.fetch(Settings.FIELDS);
-  }
-
-  saveSettings(data) {
-    this.storageManager.save(data);
-  }
-
-  clearSettings() {
-    this.storageManager.remove(Settings.FIELDS);
   }
 
   onSettingsUpdated(data) {
@@ -4137,6 +4167,32 @@ class Settings {
     Object.assign(this.data, data);
     this.listener.onSettingsUpdated();
   }
+
+  selectorChanged(data) {
+    return this.data[Settings.INCLUDE_SELECTOR] !== (data[Settings.INCLUDE_SELECTOR] || '') ||
+           this.data[Settings.EXCLUDE_SELECTOR] !== (data[Settings.EXCLUDE_SELECTOR] || '');
+  }
+
+  snapChanged(data) {
+    return this.data[Settings.SNAP_X] !== (data[Settings.SNAP_X] || 0) ||
+           this.data[Settings.SNAP_Y] !== (data[Settings.SNAP_Y] || 0);
+  }
+
+  // --- Storage
+
+  fetchSettings() {
+    this.storageManager.fetch(Settings.FIELDS);
+  }
+
+  saveSettings(data) {
+    this.storageManager.save(data);
+  }
+
+  clearSettings() {
+    this.storageManager.remove(Settings.FIELDS);
+  }
+
+  // --- Validations
 
   isValidQuery(query) {
     var reg, match;
@@ -4165,6 +4221,8 @@ class Settings {
     return !str || !!this.parseGroupingMap(str);
   }
 
+  // --- Transforms
+
   parseGroupingMap(str) {
     var lines = str.split('\n'), data = {};
     lines = lines.filter(l => l);
@@ -4187,15 +4245,7 @@ class Settings {
     }).join('\n');
   }
 
-  selectorChanged(data) {
-    return this.data[Settings.INCLUDE_SELECTOR] !== data[Settings.INCLUDE_SELECTOR] ||
-           this.data[Settings.EXCLUDE_SELECTOR] !== data[Settings.EXCLUDE_SELECTOR];
-  }
-
-  snapChanged(data) {
-    return this.data[Settings.SNAP_X] !== data[Settings.SNAP_X] ||
-           this.data[Settings.SNAP_Y] !== data[Settings.SNAP_Y];
-  }
+  // --- Advanced Features
 
   checkAdvancedFeaturesReset() {
     if (!this.advancedFeatures && !this.advancedFeaturesAreDefault()) {
@@ -4233,6 +4283,10 @@ class LinkedSelect extends BrowserEventTarget {
     this.setCurrentAreaActive();
   }
 
+
+  // === Private ===
+
+
   setup() {
     this.linked = {};
     var els = this.el.parentNode.querySelectorAll('[data-linked-option]');
@@ -4243,22 +4297,26 @@ class LinkedSelect extends BrowserEventTarget {
     this.setCurrentAreaActive();
   }
 
+  // --- Events
+
+  onChange() {
+    this.update();
+  }
+
+  // --- Areas
+
+  setCurrentAreaActive() {
+    var area = this.getLinkedAreaByValue(this.getCurrentValue());
+    this.showLinkedArea(area);
+    this.activeLinkedArea = area;
+  }
+
   getCurrentValue() {
     return this.el.selectedOptions[0].value;
   }
 
   getLinkedAreaByValue(value) {
     return this.linked[value];
-  }
-
-  onChange() {
-    this.update();
-  }
-
-  setCurrentAreaActive() {
-    var area = this.getLinkedAreaByValue(this.getCurrentValue());
-    this.showLinkedArea(area);
-    this.activeLinkedArea = area;
   }
 
   showLinkedArea(area) {
@@ -4282,12 +4340,6 @@ class Animation {
     this.activeClass = activeClass;
     this.listener    = listener;
     this.expectedTransitionEvents = expectedTransitionEvents || 1;
-  }
-
-  defer(fn) {
-    // Allow 1 frame to allow styling to be applied before
-    // adding transition classes. For some reason RAF won't work here.
-    this.timer = setTimeout(fn, 16);
   }
 
   show() {
@@ -4316,8 +4368,22 @@ class Animation {
     });
   }
 
+
+  // === Private ===
+
+
+  // --- Events
+
   onAnimationExit() {
     this.target.hide();
+  }
+
+  // --- Timing
+
+  defer(fn) {
+    // Allow 1 frame to allow styling to be applied before
+    // adding transition classes. For some reason RAF won't work here.
+    this.timer = setTimeout(fn, 16);
   }
 
   awaitTransitionEnd(fn) {
@@ -4339,12 +4405,16 @@ class Animation {
 
 class LoadingAnimation extends Animation {
 
-  static get ID()           { return 'loading-animation'; }
+  static get ID()           { return 'loading-animation';         }
   static get ACTIVE_CLASS() { return 'loading-animation--active'; }
 
   constructor(uiRoot, listener) {
     super(uiRoot.getElementById(LoadingAnimation.ID), LoadingAnimation.ACTIVE_CLASS, listener);
   }
+
+
+  // === Protected ===
+
 
   onAnimationEnter() {
     this.listener.onLoadingAnimationTaskReady();
@@ -4369,10 +4439,6 @@ class CopyAnimation extends Animation {
     this.noStyles = new Element(uiRoot.getElementById(CopyAnimation.NO_STYLES_ID));
   }
 
-  onAnimationEnter() {
-    this.hide();
-  }
-
   show(hasStyles) {
     if (hasStyles) {
       this.copied.show();
@@ -4382,6 +4448,14 @@ class CopyAnimation extends Animation {
       this.noStyles.show();
     }
     super.show();
+  }
+
+
+  // === Protected ===
+
+
+  onAnimationEnter() {
+    this.hide();
   }
 
 }
@@ -4431,7 +4505,9 @@ class SpriteRecognizer {
     return bounds;
   }
 
+
   // === Private ===
+
 
   onImageLoaded() {
     var img = this.img, canvas, context;
@@ -4445,6 +4521,8 @@ class SpriteRecognizer {
     this.height = img.height;
     this.map = new Array(this.width * this.height);
   }
+
+  // --- Testing Pixels
 
   testAdjacentPixels(pixel, bounds, queue) {
     this.testPixel(new Point(pixel.x, pixel.y - 1), bounds, queue); // Top
@@ -4571,10 +4649,6 @@ class Point {
     return new Point(x, y);
   }
 
-  getLength() {
-    return Math.sqrt(Math.pow(this.x, 2) + Math.pow(this.y, 2));
-  }
-
   clone() {
     return new Point(this.x, this.y);
   }
@@ -4633,22 +4707,6 @@ class CSSPositioningProperty {
     this.prop     = prop;
   }
 
-  clone() {
-    return new CSSPositioningProperty(this.cssValue.clone(), this.prop);
-  }
-
-  render(style) {
-    style[this.prop] = this.cssValue.isInitial() ? '': this.cssValue;
-  }
-
-  add(px) {
-    this.px += this.isInverted() ? -px : px;
-  }
-
-  toString() {
-    return this.cssValue.toString();
-  }
-
   // --- Accessors
 
   get px() {
@@ -4659,10 +4717,18 @@ class CSSPositioningProperty {
     this.cssValue.px = px;
   }
 
-  // --- Accessors
+  add(px) {
+    this.px += this.isInverted() ? -px : px;
+  }
 
   isInverted() {
     return this.prop === 'right' || this.prop === 'bottom';
+  }
+
+  // --- Rendering
+
+  render(style) {
+    style[this.prop] = this.cssValue.isInitial() ? '': this.cssValue;
   }
 
   // --- CSS Declarations
@@ -4671,8 +4737,14 @@ class CSSPositioningProperty {
     return this.cssValue.appendCSSDeclaration(this.prop, declarations);
   }
 
-  destroy(style) {
-    style[this.prop] = '';
+  // --- Other
+
+  toString() {
+    return this.cssValue.toString();
+  }
+
+  clone() {
+    return new CSSPositioningProperty(this.cssValue.clone(), this.prop);
   }
 
 }
@@ -4771,16 +4843,6 @@ class CSSBox {
     return xyPosition.add(anchorOffset);
   }
 
-  // --- Headers
-
-  getPositionHeader() {
-    return this.getRenderablePosition().join(', ');
-  }
-
-  getDimensionsHeader() {
-    return this.getRenderableDimensions().join(', ');
-  }
-
   // --- Rendering
 
   render(style) {
@@ -4788,7 +4850,7 @@ class CSSBox {
     this.renderAxis(style, this.cssV, this.cssHeight, 'height');
   }
 
-  // --- CSS
+  // --- CSS Declarations
 
   appendCSSDeclarations(declarations) {
     var cssH, cssV, cssWidth, cssHeight;
@@ -4803,6 +4865,14 @@ class CSSBox {
   }
 
   // --- Other
+
+  getPositionHeader() {
+    return this.getRenderablePosition().join(', ');
+  }
+
+  getDimensionsHeader() {
+    return this.getRenderableDimensions().join(', ');
+  }
 
   getRatio() {
     var x = this.cssWidth.px;
@@ -4824,7 +4894,9 @@ class CSSBox {
     );
   }
 
+
   // === Private ===
+
 
   // --- Manipulation
 
@@ -5109,7 +5181,9 @@ class CSSRuleMatcher {
     return this.computedStyle[name];
   }
 
+
   // === Private ===
+
 
   getMatchedRules(el) {
     // Note: This API is deprecated and may be removed.
@@ -5158,6 +5232,12 @@ class CSSRuleMatcher {
 
 class CSSProperty {
 
+  // Initial Values
+  static get NONE()    { return 'none';    }
+  static get AUTO()    { return 'auto';    }
+  static get INITIAL() { return 'initial'; }
+
+  // Position Keywords
   static get TOP()    { return 'top';    }
   static get LEFT()   { return 'left';   }
   static get WIDTH()  { return 'width';  }
@@ -5166,17 +5246,15 @@ class CSSProperty {
   static get BOTTOM() { return 'bottom'; }
   static get CENTER() { return 'center'; }
 
-  static get NONE()    { return 'none';    }
-  static get AUTO()    { return 'auto';    }
-  static get INITIAL() { return 'initial'; }
-
+  // Properties
   static get TRANSFORM()           { return 'transform';          }
   static get TRANSFORM_ORIGIN()    { return 'transformOrigin';    }
   static get BACKGROUND_IMAGE()    { return 'backgroundImage';    }
   static get BACKGROUND_POSITION() { return 'backgroundPosition'; }
 
+  // Special Values
   static get LINEAR_GRADIENT_REG()         { return /linear-gradient/; }
-  static get BACKGROUND_POSITION_INITIAL() { return '0% 0%'; }
+  static get BACKGROUND_POSITION_INITIAL() { return '0% 0%';           }
 
   constructor(name, matchedValue, computedValue) {
     this.name          = name;
@@ -5200,7 +5278,9 @@ class CSSProperty {
            this.name === CSSProperty.HEIGHT;
   }
 
+
   // === Private ===
+
 
   normalize() {
     // We need to normalize values here so that they can all be tested.
@@ -5284,6 +5364,8 @@ class CSSProperty {
            str === CSSProperty.BACKGROUND_POSITION_INITIAL;
   }
 
+  // --- Specific Properties
+
   isPositioningPair() {
     return this.isBackgroundPosition() || this.isTransformOrigin();
   }
@@ -5295,6 +5377,12 @@ class CSSProperty {
   isTransformOrigin() {
     return this.name === CSSProperty.TRANSFORM_ORIGIN;
   }
+
+  isTransform() {
+    return this.name === CSSProperty.TRANSFORM;
+  }
+
+  // --- Keywords
 
   replacePositionKeywords(str) {
     var split;
@@ -5370,12 +5458,12 @@ class CSSTransform {
     this.cssTransformOrigin = cssTransformOrigin;
   }
 
-  getOrigin() {
-    return new Point(
-      this.cssTransformOrigin.cssX.px,
-      this.cssTransformOrigin.cssY.px
-    );
+  update() {
+    this.updateOrigin();
+    this.updateTranslation();
   }
+
+  // --- Rotation
 
   getRotation() {
     var func = this.getRotationFunction();
@@ -5395,6 +5483,8 @@ class CSSTransform {
   addRotation(deg) {
     this.setRotation(this.getRotation() + deg);
   }
+
+  // --- Translation
 
   getTranslation() {
     var func = this.getPreceedingTranslationFunction();
@@ -5423,15 +5513,36 @@ class CSSTransform {
     this.setTranslation(this.getTranslation().add(v));
   }
 
-  update() {
-    this.updateOrigin();
-    this.updateTranslation();
-  }
-
   hasPercentTranslation() {
     var func = this.getPreceedingTranslationFunction();
     return !!func && func.hasPercentTranslation();
   }
+
+  // --- Origin
+
+  getOrigin() {
+    return new Point(
+      this.cssTransformOrigin.cssX.px,
+      this.cssTransformOrigin.cssY.px
+    );
+  }
+
+  // --- Rendering
+
+  render(style) {
+    style.transform = this.toString();
+  }
+
+  // --- CSS Declarations
+
+  appendCSSDeclaration(declarations) {
+    var str = this.toString();
+    if (str) {
+      declarations.push(`transform: ${str};`);
+    }
+  }
+
+  // --- Other
 
   getHeader() {
     return this.functions.map(f => f.getHeader()).join(' | ');
@@ -5441,27 +5552,14 @@ class CSSTransform {
     return this.isNull() ? '' : this.functions.join(' ');
   }
 
-  isNull() {
-    return this.functions.every(f => {
-      return f.values.every(v => {
-        return typeof v !== 'string' && !v.val;
-      });
-    });
-  }
-
-  appendCSSDeclaration(declarations) {
-    var str = this.toString();
-    if (str) {
-      declarations.push(`transform: ${str};`);
-    }
-  }
-
   clone() {
     var functions = this.functions.map(f => f.clone());
     return new CSSTransform(functions, this.cssTransformOrigin.clone());
   }
 
+
   // === Private ===
+
 
   getRotationFunction() {
     return this.functions.find(f => f.isZRotate());
@@ -5477,10 +5575,6 @@ class CSSTransform {
     }
   }
 
-  updateOrigin() {
-    this.cssTransformOrigin.update();
-  }
-
   updateTranslation() {
     var func = this.getPreceedingTranslationFunction();
     if (func) {
@@ -5488,12 +5582,16 @@ class CSSTransform {
     }
   }
 
-  render(style) {
-    style.transform = this.toString();
+  updateOrigin() {
+    this.cssTransformOrigin.update();
   }
 
-  destroy(style) {
-    style.transform = '';
+  isNull() {
+    return this.functions.every(f => {
+      return f.values.every(v => {
+        return typeof v !== 'string' && !v.val;
+      });
+    });
   }
 
 }
@@ -5557,14 +5655,6 @@ class CSSTransformFunction {
     this.canMutate = canMutate;
   }
 
-  getHeader() {
-    return this.getAbbreviatedHeader() + ': ' + this.values.join(this.getHeaderJoin());
-  }
-
-  toString() {
-    return this.name + '(' + this.values.join(', ') + ')';
-  }
-
   isTranslate() {
     return CSSTransformFunction.isTranslate(this.name);
   }
@@ -5581,6 +5671,16 @@ class CSSTransformFunction {
     return this.isTranslate() && this.values.some(v => v.isPercent());
   }
 
+  // --- Other
+
+  getHeader() {
+    return this.getAbbreviatedHeader() + ': ' + this.values.join(this.getHeaderJoin());
+  }
+
+  toString() {
+    return this.name + '(' + this.values.join(', ') + ')';
+  }
+
   clone() {
     var values = this.values;
     if (this.canMutate) {
@@ -5589,7 +5689,9 @@ class CSSTransformFunction {
     return new CSSTransformFunction(this.name, values, this.canMutate);
   }
 
+
   // === Private ===
+
 
   getHeaderJoin() {
     return this.isMatrix() ? ',' : ', ';
@@ -5637,6 +5739,8 @@ class CSSTransformOrigin {
     this.cssX.update();
     this.cssY.update();
   }
+
+  // --- Other
 
   clone() {
     return new CSSTransformOrigin(this.cssX.clone(), this.cssY.clone());
@@ -5706,10 +5810,6 @@ class CSSValue {
     this.value = value;
   }
 
-  // Note that this method is intended to be overridden by child
-  // css values that require an update, such as CSSPercentValue.
-  update() {}
-
   isInitial() {
     return this.initial;
   }
@@ -5718,11 +5818,15 @@ class CSSValue {
     return this.unit === '%';
   }
 
+  // --- CSS Declarations
+
   appendCSSDeclaration(prop, declarations) {
     if (!this.isInitial()) {
       declarations.push(`${prop}: ${this};`);
     }
   }
+
+  // --- Other
 
   getHeader() {
     return this.toString();
@@ -5741,6 +5845,14 @@ class CSSValue {
     return roundWithPrecision(this.val, precision).toString() + this.unit;
   }
 
+
+  // === Protected ===
+
+
+  // Note that this method is intended to be overridden by child
+  // css values that require an update, such as CSSPercentValue.
+  update() {}
+
 }
 
 /*-------------------------] CSSPixelValue [--------------------------*/
@@ -5748,8 +5860,7 @@ class CSSValue {
 class CSSPixelValue extends CSSValue {
 
   static create(val, initial, prop) {
-    var subpixel = prop.name === CSSProperty.TRANSFORM;
-    return new CSSPixelValue(val, initial, subpixel);
+    return new CSSPixelValue(val, initial, prop.isTransform());
   }
 
   constructor(val, initial, subpixel) {
@@ -5763,6 +5874,8 @@ class CSSPixelValue extends CSSValue {
   set px(val) {
     this.val = val;
   }
+
+  // --- Other
 
   clone() {
     return new CSSPixelValue(this.val, this.initial, this.subpixel);
@@ -5802,6 +5915,8 @@ class CSSEmValue extends CSSFontSizeValue {
     super(val, initial, 'em', fontSize);
   }
 
+  // --- Other
+
   clone() {
     return new CSSEmValue(this.val, this.initial, this.fontSize);
   }
@@ -5821,6 +5936,8 @@ class CSSRemValue extends CSSFontSizeValue {
   constructor(val, initial, fontSize) {
     super(val, initial, 'rem', fontSize);
   }
+
+  // --- Other
 
   clone() {
     return new CSSRemValue(this.val, this.initial, this.fontSize);
@@ -5844,6 +5961,8 @@ class CSSDegreeValue extends CSSValue {
     this.val = val;
   }
 
+  // --- Other
+
   clone() {
     return new CSSDegreeValue(this.val, this.initial);
   }
@@ -5865,6 +5984,8 @@ class CSSRadianValue extends CSSValue {
   set deg(val) {
     this.val = Point.degToRad(val);
   }
+
+  // --- Other
 
   clone() {
     return new CSSRadianValue(this.val, this.initial);
@@ -5888,6 +6009,8 @@ class CSSGradianValue extends CSSValue {
     this.val = Point.degToGrad(val);
   }
 
+  // --- Other
+
   clone() {
     return new CSSGradianValue(this.val, this.initial);
   }
@@ -5910,6 +6033,8 @@ class CSSTurnValue extends CSSValue {
     this.val = val / 360;
   }
 
+  // --- Other
+
   clone() {
     return new CSSTurnValue(this.val, this.initial);
   }
@@ -5923,6 +6048,8 @@ class CSSIntegerValue extends CSSValue {
   constructor(val, initial) {
     super(val, initial, '');
   }
+
+  // --- Other
 
   clone() {
     return new CSSIntegerValue(this.val, this.initial);
@@ -5943,9 +6070,9 @@ class CSSPercentValue extends CSSValue {
   }
 
   static isElementRelative(prop) {
-    return prop.name === CSSProperty.TRANSFORM ||
-           prop.name === CSSProperty.TRANSFORM_ORIGIN ||
-           prop.name === CSSProperty.BACKGROUND_POSITION;
+    return prop.isTransform() ||
+           prop.isTransformOrigin() ||
+           prop.isBackgroundPosition();
   }
 
   // It seems that CSS/CSSOM has a bug/quirk where absolute elements are relative
@@ -5973,10 +6100,6 @@ class CSSPercentValue extends CSSValue {
     this.initialize();
   }
 
-  update() {
-    this.size = this.getTotalSize();
-  }
-
   get px() {
     if (this.size === 0) {
       return 0;
@@ -5993,6 +6116,12 @@ class CSSPercentValue extends CSSValue {
     }
   }
 
+  update() {
+    this.size = this.getTotalSize();
+  }
+
+  // --- Other
+
   clone() {
     return new CSSPercentValue(
       this.val,
@@ -6004,7 +6133,9 @@ class CSSPercentValue extends CSSValue {
       this.size);
   }
 
+
   // === Private ===
+
 
   initialize() {
     if (this.size === undefined) {
@@ -6048,6 +6179,16 @@ class CSSViewportValue extends CSSValue {
     this.val = px / this.getViewportValue() * 100;
   }
 
+  // --- Other
+
+  clone() {
+    return new CSSViewportValue(this.val, this.initial, this.unit);
+  }
+
+
+  // === Private ===
+
+
   getViewportValue() {
     switch (this.unit) {
       case 'vw':   return window.innerWidth;
@@ -6055,10 +6196,6 @@ class CSSViewportValue extends CSSValue {
       case 'vmin': return Math.min(window.innerWidth, window.innerHeight);
       case 'vmax': return Math.max(window.innerWidth, window.innerHeight);
     }
-  }
-
-  clone() {
-    return new CSSViewportValue(this.val, this.initial, this.unit);
   }
 
 }
@@ -6088,9 +6225,7 @@ class CSSZIndex {
     this.cssValue.val += val;
   }
 
-  getHeader() {
-    return this.toString();
-  }
+  // --- CSS Declarations
 
   appendCSSDeclaration(declarations) {
     if (!this.cssValue.isInitial()) {
@@ -6098,8 +6233,10 @@ class CSSZIndex {
     }
   }
 
-  destroy(style) {
-    style.zIndex = '';
+  // --- Other
+
+  getHeader() {
+    return this.toString();
   }
 
   toString() {
@@ -6236,27 +6373,11 @@ class CSSBackgroundImage {
     return this.spriteRecognizer.getSpriteBoundsForCoordinate(imgCoord);
   }
 
-  getPositionHeader() {
-    return this.getPositionString(', ');
-  }
-
-  renderPosition(style) {
-    style.backgroundPosition = this.getPositionString();
-  }
-
   // --- Positioning
 
   move(x, y) {
     this.cssLeft.px += x;
     this.cssTop.px  += y;
-  }
-
-  getPositionString(join) {
-    if (this.cssLeft.isInitial() && this.cssTop.isInitial()) {
-      return '';
-    } else {
-      return [this.cssLeft, this.cssTop].join(join || ' ');
-    }
   }
 
   getPosition() {
@@ -6268,10 +6389,32 @@ class CSSBackgroundImage {
     this.cssTop.px  = y;
   }
 
+  // --- Rendering
+
+  renderPosition(style) {
+    style.backgroundPosition = this.getPositionString();
+  }
+
+  // --- CSS Declarations
+
   appendCSSDeclaration(declarations) {
     var str = this.getPositionString();
     if (str) {
       declarations.push(`background-position: ${str};`);
+    }
+  }
+
+  // --- Other
+
+  getPositionHeader() {
+    return this.getPositionString(', ');
+  }
+
+  getPositionString(join) {
+    if (this.cssLeft.isInitial() && this.cssTop.isInitial()) {
+      return '';
+    } else {
+      return [this.cssLeft, this.cssTop].join(join || ' ');
     }
   }
 
@@ -6281,10 +6424,6 @@ class CSSBackgroundImage {
     return new CSSBackgroundImage(this.img, this.cssLeft.clone(), this.cssTop.clone(), this.spriteRecognizer);
   }
 
-  destroy(style) {
-    style.backgroundPosition = '';
-  }
-
 }
 
 /*-------------------------] LicenseManager [--------------------------*/
@@ -6292,10 +6431,15 @@ class CSSBackgroundImage {
 class LicenseManager {
 
   // API Constants
-  static get SKU()               { return 'positionable_pro_test'; }
-  static get ENVIRONMENT()       { return 'prod';                  }
-  static get ACTIVE_STATE()      { return 'ACTIVE';                }
-  static get PURCHASE_CANCELED() { return 'PURCHASE_CANCELED';     }
+  static get SKU()         { return 'positionable_pro_test'; }
+  static get ENVIRONMENT() { return 'prod';                  }
+
+  // Purchase States
+  static get STATE_ACTIVE()  { return 'ACTIVE';  }
+  static get STATE_PENDING() { return 'PENDING'; }
+
+  // Error Types
+  static get PURCHASE_CANCELED() { return 'PURCHASE_CANCELED'; }
 
   // License Statuses
   static get STATUS_NORMAL() { return 'normal'; }
@@ -6449,7 +6593,8 @@ class LicenseManager {
   getStatusFromPurchaseData(data) {
     var activePurchase = data.response.details.some(d => {
       return d.sku   === LicenseManager.SKU &&
-             d.state === LicenseManager.ACTIVE_STATE;
+            (d.state === LicenseManager.STATE_ACTIVE ||
+             d.state === LicenseManager.STATE_PENDING);
     });
     return activePurchase ?
       LicenseManager.STATUS_PRO :
@@ -6516,159 +6661,22 @@ class AppController {
   static get HOST_CLASS_NAME() { return 'positionble-extension-ui'; }
 
   constructor(uiRoot) {
-
     this.uiRoot = uiRoot;
-    this.settings = new Settings(this, uiRoot);
-    this.outputManager = new OutputManager(this.settings);
-    this.alignmentManager = new AlignmentManager();
 
-    this.body = new Element(document.body);
-
-    this.copyManager = new CopyManager(this);
-    this.copyAnimation = new CopyAnimation(uiRoot, this);
-    this.licenseManager = new LicenseManager(this);
-    this.loadingAnimation = new LoadingAnimation(uiRoot, this);
-
-    this.cursorManager  = new CursorManager(ShadowDomInjector.BASE_PATH);
-
-    // TODO: order here?
-    this.elementManager = new PositionableElementManager(this, ShadowDomInjector.UI_HOST_CLASS_NAME);
-    this.controlPanel   = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
-    this.nudgeManager   = new NudgeManager(this);
-
+    this.setupInterface(uiRoot);
+    this.setupPayment();
     this.setupKeyManager();
+    this.setupSupportManagers();
+    this.setupElementManager();
 
-    new DragSelection(uiRoot, this);
     this.loadingAnimation.show();
   }
 
-  setupKeyManager() {
-    this.keyManager = new KeyManager(this, AppController.PLATFORM_IS_MAC);
 
-    this.keyManager.setupKey(KeyManager.SHIFT_KEY);
-    this.keyManager.setupKey(KeyManager.CTRL_KEY);
-    this.keyManager.setupKey(KeyManager.META_KEY);
-    this.keyManager.setupKey(KeyManager.ALT_KEY);
+  // === Protected ===
 
-    this.keyManager.setupKey(KeyManager.A_KEY);
-    this.keyManager.setupKey(KeyManager.B_KEY);
-    this.keyManager.setupKey(KeyManager.M_KEY);
-    this.keyManager.setupKey(KeyManager.S_KEY);
-    this.keyManager.setupKey(KeyManager.R_KEY);
-    this.keyManager.setupKey(KeyManager.Z_KEY);
 
-    this.keyManager.setupKey(KeyManager.UP_KEY);
-    this.keyManager.setupKey(KeyManager.LEFT_KEY);
-    this.keyManager.setupKey(KeyManager.DOWN_KEY);
-    this.keyManager.setupKey(KeyManager.RIGHT_KEY);
-
-    this.keyManager.setupCommandKey(KeyManager.A_KEY);
-    this.keyManager.setupCommandKey(KeyManager.S_KEY);
-    this.keyManager.setupCommandKey(KeyManager.Z_KEY);
-
-    // Command S for save works regardless of where you are,
-    // other command keys should be able to disable as they
-    // do other things in the context of the settings form.
-    this.keyManager.setupCommandKeyException(KeyManager.S_KEY);
-  }
-
-  onFocusedElementsChanged() {
-    this.renderActiveControlPanel();
-  }
-
-  onElementMouseDown() {
-    this.controlPanel.closeSettings();
-  }
-
-  renderActiveControlPanel() {
-    var elements = this.elementManager.getFocusedElements();
-    if (elements.length > 1) {
-      this.renderMultipleArea(elements);
-    } else if (elements.length === 1) {
-      this.renderElementArea();
-    } else {
-      this.controlPanel.showDefaultArea();
-    }
-  }
-
-  onLicensePurchased() {
-    this.controlPanel.renderUpgradeThankYou();
-    this.settings.toggleAdvancedFeatures(true);
-  }
-
-  onLicenseUpdated() {
-    var pro  = this.licenseManager.hasProLicense();
-    var time = this.licenseManager.freeTimeRemaining();
-    this.controlPanel.renderUpgradeStatus(pro, time);
-    this.settings.toggleAdvancedFeatures(pro || time);
-  }
-
-  getStylesForFocusedElements() {
-    return this.elementManager.getFocusedElements().map(element => {
-      return this.settings.getStylesForElement(element);
-    }).join(' ');
-  }
-
-  onShowSettingsClick() {
-    this.settings.focusForm();
-  }
-
-  onBasicSettingsClick() {
-    this.settings.setBasic();
-  }
-
-  onAdvancedSettingsClick() {
-    this.settings.setAdvanced();
-  }
-
-  onQuickstartSkip() {
-    this.settings.set(Settings.SKIP_QUICKSTART, true);
-    this.renderActiveControlPanel();
-  }
-
-  onUpgradeClick() {
-    this.licenseManager.purchase();
-  }
-
-  onFormFocus() {
-    this.keyManager.setActive(false);
-    this.copyManager.setActive(false);
-  }
-
-  onFormBlur() {
-    this.keyManager.setActive(true);
-    this.copyManager.setActive(true);
-  }
-
-  onSettingsInitialized() {
-    this.elementManager.setSnap(
-      this.settings.get(Settings.SNAP_X),
-      this.settings.get(Settings.SNAP_Y)
-    );
-  }
-
-  onSelectorUpdated() {
-    this.elementManager.releaseAll();
-    this.loadingAnimation.show();
-  }
-
-  onSnappingUpdated(x, y) {
-    this.elementManager.setSnap(x, y);
-  }
-
-  onSettingsUpdated() {
-    this.renderActiveControlPanel();
-  }
-
-  onAlignButtonClick(edge) {
-    this.alignmentManager.align(this.elementManager.getFocusedElements(), edge);
-  }
-
-  onDistributeButtonClick(edge) {
-    this.alignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
-  }
-
-  // --- Loading Animation Events
+  // --- Animation Events
 
   onLoadingAnimationTaskReady() {
     this.elementManager.findElements(
@@ -6683,31 +6691,136 @@ class AppController {
     }
   }
 
+  // --- License Manager Events
+
+  onLicensePurchased() {
+    this.controlPanel.renderUpgradeThankYou();
+    this.settings.toggleAdvancedFeatures(true);
+  }
+
+  onLicenseUpdated() {
+    var pro  = this.licenseManager.hasProLicense();
+    var time = this.licenseManager.freeTimeRemaining();
+    this.controlPanel.renderUpgradeStatus(pro, time);
+    this.settings.toggleAdvancedFeatures(pro || time);
+  }
+
+  // --- Control Panel Events
+
+  onQuickstartSkip() {
+    this.settings.set(Settings.SKIP_QUICKSTART, true);
+    this.renderActiveControlPanel();
+  }
+
+  onShowSettingsClick() {
+    this.settings.focusForm();
+  }
+
+  onBasicSettingsClick() {
+    this.settings.setBasic();
+  }
+
+  onAdvancedSettingsClick() {
+    this.settings.setAdvanced();
+  }
+
+  onUpgradeClick() {
+    this.licenseManager.purchase();
+  }
+
+  onControlPanelDragStart() {
+    this.cursorManager.setDragCursor('move');
+  }
+
+  onControlPanelDragStop() {
+    this.cursorManager.clearDragCursor();
+  }
+
+  onElementHighlightMouseOver(index) {
+    var element = this.elementManager.focusedElements[index], selector;
+    selector = this.outputManager.getSelectorWithDefault(element);
+    this.controlPanel.renderMultipleHeader(selector);
+    element.setHighlightMode(true);
+  }
+
+  onElementHighlightMouseOut(index) {
+    var element = this.elementManager.focusedElements[index];
+    element.setHighlightMode(false);
+    this.controlPanel.renderMultipleHeader();
+  }
+
+  onElementHighlightClick(index) {
+    var element = this.elementManager.focusedElements[index];
+    element.setHighlightMode(false);
+    this.elementManager.setFocused([element]);
+  }
+
+  // --- Settings Events
+
+  onSettingsInitialized() {
+    this.elementManager.setSnap(
+      this.settings.get(Settings.SNAP_X),
+      this.settings.get(Settings.SNAP_Y)
+    );
+  }
+
+  onSettingsUpdated() {
+    this.renderActiveControlPanel();
+  }
+
+  onSelectorUpdated() {
+    this.elementManager.releaseAll();
+    this.loadingAnimation.show();
+  }
+
+  onSnappingUpdated(x, y) {
+    this.elementManager.setSnap(x, y);
+  }
+
+  onSettingsFormFocus() {
+    this.keyManager.setActive(false);
+    this.copyManager.setActive(false);
+  }
+
+  onSettingsFormBlur() {
+    this.keyManager.setActive(true);
+    this.copyManager.setActive(true);
+  }
+
+  // --- Element Manager Events
+
+  onElementMouseDown() {
+    this.controlPanel.closeSettings();
+  }
+
+  onFocusedElementsChanged() {
+    this.renderActiveControlPanel();
+  }
+
   // --- Position Drag Events
 
   onPositionDragIntentStart(evt, handle) {
-    this.setHoverCursor(handle);
+    this.setHoverCursorForHandle(handle);
   }
 
   onPositionDragIntentStop() {
-    this.clearHoverCursor();
+    this.cursorManager.clearHoverCursor();
   }
 
   onPositionDragStart(evt, handle) {
-    this.setDragCursor(handle);
+    this.setDragCursorForHandle(handle);
   }
 
-  onPositionDragMove() {
-  }
+  onPositionDragMove() {}
 
   onPositionDragStop() {
-    this.clearDragCursor();
+    this.cursorManager.clearDragCursor();
   }
 
   // --- Resize Drag Events
 
   onResizeDragIntentStart(evt, handle, element) {
-    this.setHoverCursor(handle, element.getRotation());
+    this.setHoverCursorForHandle(handle, element.getRotation());
     this.currentFocusedHandle = handle;
   }
 
@@ -6718,26 +6831,25 @@ class AppController {
 
   onResizeDragStart(evt, handle, element) {
     this.isResizing = !evt.ctrlKey;
-    this.setDragCursor(handle, element.getRotation());
+    this.setDragCursorForHandle(handle, element.getRotation());
   }
 
-  onResizeDragMove() {
-  }
+  onResizeDragMove() {}
 
   onResizeDragStop() {
-    this.clearDragCursor();
+    this.cursorManager.clearDragCursor();
     this.isResizing = false;
   }
 
   // --- Rotation Drag Events
 
   onRotationDragIntentStart(evt, handle, element) {
-    this.setHoverCursor(handle, element.getRotation());
+    this.setHoverCursorForHandle(handle, element.getRotation());
     this.currentFocusedHandle = handle;
   }
 
   onRotationDragIntentStop() {
-    this.clearHoverCursor();
+    this.cursorManager.clearHoverCursor();
     this.currentFocusedHandle = null;
   }
 
@@ -6746,37 +6858,15 @@ class AppController {
   }
 
   onRotationDragMove(evt, handle) {
-    this.setDragCursor(handle, evt.rotation.abs);
+    this.setDragCursorForHandle(handle, evt.rotation.abs);
   }
 
   onRotationDragStop(evt, handle, element) {
     this.isRotating = false;
-    this.clearDragCursor();
-    if (this.currentFocusedHandle) {
-      this.setHoverCursor(this.currentFocusedHandle, element.getRotation());
-    }
-  }
-
-  // --- Cursors
-
-  setHoverCursor(handle, rotation) {
-    var img = handle.hasImageCursor();
-    var cursor = handle.getCursor(rotation);
-    this.cursorManager.setHoverCursor(cursor, img);
-  }
-
-  setDragCursor(handle, rotation) {
-    var img = handle.hasImageCursor();
-    var cursor = handle.getCursor(rotation);
-    this.cursorManager.setDragCursor(cursor, img);
-  }
-
-  clearHoverCursor() {
-    this.cursorManager.clearHoverCursor();
-  }
-
-  clearDragCursor() {
     this.cursorManager.clearDragCursor();
+    if (this.currentFocusedHandle) {
+      this.setHoverCursorForHandle(this.currentFocusedHandle, element.getRotation());
+    }
   }
 
   // --- Background Image Events
@@ -6811,7 +6901,7 @@ class AppController {
     this.renderFocusedZIndex();
   }
 
-  // --- Key Events
+  // --- Key Manager Events
 
   onKeyDown(evt) {
     // Note mode resetting is handled by DragTarget
@@ -6872,10 +6962,6 @@ class AppController {
     }
   }
 
-  canPeek() {
-    return !this.isResizing && !this.isRotating;
-  }
-
   onCommandKeyDown(evt) {
     // Note that copying is handled by the copy event not key events.
 
@@ -6892,21 +6978,6 @@ class AppController {
           this.renderActiveControlPanel();
         }
         break;
-    }
-  }
-
-  onCopyEvent(evt) {
-    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
-    this.copyManager.setCopyData(evt, styles);
-    this.copyAnimation.show(!!styles);
-  }
-
-  saveStyles() {
-    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
-    if (styles) {
-      this.outputManager.saveStyles(styles);
-    } else {
-      this.copyAnimation.show(false);
     }
   }
 
@@ -6939,21 +7010,20 @@ class AppController {
     }
   }
 
-  onNudgeStop() {
-  }
+  onNudgeStop() {}
 
   onNudgeModeChanged(mode) {
     this.controlPanel.setNudgeMode(mode);
   }
 
-  // --- Control Panel Drag Events
+  // --- Align Manager Events
 
-  onControlPanelDragStart() {
-    this.cursorManager.setDragCursor('move');
+  onAlignButtonClick(edge) {
+    this.alignmentManager.align(this.elementManager.getFocusedElements(), edge);
   }
 
-  onControlPanelDragStop() {
-    this.cursorManager.clearDragCursor();
+  onDistributeButtonClick(edge) {
+    this.alignmentManager.distribute(this.elementManager.getFocusedElements(), edge);
   }
 
   // --- Drag Selection Events
@@ -6974,7 +7044,117 @@ class AppController {
     this.elementManager.unfocusAll();
   }
 
-  // --- Control Panel Element Rendering
+  // --- Copy Manager Events
+
+  onCopyEvent(evt) {
+    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
+    this.copyManager.setCopyData(evt, styles);
+    this.copyAnimation.show(!!styles);
+  }
+
+
+  // === Private ===
+
+
+  // --- Setup
+
+  setupInterface(uiRoot) {
+    this.settings         = new Settings(this, uiRoot);
+    this.controlPanel     = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
+    this.cursorManager    = new CursorManager(ShadowDomInjector.BASE_PATH);
+    this.loadingAnimation = new LoadingAnimation(uiRoot, this);
+    this.copyAnimation    = new CopyAnimation(uiRoot, this);
+    new DragSelection(uiRoot, this);
+  }
+
+  setupPayment() {
+    this.licenseManager = new LicenseManager(this);
+  }
+
+  setupKeyManager() {
+    this.keyManager = new KeyManager(this, AppController.PLATFORM_IS_MAC);
+
+    this.keyManager.setupKey(KeyManager.SHIFT_KEY);
+    this.keyManager.setupKey(KeyManager.CTRL_KEY);
+    this.keyManager.setupKey(KeyManager.META_KEY);
+    this.keyManager.setupKey(KeyManager.ALT_KEY);
+
+    this.keyManager.setupKey(KeyManager.A_KEY);
+    this.keyManager.setupKey(KeyManager.B_KEY);
+    this.keyManager.setupKey(KeyManager.M_KEY);
+    this.keyManager.setupKey(KeyManager.S_KEY);
+    this.keyManager.setupKey(KeyManager.R_KEY);
+    this.keyManager.setupKey(KeyManager.Z_KEY);
+
+    this.keyManager.setupKey(KeyManager.UP_KEY);
+    this.keyManager.setupKey(KeyManager.LEFT_KEY);
+    this.keyManager.setupKey(KeyManager.DOWN_KEY);
+    this.keyManager.setupKey(KeyManager.RIGHT_KEY);
+
+    this.keyManager.setupCommandKey(KeyManager.A_KEY);
+    this.keyManager.setupCommandKey(KeyManager.S_KEY);
+    this.keyManager.setupCommandKey(KeyManager.Z_KEY);
+
+    // Command S for save works regardless of where you are,
+    // other command keys should be able to disable as they
+    // do other things in the context of the settings form.
+    this.keyManager.setupCommandKeyException(KeyManager.S_KEY);
+  }
+
+  setupSupportManagers() {
+    this.copyManager      = new CopyManager(this);
+    this.nudgeManager     = new NudgeManager(this);
+    this.alignmentManager = new AlignmentManager();
+    this.outputManager    = new OutputManager(this.settings);
+  }
+
+  setupElementManager() {
+    this.elementManager = new PositionableElementManager(this, ShadowDomInjector.UI_HOST_CLASS_NAME);
+  }
+
+  // --- Cursors
+
+  setHoverCursorForHandle(handle, rotation) {
+    var img = handle.hasImageCursor();
+    var cursor = handle.getCursor(rotation);
+    this.cursorManager.setHoverCursor(cursor, img);
+  }
+
+  setDragCursorForHandle(handle, rotation) {
+    var img = handle.hasImageCursor();
+    var cursor = handle.getCursor(rotation);
+    this.cursorManager.setDragCursor(cursor, img);
+  }
+
+  // --- Peeking
+
+  canPeek() {
+    return !this.isResizing && !this.isRotating;
+  }
+
+  // --- Style Output
+
+  saveStyles() {
+    var styles = this.outputManager.getStyles(this.elementManager.getFocusedElements());
+    if (styles) {
+      this.outputManager.saveStyles(styles);
+    } else {
+      this.copyAnimation.show(false);
+    }
+  }
+
+  // --- Control Panel Rendering
+
+  renderActiveControlPanel() {
+    var elements = this.elementManager.getFocusedElements();
+    if (elements.length > 1) {
+      this.renderMultipleArea(elements);
+    } else if (elements.length === 1) {
+      this.renderElementArea();
+    } else {
+      this.controlPanel.showDefaultArea();
+    }
+  }
 
   renderMultipleArea(elements) {
     this.controlPanel.showMultipleArea();
@@ -7034,26 +7214,7 @@ class AppController {
     }
   }
 
-  onElementHighlightMouseOver(index) {
-    var element = this.elementManager.focusedElements[index], selector;
-    selector = this.outputManager.getSelectorWithDefault(element);
-    this.controlPanel.renderMultipleHeader(selector);
-    element.setHighlightMode(true);
-  }
-
-  onElementHighlightMouseOut(index) {
-    var element = this.elementManager.focusedElements[index];
-    element.setHighlightMode(false);
-    this.controlPanel.renderMultipleHeader();
-  }
-
-  onElementHighlightClick(index) {
-    var element = this.elementManager.focusedElements[index];
-    element.setHighlightMode(false);
-    this.elementManager.setFocused([element]);
-  }
-
-  // --- Control Panel Align Rendering
+  // --- Other
 
   destroy() {
     this.elementManager.destroy();

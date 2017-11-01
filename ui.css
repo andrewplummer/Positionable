@@ -756,7 +756,7 @@ code {
   margin: -12px 0 5px 0;
   overflow: hidden;
   max-height: 3.8em;
-  transition: max-height 300ms cubic-bezier(0.645, 0.045, 0.355, 1.000) 3s;
+  transition: max-height 300ms cubic-bezier(0.645, 0.045, 0.355, 1.000) 6s;
 }
 
 .upgrade-container {
