@@ -9,9 +9,7 @@
 // - TODO: pro features?
 // - TODO: make callbacks ES6 () => style
 // - TODO: one space for private/protected?
-// - TODO: you are a pro user! icon
-// - TODO: test when users trial period elapses
-// - TODO: test re-enabling pro features when purchased
+// - TODO: remove min-width/height as an override
 // - TODO: test if instances of things passed in couldn't just be created inside the classes themselves like ChromeStorageManager
 // - TODO: PositionableElementManager -> ElementManager?
 // - TODO: better description
@@ -19,6 +17,7 @@
 // - TODO: cleanup!!
 // - TODO: todos!
 // - TODO: release!
+
 
 /*-------------------------] Utilities [--------------------------*/
 
@@ -3038,6 +3037,10 @@ class ControlPanel extends DraggableElement {
     this.settingsArea.renderUpgradeStatus(pro, timeRemaining);
   }
 
+  renderUpgradeThankYou() {
+    this.settingsArea.renderUpgradeThankYou();
+  }
+
   // --- Other
 
   setNudgeMode(mode) {
@@ -3292,7 +3295,8 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   static get AREA_BASIC_CLASS()    { return 'settings-area--basic';    }
   static get AREA_ADVANCED_CLASS() { return 'settings-area--advanced'; }
 
-  static get PRO_USER_CLASS()      { return 'upgrade-prompt--pro-user';      }
+  static get PRO_CLASS()           { return 'upgrade-prompt--pro';           }
+  static get THANK_YOU_CLASS()     { return 'upgrade-prompt--thank-you';     }
   static get TRIAL_ACTIVE_CLASS()  { return 'upgrade-prompt--trial-active';  }
   static get TRIAL_EXPIRED_CLASS() { return 'upgrade-prompt--trial-expired'; }
 
@@ -3315,13 +3319,20 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   renderUpgradeStatus(pro, timeRemaining) {
     if (pro) {
-      this.upgradePrompt.addClass(ControlPanelSettingsArea.PRO_USER_CLASS);
+      this.upgradePrompt.addClass(ControlPanelSettingsArea.PRO_CLASS);
+      this.proBadge.show();
     } else if (timeRemaining <= 0) {
       this.upgradePrompt.addClass(ControlPanelSettingsArea.TRIAL_EXPIRED_CLASS);
+      this.proBadge.hide();
     } else {
       this.upgradePrompt.addClass(ControlPanelSettingsArea.TRIAL_ACTIVE_CLASS);
       this.upgradeTime.text(this.getTimeRemainingInWords(timeRemaining));
+      this.proBadge.hide();
     }
+  }
+
+  renderUpgradeThankYou() {
+    this.upgradePrompt.addClass(ControlPanelSettingsArea.THANK_YOU_CLASS);
   }
 
   // === Private ===
@@ -3329,8 +3340,9 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   setupElements(root) {
     this.form = new Element(root.getElementById('settings-form'));
-    this.upgradePrompt = new Element(root.getElementById('upgrade-prompt'));
+    this.proBadge      = new Element(root.getElementById('pro-badge'));
     this.upgradeTime   = new Element(root.getElementById('upgrade-time-remaining'));
+    this.upgradePrompt = new Element(root.getElementById('upgrade-prompt'));
   }
 
   setupButtons(root) {
@@ -3986,6 +3998,15 @@ class Settings {
     ];
   }
 
+  static get ADVANCED_FIELDS() {
+    return [
+      this.SNAP_X,
+      this.SNAP_Y,
+      this.OUTPUT_GROUPING,
+      this.GROUPING_MAP
+    ];
+  }
+
   constructor(listener, root) {
     this.listener = listener;
     this.setup(root);
@@ -4015,6 +4036,8 @@ class Settings {
 
   toggleAdvancedFeatures(on) {
     this.form.toggleAdvancedFeatures(on);
+    this.advancedFeatures = on;
+    this.checkAdvancedFeaturesReset();
   }
 
   // --- Events
@@ -4023,6 +4046,7 @@ class Settings {
   onStorageDataFetched(data) {
     this.data = Object.assign({}, this.defaultData, data);
     this.onInitialized();
+    this.checkAdvancedFeaturesReset();
   }
 
   onStorageDataSaved(data) {
@@ -4052,6 +4076,7 @@ class Settings {
   // === Private ===
 
   setup(root) {
+    this.advancedFeatures = true;
     this.setupForm(root);
     this.setupStorage();
     this.defaultData = this.form.getData();
@@ -4169,6 +4194,26 @@ class Settings {
   snapChanged(data) {
     return this.data[Settings.SNAP_X] !== data[Settings.SNAP_X] ||
            this.data[Settings.SNAP_Y] !== data[Settings.SNAP_Y];
+  }
+
+  checkAdvancedFeaturesReset() {
+    if (!this.advancedFeatures && !this.advancedFeaturesAreDefault()) {
+      this.resetAdvancedFeatures();
+    }
+  }
+
+  advancedFeaturesAreDefault() {
+    if (this.data) {
+      return Settings.ADVANCED_FIELDS.every(f => {
+        return this.data[f] === this.defaultData[f];
+      });
+    }
+  }
+
+  resetAdvancedFeatures() {
+    Settings.ADVANCED_FIELDS.forEach(f => {
+      this.data[f] = this.defaultData[f]
+    });
   }
 
 }
@@ -6251,34 +6296,41 @@ class LicenseManager {
   static get ACTIVE_STATE()      { return 'ACTIVE';                }
   static get PURCHASE_CANCELED() { return 'PURCHASE_CANCELED';     }
 
-  // User Statuses
-  static get USER_STATUS_NORMAL() { return 'normal'; }
-  static get USER_STATUS_PRO()    { return 'pro';    }
+  // License Statuses
+  static get STATUS_NORMAL() { return 'normal'; }
+  static get STATUS_PRO()    { return 'pro';    }
 
   // Storage Keys
-  static get STORAGE_KEY_USER_STATUS()     { return 'user-status';      }
-  static get STORAGE_KEY_ACTIVATION_DATE() { return 'activation-date';  }
+  static get STORAGE_KEY_STATUS()    { return 'license-status';    }
+  static get STORAGE_KEY_UPDATED()   { return 'license-updated';   }
+  static get STORAGE_KEY_ACTIVATED() { return 'license-activated'; }
 
   // Free trial period (30 days)
   static get FREE_TRIAL_PERIOD() { return 30 * 24 * 60 * 60 * 1000; }
 
+  // Time before re-checking purchases
+  static get MAX_AGE() { return 7 * 24 * 60 * 60 * 1000;  }
+
+  // Other
+  static get CHECKOUT_ORDER_ID() { return 'checkoutOrderId'; }
+
   constructor(listener) {
     this.listener = listener;
 
-    this.userStatus     = null;
-    this.activationDate = null;
+    this.status    = null;
+    this.activated = null;
 
     this.setup();
-    this.fetchStoredUserData();
+    this.fetchStoredLicenseData();
   }
 
-  isProUser() {
-    return this.userStatus === LicenseManager.USER_STATUS_PRO;
+  hasProLicense() {
+    return this.status === LicenseManager.STATUS_PRO;
   }
 
   freeTimeRemaining() {
     var period  = LicenseManager.FREE_TRIAL_PERIOD;
-    var elapsed = Date.now() - this.activationDate;
+    var elapsed = Date.now() - this.activated;
     return Math.max(0, period - elapsed);
   }
 
@@ -6291,11 +6343,12 @@ class LicenseManager {
 
 
   onStorageDataFetched(data) {
-    this.checkStoredActivationDate(data);
-    this.checkStoredUserStatus(data);
+    this.checkStoredActivatedDate(data);
+    // TODO: Commenting out this line to force checking the payments api for testing
+    this.checkStoredStatus(data);
 
-    if (!this.userStatus) {
-      // If there is no stored user status, then go to the
+    if (!this.status) {
+      // If there is no stored license status, then go to the
       // in-app payments API to check for an active purchase.
       this.checkPurchases();
     }
@@ -6315,42 +6368,64 @@ class LicenseManager {
 
   // --- Storage
 
-  fetchStoredUserData() {
+  fetchStoredLicenseData() {
     this.storageManager.fetch([
-      LicenseManager.STORAGE_KEY_USER_STATUS,
-      LicenseManager.STORAGE_KEY_ACTIVATION_DATE
+      LicenseManager.STORAGE_KEY_STATUS,
+      LicenseManager.STORAGE_KEY_UPDATED,
+      LicenseManager.STORAGE_KEY_ACTIVATED
     ]);
   }
 
-  saveUserStatus() {
-    var storageKey = LicenseManager.STORAGE_KEY_USER_STATUS;
-    this.storageManager.save(storageKey, this.userStatus);
+  saveStatus() {
+    var data = {
+      [LicenseManager.STORAGE_KEY_STATUS]: this.status,
+      [LicenseManager.STORAGE_KEY_UPDATED]: Date.now()
+    };
+    this.storageManager.save(data);
   }
 
-  checkStoredUserStatus(data) {
-    var userStatus = data[LicenseManager.STORAGE_KEY_USER_STATUS];
-    if (userStatus) {
-      this.resolveUserStatus(userStatus);
+  resolveStatus(status) {
+    var purchased = this.licenseWasPurchased(status);
+    this.status = status;
+    if (purchased) {
+      this.listener.onLicensePurchased();
     }
-  }
-
-  checkStoredActivationDate(data) {
-    var storageKey, activationDate;
-
-    storageKey     = LicenseManager.STORAGE_KEY_ACTIVATION_DATE;
-    activationDate = data[storageKey];
-
-    if (!activationDate) {
-      activationDate = Date.now();
-      this.storageManager.save(storageKey, activationDate);
-    }
-
-    this.activationDate = activationDate;
-  }
-
-  resolveUserStatus(userStatus) {
-    this.userStatus = userStatus;
     this.listener.onLicenseUpdated();
+  }
+
+  licenseWasPurchased(status) {
+    // If the previous status was normal and the new status
+    // is pro, then the user has just purchased a license.
+   return status === LicenseManager.STATUS_PRO &&
+          this.status === LicenseManager.STATUS_NORMAL;
+  }
+
+  checkStoredActivatedDate(data) {
+    var storageKey, activated;
+
+    storageKey = LicenseManager.STORAGE_KEY_ACTIVATED;
+    activated  = data[storageKey];
+
+    if (!activated) {
+      activated = Date.now();
+      this.storageManager.save(storageKey, activated);
+    }
+
+    this.activated = activated;
+  }
+
+  checkStoredStatus(data) {
+    var status = data[LicenseManager.STORAGE_KEY_STATUS];
+    if (status && !this.storageNeedsUpdate(data)) {
+      this.resolveStatus(status);
+    }
+  }
+
+  storageNeedsUpdate(data) {
+    var maxAge  = LicenseManager.MAX_AGE;
+    var updated = data[LicenseManager.STORAGE_KEY_UPDATED] || maxAge;
+    var age     = Date.now() - updated;
+    return age >= maxAge;
   }
 
   // --- Checking Purchases
@@ -6360,23 +6435,24 @@ class LicenseManager {
   }
 
   onGetPurchasesSuccess(data) {
-    var userStatus = this.getUserStatusFromPurchaseData(data);
-    this.resolveUserStatus(userStatus);
-    this.saveUserStatus();
+    console.info('Get purchases succeeded with', data);
+    var status = this.getStatusFromPurchaseData(data);
+    this.resolveStatus(status);
+    this.saveStatus();
   }
 
   onGetPurchasesFailure(data) {
-    console.error('Could not retreive purchases: ' + data.response.errorType);
+    console.error('Could not retreive purchases: ' + data.response.errorType, data);
   }
 
-  getUserStatusFromPurchaseData(data) {
+  getStatusFromPurchaseData(data) {
     var activePurchase = data.response.details.some(d => {
       return d.sku   === LicenseManager.SKU &&
              d.state === LicenseManager.ACTIVE_STATE;
     });
     return activePurchase ?
-      LicenseManager.USER_STATUS_PRO :
-      LicenseManager.USER_STATUS_NORMAL;
+      LicenseManager.STATUS_PRO :
+      LicenseManager.STATUS_NORMAL;
   }
 
   // --- Making Purchase
@@ -6385,30 +6461,39 @@ class LicenseManager {
     google.payments.inapp.buy(this.buyOptions);
   }
 
-  onBuySuccess() {
-    this.resolveUserStatus(LicenseManager.USER_STATUS_PRO);
-    this.saveUserStatus();
+  onBuySuccess(data) {
+    console.info('Buy succeeded with', data);
+    this.checkPurchases();
   }
 
   onBuyFailure(data) {
-    if (data.response.errorType !== LicenseManager.PURCHASE_CANCELED) {
-      console.error('Could not complete purchase: ' + data.response.errorType);
+    if (data[LicenseManager.CHECKOUT_ORDER_ID]) {
+      // It seems that this may be an inapp payements bug
+      // where it returns a checkoutOrderId in the failure
+      // callback. Still not 100% why this is happening but
+      // it may have to do with multiple Chrome logins. It
+      // appears that the charges go through, however, so
+      // grant the user pro status here.
+      this.onBuySuccess(data);
+    } else if (data.response && data.response.errorType !== LicenseManager.PURCHASE_CANCELED) {
+      console.error('Could not complete purchase: ' + data.response);
     }
   }
 
   // --- Other
 
-  getBuyOptions() {
-    return Object.assign(this.getDefaultOptions(), {
-      'success': this.onBuySuccess.bind(this),
-      'failure': this.onBuyFailure.bind(this)
-    });
-  }
-
   getGetPurchasesOptions() {
     return Object.assign(this.getDefaultOptions(), {
       'success': this.onGetPurchasesSuccess.bind(this),
       'failure': this.onGetPurchasesFailure.bind(this)
+    });
+  }
+
+  getBuyOptions() {
+    return Object.assign(this.getDefaultOptions(), {
+      'sku':     LicenseManager.SKU,
+      'success': this.onBuySuccess.bind(this),
+      'failure': this.onBuyFailure.bind(this)
     });
   }
 
@@ -6505,8 +6590,13 @@ class AppController {
     }
   }
 
+  onLicensePurchased() {
+    this.controlPanel.renderUpgradeThankYou();
+    this.settings.toggleAdvancedFeatures(true);
+  }
+
   onLicenseUpdated() {
-    var pro  = this.licenseManager.isProUser();
+    var pro  = this.licenseManager.hasProLicense();
     var time = this.licenseManager.freeTimeRemaining();
     this.controlPanel.renderUpgradeStatus(pro, time);
     this.settings.toggleAdvancedFeatures(pro || time);
@@ -6971,5 +7061,3 @@ class AppController {
   }
 
 }
-
-window.AppController = AppController;

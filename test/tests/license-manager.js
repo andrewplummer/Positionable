@@ -1,5 +1,5 @@
 
-describe('LicenseManager', function(uiRoot) {
+describe('LicenseManager', function() {
 
   var manager, listener;
 
@@ -15,13 +15,13 @@ describe('LicenseManager', function(uiRoot) {
     manager  = null;
   });
 
-  const GET_PURCHASES_UNPAID_USER_RESPONSE = {
+  const GET_PURCHASES_NONE_RESPONSE = {
     response: {
       details: []
     }
   };
 
-  const GET_PURCHASES_PAID_USER_RESPONSE = {
+  const GET_PURCHASES_ACTIVE_RESPONSE = {
     response: {
       details: [
         {
@@ -45,7 +45,11 @@ describe('LicenseManager', function(uiRoot) {
     }
   };
 
-  var BUY_CANCELED_RESPONSE = {
+  const BUY_FAILURE_BUG_RESPONSE = {
+    checkoutOrderId: '00000000000000000000.0000000000000000000'
+  };
+
+  var PURCHASE_CANCELED_RESPONSE = {
     request: {},
     response: {
       errorType: 'PURCHASE_CANCELED'
@@ -55,7 +59,12 @@ describe('LicenseManager', function(uiRoot) {
   class Listener {
 
     constructor() {
-      this.licenseUpdatedEvents = 0;
+      this.licenseUpdatedEvents   = 0;
+      this.licensePurchasedEvents = 0;
+    }
+
+    onLicensePurchased() {
+      this.licensePurchasedEvents += 1;
     }
 
     onLicenseUpdated() {
@@ -65,21 +74,15 @@ describe('LicenseManager', function(uiRoot) {
   }
 
   // Just to make things clearer
-  const PRO_USER            = LicenseManager.USER_STATUS_PRO;
-  const NORMAL_USER         = LicenseManager.USER_STATUS_NORMAL;
-  const USER_STATUS_KEY     = LicenseManager.STORAGE_KEY_USER_STATUS;
-  const ACTIVATION_DATE_KEY = LicenseManager.STORAGE_KEY_ACTIVATION_DATE;
+  const SKU                 = LicenseManager.SKU;
+  const PRO_LICENSE         = LicenseManager.STATUS_PRO;
+  const NORMAL_LICENSE      = LicenseManager.STATUS_NORMAL;
+  const STATUS_KEY          = LicenseManager.STORAGE_KEY_STATUS;
+  const UPDATED_KEY         = LicenseManager.STORAGE_KEY_UPDATED;
+  const ACTIVATED_KEY       = LicenseManager.STORAGE_KEY_ACTIVATED;
 
   function days(n) {
     return n * 24 * 60 * 60 * 1000;
-  }
-
-  function setStorageUserStatus(status) {
-    chromeMock.setStoredData(USER_STATUS_KEY, status);
-  }
-
-  function setStorageActivationDate(date) {
-    chromeMock.setStoredData(ACTIVATION_DATE_KEY, date);
   }
 
   function setupLicenseManager() {
@@ -87,80 +90,99 @@ describe('LicenseManager', function(uiRoot) {
     manager  = new LicenseManager(listener);
   }
 
-  function assertProUser(expected) {
-    assert.equal(manager.isProUser(), expected);
+  function setStorageLicenseStatus(status, maxAge) {
+    chromeMock.setStoredData(STATUS_KEY,  status);
+    chromeMock.setStoredData(UPDATED_KEY, maxAge || Date.now());
+  }
+
+  function setStorageActivatedDate(date) {
+    chromeMock.setStoredData(ACTIVATED_KEY, date);
+  }
+
+  function assertProLicense(expected) {
+    assert.equal(manager.hasProLicense(), expected);
   }
 
   function assertDaysRemaining(expected) {
     assert.equalWithTolerance(manager.freeTimeRemaining(), days(expected), 50);
   }
 
-  function assertStorageUserStatus(expected) {
-    var status = chromeMock.getStoredData(USER_STATUS_KEY);
+  function assertStorageLicenseStatus(expected) {
+    var status = chromeMock.getStoredData(STATUS_KEY);
     assert.equal(status, expected);
   }
 
-  function assertStorageActivationDate(expected) {
-    var date = chromeMock.getStoredData(ACTIVATION_DATE_KEY);
+  function assertStorageActivatedDate(expected) {
+    var date = chromeMock.getStoredData(ACTIVATED_KEY);
     assert.equalWithTolerance(date, expected, 50);
   }
 
-  // --- Querying User Status
+  function assertStorageUpdatedDate(expected) {
+    var date = chromeMock.getStoredData(UPDATED_KEY);
+    assert.equalWithTolerance(date, expected, 50);
+  }
 
-  it('should correctly identify a fresh user on init', function() {
-    googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_UNPAID_USER_RESPONSE);
+  function assertCorrectBuyOptions() {
+    var requests = googlePaymentsMock.getRequests();
+    assert.equal(requests[0].sku, SKU);
+  }
+
+  // --- Querying Status
+
+  it('should correctly identify a fresh license on init', function() {
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
     setupLicenseManager();
-    assertProUser(false);
+    assertProLicense(false);
     assertDaysRemaining(30);
     assert.equal(listener.licenseUpdatedEvents, 1);
   });
 
-  it('should correctly identify a pro user on init', function() {
-    googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_PAID_USER_RESPONSE);
+  it('should correctly identify a pro license on init', function() {
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
     setupLicenseManager();
-    assertProUser(true);
+    assertProLicense(true);
     assertDaysRemaining(30);
     assert.equal(listener.licenseUpdatedEvents, 1);
   });
 
-  it('should set storage after checking a fresh user on init', function() {
-    googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_UNPAID_USER_RESPONSE);
+  it('should set storage after checking a fresh license on init', function() {
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
     setupLicenseManager();
-    assertStorageUserStatus(NORMAL_USER);
-    assertStorageActivationDate(Date.now());
+    assertStorageLicenseStatus(NORMAL_LICENSE);
+    assertStorageActivatedDate(Date.now());
   });
 
-  it('should read storage before checking a fresh user on init', function() {
-    setStorageUserStatus(NORMAL_USER);
+  it('should read storage before checking a fresh license on init', function() {
+    setStorageLicenseStatus(NORMAL_LICENSE);
     setupLicenseManager();
-    assertProUser(false);
+    assertProLicense(false);
     assertDaysRemaining(30);
   });
 
-  it('should set storage after checking a pro user on init', function() {
-    googlePaymentsMock.setGetPurchasesSuccessResponse(GET_PURCHASES_PAID_USER_RESPONSE);
+  it('should set storage after checking a pro license on init', function() {
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
     setupLicenseManager();
-    assertStorageUserStatus(PRO_USER);
-    assertStorageActivationDate(Date.now());
+    assertStorageLicenseStatus(PRO_LICENSE);
+    assertStorageActivatedDate(Date.now());
   });
 
-  it('should read storage before checking a pro user on init', function() {
-    setStorageUserStatus(PRO_USER);
+  it('should read storage before checking a pro license on init', function() {
+    setStorageLicenseStatus(PRO_LICENSE);
     setupLicenseManager();
-    assertProUser(true);
+    assertProLicense(true);
     assertDaysRemaining(30);
   });
 
-  it('should identify a normal user whose time is running out', function() {
-    setStorageUserStatus(NORMAL_USER);
-    setStorageActivationDate(Date.now() - days(24));
+  it('should identify a normal license whose time is running out', function() {
+    setStorageLicenseStatus(NORMAL_LICENSE);
+    setStorageActivatedDate(Date.now() - days(24));
     setupLicenseManager();
     assertDaysRemaining(6);
   });
 
   it('should not allow days remaining to go negative', function() {
-    setStorageUserStatus(NORMAL_USER);
-    setStorageActivationDate(Date.now() - days(100));
+    setStorageLicenseStatus(NORMAL_LICENSE);
+    setStorageActivatedDate(Date.now() - days(100));
     setupLicenseManager();
     assertDaysRemaining(0);
   });
@@ -177,38 +199,109 @@ describe('LicenseManager', function(uiRoot) {
 
   it('should not fire events on init when buy API fails', function() {
     consoleMock.apply();
-    setStorageUserStatus(NORMAL_USER);
+    setStorageLicenseStatus(NORMAL_LICENSE);
     setupLicenseManager();
 
     manager.purchase();
 
+    assertCorrectBuyOptions();
     assert.equal(listener.licenseUpdatedEvents, 1);
     assert.equal(consoleMock.getErrorCount(), 1);
     consoleMock.release();
   });
 
   it('should fire an event when payment successfully completed', function() {
-    setStorageUserStatus(NORMAL_USER);
-    googlePaymentsMock.setBuySuccessResponse(BUY_SUCCESS_RESPONSE);
+    setStorageLicenseStatus(NORMAL_LICENSE);
     setupLicenseManager();
 
+    googlePaymentsMock.queueSuccessResponse(BUY_SUCCESS_RESPONSE);
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
     manager.purchase();
 
+    assertCorrectBuyOptions();
     assert.equal(listener.licenseUpdatedEvents, 2);
-    assertProUser(true);
+    assertProLicense(true);
   });
 
   it('should not fire an event or error when user cancels payment', function() {
     consoleMock.apply();
-    setStorageUserStatus(NORMAL_USER);
-    googlePaymentsMock.setBuyFailureResponse(BUY_CANCELED_RESPONSE);
+    setStorageLicenseStatus(NORMAL_LICENSE);
     setupLicenseManager();
 
+    googlePaymentsMock.queueFailureResponse(PURCHASE_CANCELED_RESPONSE);
     manager.purchase();
 
+    assertCorrectBuyOptions();
     assert.equal(listener.licenseUpdatedEvents, 1);
     assert.equal(consoleMock.getErrorCount(), 0);
     consoleMock.release();
+  });
+
+  // --- Updating the storage cache
+
+  it('should store the updated field when checking the license', function() {
+    setStorageLicenseStatus(NORMAL_LICENSE);
+
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
+    setupLicenseManager();
+
+    assertStorageUpdatedDate(Date.now());
+  });
+
+  it('should re-check license after 1 week', function() {
+    setStorageLicenseStatus(PRO_LICENSE, Date.now() - days(7));
+
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
+    setupLicenseManager();
+
+    assertProLicense(false);
+    assertStorageLicenseStatus(NORMAL_LICENSE);
+  });
+
+  it('should not re-check license before 1 week', function() {
+    setStorageLicenseStatus(PRO_LICENSE, Date.now() - days(6));
+
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
+    setupLicenseManager();
+
+    assertProLicense(true);
+    assertStorageLicenseStatus(PRO_LICENSE);
+  });
+
+  // --- License Purchased Events
+
+  it('should fire an event when the user purchases a license', function() {
+    setStorageLicenseStatus(NORMAL_LICENSE);
+    setupLicenseManager();
+
+    googlePaymentsMock.queueSuccessResponse(BUY_SUCCESS_RESPONSE);
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
+    manager.purchase();
+
+    assert.equal(listener.licenseUpdatedEvents,   2);
+    assert.equal(listener.licensePurchasedEvents, 1);
+  });
+
+  it('should not fire a purchased event on simple init for pro user', function() {
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
+    setupLicenseManager();
+
+    assert.equal(listener.licenseUpdatedEvents,   1);
+    assert.equal(listener.licensePurchasedEvents, 0);
+  });
+
+  // --- Inapp purchases bug
+
+  it('should account for purchases bug where success comes back as failure', function() {
+    setStorageLicenseStatus(NORMAL_LICENSE);
+    setupLicenseManager();
+
+    googlePaymentsMock.queueFailureResponse(BUY_FAILURE_BUG_RESPONSE);
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
+    manager.purchase();
+
+    assertProLicense(true);
+    assertStorageLicenseStatus(PRO_LICENSE);
   });
 
 });

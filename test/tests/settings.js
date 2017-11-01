@@ -63,7 +63,7 @@ describe('Settings', function(uiRoot) {
     setTimeoutMock.tick(100);
   }
 
-  function setDefaultStorageData() {
+  function setupStorageData() {
     chromeMock.setStoredData(Settings.SAVE_FILENAME,      'bar.css');
     chromeMock.setStoredData(Settings.TAB_STYLE,           Settings.TABS_FOUR_SPACES);
     chromeMock.setStoredData(Settings.OUTPUT_SELECTOR,     Settings.OUTPUT_SELECTOR_TAG);
@@ -105,7 +105,7 @@ describe('Settings', function(uiRoot) {
   });
 
   it('should initialize with stored settings', function() {
-    setDefaultStorageData();
+    setupStorageData();
     setupSettings();
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'bar.css');
     assert.equal(settings.get(Settings.TAB_STYLE),           Settings.TABS_FOUR_SPACES);
@@ -118,7 +118,7 @@ describe('Settings', function(uiRoot) {
 
   it('should set form fields with stored settings', function() {
     var form = getForm();
-    setDefaultStorageData();
+    setupStorageData();
     setupSettings();
     assert.equal(form.elements[Settings.SAVE_FILENAME].value,        'bar.css');
     assert.equal(form.elements[Settings.TAB_STYLE].value,             Settings.TABS_FOUR_SPACES);
@@ -354,6 +354,20 @@ describe('Settings', function(uiRoot) {
     assertInputIsDisabled('snap-y', false);
     assertInputIsDisabled('output-grouping', false);
     assertInputIsDisabled('grouping-map', false);
+  });
+
+  it('should remove unset advanced features', function() {
+    chromeMock.setStoredData(Settings.SNAP_X, 5);
+    chromeMock.setStoredData(Settings.SNAP_Y, 5);
+    chromeMock.setStoredData(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_MAP);
+    chromeMock.setStoredData(Settings.GROUPING_MAP, 'foo:bar');
+    setupSettings();
+    settings.toggleAdvancedFeatures(false);
+    assert.equal(settings.get(Settings.SNAP_X), 0);
+    assert.equal(settings.get(Settings.SNAP_Y), 0);
+    assert.equal(settings.get(Settings.OUTPUT_GROUPING), Settings.OUTPUT_GROUPING_NONE);
+    assert.equal(Object.keys(settings.get(Settings.GROUPING_MAP)).length, 0);
+    assert.equal(listener.settingsUpdatedCount, 0);
   });
 
 });

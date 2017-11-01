@@ -91,6 +91,8 @@
   </div>
 
   <div class="control-panel-area settings-area" id="settings-area">
+    <img src="chrome-extension://__MSG_@@extension_id__/images/icons/pro.svg"
+         width="22" height="10" id="pro-badge" class="pro-badge" title="You are a pro user! Thank you for your support.">
     <h3 class="settings-area-tabs">
       <span id="settings-tab-basic" class="settings-tab settings-tab--basic">Settings</span>
       <span id="settings-tab-advanced" class="settings-tab settings-tab--advanced">Advanced</span>
@@ -214,10 +216,17 @@
           </div>
           <div class="settings-form-page settings-form-page--advanced">
             <div id="upgrade-prompt" class="upgrade-prompt">
-              <span>Advanced features are available to pro users.</span>
-              <span class="upgrade-trial-active">You have <span id="upgrade-time-remaining"></span> left to try them out.</span>
-              <span class="upgrade-trial-expired">Your trial has expired.</span>
-              <span id="upgrade-button" class="upgrade-button">Upgrade!</span>
+              <div class="upgrade-container">
+                <span class="upgrade-thank-you">
+                  Thank you for your purchase! You are now a pro user.
+                </span>
+                <span class="upgrade-trial">
+                  <span>Advanced features are available to pro users.</span>
+                  <span class="upgrade-trial-active">You have <span id="upgrade-time-remaining"></span> left to try them out.</span>
+                  <span class="upgrade-trial-expired">Your trial has expired.</span>
+                  <span id="upgrade-button" class="upgrade-button">Upgrade!</span>
+                </span>
+              </div>
             </div>
             <fieldset class="settings-field" name="snap-field">
               <div class="settings-label">

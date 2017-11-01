@@ -6,8 +6,7 @@
 
   // Should be null when testing, but just in case.
   var nativePayments = google.payments, mockPayments;
-  var getPurchasesSuccessResponse, getPurchasesFailureResponse;
-  var buySuccessResponse, buyFailureResponse;
+  var mockResponseQueue = [], requests = [];
 
   var INVALID_RESPONSE_ERROR = {
     request: {},
@@ -24,54 +23,48 @@
 
     release() {
       google.payments = nativePayments;
-      getPurchasesSuccessResponse = null;
-      getPurchasesFailureResponse = null;
-      buySuccessResponse = null;
-      buyFailureResponse = null;
+      mockResponseQueue = [];
+      requests = [];
     }
 
-    setGetPurchasesSuccessResponse(obj) {
-      getPurchasesSuccessResponse = obj;
+    getRequests() {
+      return requests;
     }
 
-    setGetPurchasesFailureResponse(obj) {
-      getPurchasesFailureResponse = obj;
+    queueSuccessResponse(response) {
+      mockResponseQueue.push({
+        success: true,
+        response: response
+      });
     }
 
-    setBuySuccessResponse(obj) {
-      buySuccessResponse = obj;
+    queueFailureResponse(response) {
+      mockResponseQueue.push({
+        success: false,
+        response: response
+      });
     }
 
-    setBuyFailureResponse(obj) {
-      buyFailureResponse = obj;
-    }
+  }
 
+  function mockCall(request) {
+    var mockResponse = mockResponseQueue.shift();
+    requests.push(request);
+    if (!mockResponse) {
+      request.failure(INVALID_RESPONSE_ERROR);
+    } else if (mockResponse.success) {
+      request.success(mockResponse.response);
+    } else {
+      request.failure(mockResponse.response);
+    }
   }
 
   mockPayments = {
 
     inapp: {
-
-      getPurchases: function(opt) {
-        if (getPurchasesSuccessResponse) {
-          opt.success(getPurchasesSuccessResponse);
-        } else if (getPurchasesFailureResponse) {
-          opt.failure(getPurchasesFailureResponse);
-        } else {
-          opt.failure(INVALID_RESPONSE_ERROR);
-        }
-      },
-
-      buy: function(opt) {
-        if (buySuccessResponse) {
-          opt.success(buySuccessResponse);
-        } else if(buyFailureResponse) {
-          opt.failure(buyFailureResponse);
-        } else {
-          opt.failure(INVALID_RESPONSE_ERROR);
-        }
-      }
-
+      buy: mockCall,
+      consume: mockCall,
+      getPurchases: mockCall
     }
 
   };

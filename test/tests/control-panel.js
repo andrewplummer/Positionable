@@ -210,7 +210,7 @@ describe('ControlPanel', function(uiRoot) {
 
   it('should render the upgrade form for a pro user', function() {
     panel.renderUpgradeStatus(true, 24 * 60 * 60 * 1000);
-    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--pro-user');
+    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--pro');
   });
 
   it('should render the upgrade form for a user on free trial', function() {

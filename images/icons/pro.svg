@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="22px" height="10px" viewBox="0 0 22 10" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 43.2 (39069) - http://www.bohemiancoding.com/sketch -->
+    <title>pro</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="pro">
+            <g id="Badge">
+                <path d="M7.99951255,1 L0,1 L0,3 L6.41604369,3 C6.7639406,2.20374889 7.3132241,1.51562167 7.99951255,1 Z M14.0004875,1 L22,1 L22,3 L15.5839563,3 C15.2360594,2.20374889 14.6867759,1.51562167 14.0004875,1 Z M6.10001812,4 L2,4 L2,6 L6.10001812,6 C6.03443026,5.67689006 6,5.34246584 6,5 C6,4.65753416 6.03443026,4.32310994 6.10001812,4 Z M15.8999819,4 L20,4 L20,6 L15.8999819,6 C15.9655697,5.67689006 16,5.34246584 16,5 C16,4.65753416 15.9655697,4.32310994 15.8999819,4 Z M6.41604369,7 L4,7 L4,9 L7.99951255,9 C7.3132241,8.48437833 6.7639406,7.79625111 6.41604369,7 Z M15.5839563,7 L18,7 L18,9 L14.0004875,9 C14.6867759,8.48437833 15.2360594,7.79625111 15.5839563,7 Z" id="Combined-Shape" fill="#000000"></path>
+                <circle id="Path" stroke="#000000" cx="11" cy="5" r="4.5"></circle>
+            </g>
+        </g>
+    </g>
+</svg>
