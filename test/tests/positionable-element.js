@@ -576,6 +576,19 @@ describe('PositionableElement', function() {
     assert.equal(el.style.userSelect, '');
   });
 
+  it('should turn off min/max height while active', function() {
+    setupBox();
+    assert.equal(el.style.minWidth,  '0px');
+    assert.equal(el.style.minHeight, '0px');
+    assert.equal(el.style.maxWidth,  'none');
+    assert.equal(el.style.maxHeight, 'none');
+    element.destroy();
+    assert.equal(el.style.minWidth,  '');
+    assert.equal(el.style.minHeight, '');
+    assert.equal(el.style.maxWidth,  '');
+    assert.equal(el.style.maxHeight, '');
+  });
+
   it('should not clear all rendered styles when destroyed', function() {
     setupBox('animation-box');
     element.pushState();

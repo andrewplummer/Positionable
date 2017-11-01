@@ -6,10 +6,8 @@
  *
  * ---------------------------- */
 
-// - TODO: pro features?
 // - TODO: make callbacks ES6 () => style
 // - TODO: one space for private/protected?
-// - TODO: remove min-width/height as an override
 // - TODO: test if instances of things passed in couldn't just be created inside the classes themselves like ChromeStorageManager
 // - TODO: PositionableElementManager -> ElementManager?
 // - TODO: better description
@@ -1676,6 +1674,10 @@ class PositionableElement extends BrowserEventTarget {
     this.el.style.animation  = 'none';
     this.el.style.transition = 'none';
     this.el.style.userSelect = 'none';
+    this.el.style.minWidth  = '0px';
+    this.el.style.minHeight = '0px';
+    this.el.style.maxWidth  = 'none';
+    this.el.style.maxHeight = 'none';
     this.isFixed = position === 'fixed';
   }
 
@@ -1684,6 +1686,10 @@ class PositionableElement extends BrowserEventTarget {
     this.el.style.animation  = '';
     this.el.style.transition = '';
     this.el.style.userSelect = '';
+    this.el.style.minWidth   = '';
+    this.el.style.minHeight  = '';
+    this.el.style.maxWidth   = '';
+    this.el.style.maxHeight  = '';
   }
 
   // --- Rendering
