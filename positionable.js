@@ -376,7 +376,7 @@ class AppController {
     this.cursorManager.setDragCursor('crosshair');
   }
 
-  onDragSelectionMove(selection) {
+  onDragSelectionMove() {
     this.elementManager.setFocused(element => {
       return this.dragSelection.contains(element.el);
     });
