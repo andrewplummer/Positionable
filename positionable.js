@@ -898,6 +898,7 @@ class LicenseManager {
   }
 
   onGetPurchasesSuccess(data) {
+    // TODO: remove on release!
     console.info('Get purchases succeeded with', data);
     var status = this.getStatusFromPurchaseData(data);
     this.resolveStatus(status);
@@ -926,6 +927,7 @@ class LicenseManager {
   }
 
   onBuySuccess(data) {
+    // TODO: remove on release!
     console.info('Buy succeeded with', data);
     this.checkPurchases();
   }
