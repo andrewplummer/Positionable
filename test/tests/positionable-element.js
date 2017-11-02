@@ -612,4 +612,12 @@ describe('PositionableElement', function() {
     assert.equal(el.style.zIndex, '');
   });
 
+  it('should set ui z-index on focus', function() {
+    setupBox();
+    element.focus();
+    assert.equal(getUiContainer(element.el).style.zIndex, String(PositionableElement.TOP_Z_INDEX));
+    element.unfocus();
+    assert.equal(getUiContainer(element.el).style.zIndex, '');
+  });
+
 });

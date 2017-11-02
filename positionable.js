@@ -640,10 +640,9 @@ class ShadowDomInjector {
     }
   }
 
-  constructor(parent, expand, zIndex) {
+  constructor(parent, expand) {
     this.parent = parent;
     this.expand = expand;
-    this.zIndex = zIndex;
     this.fetchTemplate    = this.fetchTemplate.bind(this);
     this.injectStylesheet = this.injectStylesheet.bind(this);
     this.injectShadowDom  = this.injectShadowDom.bind(this);
@@ -655,6 +654,10 @@ class ShadowDomInjector {
 
   setStylesheet(stylesheetPath) {
     this.stylesheetPath = stylesheetPath;
+  }
+
+  setContainerZIndex(zIndex) {
+    this.container.style.zIndex = zIndex;
   }
 
   run(fn) {
@@ -697,7 +700,6 @@ class ShadowDomInjector {
   injectShadowDom(templateHtml) {
     var container = document.createElement('div');
     container.style.position = 'absolute';
-    container.style.zIndex   = this.zIndex || '9999999';
     if (this.expand) {
       container.style.top    = '0';
       container.style.left   = '0';
@@ -4757,7 +4759,7 @@ class PositionableElement extends BrowserEventTarget {
     // that positionable elements inside normal elements may be inaccessible,
     // but this is a tradeoff and can be worked around with the drag select
     // or highlighting functions.
-    this.injector = new ShadowDomInjector(this.el, true, PositionableElement.TOP_Z_INDEX);
+    this.injector = new ShadowDomInjector(this.el, true);
     this.injector.setTemplate('element.html');
     this.injector.setStylesheet('element.css');
     this.injector.run(this.onInterfaceInjected.bind(this));
@@ -4798,12 +4800,14 @@ class PositionableElement extends BrowserEventTarget {
   focus() {
     this.ui.addClass(PositionableElement.UI_FOCUSED_CLASS);
     this.setTemporaryZIndex(PositionableElement.TOP_Z_INDEX);
+    this.injector.setContainerZIndex(PositionableElement.TOP_Z_INDEX);
   }
 
   unfocus() {
     this.ui.removeClass(PositionableElement.UI_FOCUSED_CLASS);
     this.setTemporaryZIndex('');
     this.renderZIndex();
+    this.injector.setContainerZIndex('');
   }
 
   setTemporaryZIndex(zIndex) {
