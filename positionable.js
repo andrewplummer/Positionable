@@ -6,33 +6,24 @@
  *
  * ---------------------------- */
 
-// - TODO: check that each class only knows about itself to as much a degree as possible
 // - TODO: todos!
 // - TODO: release!
-
 
 /*-------------------------] AppController [--------------------------*/
 
 class AppController {
 
   static get PLATFORM_IS_MAC() { return /mac/i.test(navigator.platform); }
-  static get HOST_CLASS_NAME() { return 'positionble-extension-ui'; }
 
   constructor(uiRoot) {
     this.uiRoot = uiRoot;
-
     this.setupInterface(uiRoot);
     this.setupPayment();
     this.setupKeyManager();
     this.setupSupportManagers();
     this.setupElementManager();
-
     this.loadingAnimation.show();
   }
-
-
-  // === Protected ===
-
 
   // --- Animation Events
 
@@ -419,7 +410,7 @@ class AppController {
   setupInterface(uiRoot) {
     this.settings         = new Settings(this, uiRoot);
     this.controlPanel     = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
-    this.cursorManager    = new CursorManager(ShadowDomInjector.BASE_PATH);
+    this.cursorManager    = new CursorManager(ShadowDomInjector.getBasePath());
     this.loadingAnimation = new LoadingAnimation(uiRoot, this);
     this.copyAnimation    = new CopyAnimation(uiRoot, this);
     new DragSelection(uiRoot, this);
@@ -467,7 +458,8 @@ class AppController {
   }
 
   setupElementManager() {
-    this.elementManager = new PositionableElementManager(this, ShadowDomInjector.UI_HOST_CLASS_NAME);
+    this.elementManager = new PositionableElementManager(this);
+    this.elementManager.addIgnoredClass(ShadowDomInjector.UI_HOST_CLASS_NAME);
   }
 
   // --- Cursors
@@ -589,8 +581,12 @@ class ShadowDomInjector {
   static get UI_HOST_CLASS_NAME()          { return 'positionable-extension-ui'; }
   static get EXTENSION_RELATIVE_PATH_REG() { return /chrome-extension:\/\/__MSG_@@extension_id__\//g; }
 
+  static getBasePath() {
+    return this.basePath || '';
+  }
+
   static setBasePath(path) {
-    this.BASE_PATH = path;
+    this.basePath = path;
   }
 
   // Template Preloading
@@ -655,7 +651,7 @@ class ShadowDomInjector {
 
 
   getUrl(path) {
-    return ShadowDomInjector.BASE_PATH + path;
+    return ShadowDomInjector.getBasePath() + path;
   }
 
   fetchFile(filePath) {
@@ -701,7 +697,7 @@ class ShadowDomInjector {
 
     // Relative extension paths don't seem to be supported in HTML template
     // files, so manually swap out these tokens for the extension path.
-    root.innerHTML = templateHtml.replace(ShadowDomInjector.EXTENSION_RELATIVE_PATH_REG, ShadowDomInjector.BASE_PATH);
+    root.innerHTML = templateHtml.replace(ShadowDomInjector.EXTENSION_RELATIVE_PATH_REG, ShadowDomInjector.getBasePath());
 
     this.parent.insertBefore(container, this.parent.firstChild);
     this.container = container;
@@ -756,6 +752,7 @@ class ChromeStorageManager {
 class LicenseManager {
 
   // API Constants
+  // TODO: change for production!
   static get SKU()         { return 'positionable_pro_test'; }
   static get ENVIRONMENT() { return 'prod';                  }
 
@@ -2007,18 +2004,19 @@ class KeyManager {
 
 class PositionableElementManager {
 
-  constructor(listener, hostClassName) {
-    this.listener      = listener;
-    this.hostClassName = hostClassName;
-
-    this.elements = [];
+  constructor(listener) {
+    this.listener = listener;
+    this.elements        = [];
     this.focusedElements = [];
+    this.ignoredClasses  = [];
   }
-
-  // --- Finding Elements
 
   findElements(includeSelector, excludeSelector) {
     this.executeFindElements(includeSelector, excludeSelector);
+  }
+
+  addIgnoredClass(className) {
+    this.ignoredClasses.push(className);
   }
 
   // --- Focusing
@@ -2254,11 +2252,15 @@ class PositionableElementManager {
       // so split the query by commas and append the host class here.
       let excludeSelectors = excludeSelector ? excludeSelector.split(',') : [];
 
-      excludeSelectors.push('.' + this.hostClassName);
       excludeSelectors.push('script');
       excludeSelectors.push('style');
       excludeSelectors.push('link');
       excludeSelectors.push('svg');
+
+      this.ignoredClasses.forEach(className => {
+        excludeSelectors.push('.' + className);
+      });
+
       excludeSelector = excludeSelectors.map(s => `:not(${s})`).join('');
 
       let query = `${includeSelector || '*'}${excludeSelector}`;

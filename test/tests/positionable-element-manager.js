@@ -59,7 +59,8 @@ describe('PositionableElementManager', function() {
 
   setup(function() {
     listener = new Listener();
-    manager  = new PositionableElementManager(listener, ShadowDomInjector.UI_HOST_CLASS_NAME);
+    manager  = new PositionableElementManager(listener);
+    manager.addIgnoredClass(ShadowDomInjector.UI_HOST_CLASS_NAME);
   });
 
   teardown(function() {
