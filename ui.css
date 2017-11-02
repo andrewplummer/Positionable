@@ -11,12 +11,12 @@ h1,h2,h3,h4,h5,h6 {
   font-family: "Open Sans", sans-serif;
 }
 
-label {
-  cursor: pointer;
-}
-
 input, select {
   vertical-align: sub;
+}
+
+label {
+  cursor: inherit;
 }
 
 fieldset {
@@ -117,8 +117,8 @@ code {
   bottom: 20px;
   left: 20px;
   overflow: hidden;
-  background-color: rgba(255,255,255,0.9);
-  box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.2), 0px 2px 5px 2px rgba(0,0,0,0.2);
+  background-color: rgba(255,255,255,.95);
+  box-shadow: 0px 0px 1px 1px rgba(0,0,0,.2), 0px 2px 5px 2px rgba(0,0,0,.2);
   border-radius: 10px;
   font-weight: 400;
   opacity: 0;
@@ -138,13 +138,13 @@ code {
   bottom: 5px;
   left: 5px;
   color: #000;
-  opacity: 0.2;
+  opacity: .2;
   width: 18px;
   height: 18px;
 }
 
 .control-panel-settings-button:hover {
-  opacity: 0.5;
+  opacity: .5;
 }
 
 .control-panel-area {
@@ -416,6 +416,7 @@ code {
   padding: 0 .6em;
   cursor: pointer;
   color: #d6d6d6;
+  color: rgba(0,0,0,.3);
 }
 
 .settings-tab:hover {
@@ -445,7 +446,7 @@ code {
 .settings-form-page-container {
   width: 200%;
   display: flex;
-  transition: transform 300ms cubic-bezier(0.645, 0.045, 0.355, 1.000);
+  transition: transform 300ms cubic-bezier(.645, .045, .355, 1.000);
 }
 
 .settings-form-page {
@@ -474,7 +475,7 @@ code {
 /*---------------------------] Settings Area Form [-----------------------*/
 
 .settings-field {
-  color: rgba(0,0,0,0.7);
+  color: rgba(0,0,0,.7);
   padding: 4px 0px;
 }
 
@@ -491,6 +492,11 @@ code {
   width: 43%;
   font-size: 12px;
   font-weight: bold;
+  cursor: pointer;
+}
+
+.settings-label--help {
+  cursor: help;
 }
 
 .settings-control {
@@ -506,7 +512,7 @@ code {
 }
 
 .settings-input::placeholder {
-  color: rgba(0,0,0,0.5);
+  color: rgba(0,0,0,.5);
 }
 
 .linked-select-description {
@@ -604,11 +610,11 @@ code {
 }
 
 .help-area-graphic--solid {
-  border: 1px solid rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,0,0,.5);
 }
 
 .help-area-graphic--dashed {
-  border: 1px dashed rgba(0,0,0,0.5);
+  border: 1px dashed rgba(0,0,0,.5);
 }
 
 .help-area-key-combo {
@@ -682,7 +688,7 @@ code {
   height: 8px;
   top: 30px;
   left: 30px;
-  background-color: rgba(0,0,0,0.3);
+  background-color: rgba(0,0,0,.3);
   border-radius: 30px;
 }
 
@@ -708,7 +714,7 @@ code {
   left: 4px;
   width: 6px;
   height: 6px;
-  border: 1px solid rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,0,0,.3);
 }
 
 .help-area-drag-box--two {
@@ -717,7 +723,7 @@ code {
   right: 14px;
   width: 10px;
   height: 10px;
-  border: 1px solid rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,0,0,.3);
 }
 
 .help-area-drag-pointer-icon {
@@ -748,7 +754,7 @@ code {
 
 .upgrade-prompt {
   position: relative;
-  background: #f9ece0;
+  background: rgba(241, 213, 176, .5);
   border-radius: 5px;
   font-size: 12px;
   font-weight: bold;
@@ -756,7 +762,7 @@ code {
   margin: -12px 0 5px 0;
   overflow: hidden;
   max-height: 3.8em;
-  transition: max-height 300ms cubic-bezier(0.645, 0.045, 0.355, 1.000) 6s;
+  transition: max-height 300ms cubic-bezier(.645, .045, .355, 1.000) 6s;
 }
 
 .upgrade-container {
@@ -842,15 +848,15 @@ code {
 .key-icon {
   display: inline-block;
   text-align: center;
-  border: 1px solid rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,0,0,.3);
   border-radius: 4px;
-  box-shadow: inset 0px -1px 1px rgba(0,0,0,0.1), 0px 1px 1px rgba(0,0,0,0.1);
-  background-color: rgba(255,255,255,0.3);
+  box-shadow: inset 0px -1px 1px rgba(0,0,0,.1), 0px 1px 1px rgba(0,0,0,.1);
+  background-color: rgba(255,255,255,.3);
   width: 20px;
   height: 20px;
   line-height: 22px;
   font-size: 14px;
-  color: rgba(0,0,0,0.8);
+  color: rgba(0,0,0,.8);
   margin: 2px;
 }
 
@@ -902,7 +908,7 @@ code {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.4);
+  background-color: rgba(0,0,0,.4);
   opacity: 0;
   transition: opacity 300ms linear;
 }
@@ -919,7 +925,7 @@ code {
   height: 100px;
   width: 100px;
   margin: -50px 0 0 -50px;
-  background-color: rgba(0,0,0,0.8);
+  background-color: rgba(0,0,0,.8);
   border-radius: 30px;
   opacity: 0;
   transform: scale(1.5);
@@ -943,7 +949,7 @@ code {
   top: 50%;
   width: 4px;
   height: 15px;
-  background-color: rgba(255,255,255,0.2);
+  background-color: rgba(255,255,255,.2);
   border-radius: 50px;
   margin: -30px 0 0 -2px;
   transform-origin: 2.5px 30px;
@@ -962,12 +968,12 @@ code {
 .loading-bar-11 { transform: rotateZ(300deg); }
 .loading-bar-12 { transform: rotateZ(330deg); }
 
-.loading-bar-12 { background-color: rgba(255,255,255,0.8); }
-.loading-bar-11 { background-color: rgba(255,255,255,0.7); }
-.loading-bar-10 { background-color: rgba(255,255,255,0.6); }
-.loading-bar-9  { background-color: rgba(255,255,255,0.5); }
-.loading-bar-8  { background-color: rgba(255,255,255,0.4); }
-.loading-bar-7  { background-color: rgba(255,255,255,0.3); }
+.loading-bar-12 { background-color: rgba(255,255,255,.8); }
+.loading-bar-11 { background-color: rgba(255,255,255,.7); }
+.loading-bar-10 { background-color: rgba(255,255,255,.6); }
+.loading-bar-9  { background-color: rgba(255,255,255,.5); }
+.loading-bar-8  { background-color: rgba(255,255,255,.4); }
+.loading-bar-7  { background-color: rgba(255,255,255,.3); }
 
 /*---------------------------] Copy Animation [-----------------------*/
 
@@ -979,8 +985,8 @@ code {
   width: 150px;
   height: 60px;
   margin: -30px 0 0 -75px;
-  background-color: rgba(255,255,255,0.9);
-  box-shadow: 0px 0px 1px 1px rgba(0,0,0,0.2), 0px 2px 5px 2px rgba(0,0,0,0.2);
+  background-color: rgba(255,255,255,.9);
+  box-shadow: 0px 0px 1px 1px rgba(0,0,0,.2), 0px 2px 5px 2px rgba(0,0,0,.2);
   border-radius: 10px;
   text-align: center;
   font-weight: 200;
