@@ -1,28 +1,32 @@
 
 describe('OutputManager', function(uiRoot) {
-  var settings, manager, element, el, els;
+  var settings, manager, listener, element, el, els;
 
-  class Listener {
+  class SettingsListener {
     onSettingsInitialized() {}
     onSettingsUpdated() {}
     onSelectorUpdated() {}
     onSnappingUpdated() {}
   }
 
+  class PositionableElementListener {}
+
   setup(function() {
     chromeMock.apply();
-    settings = new Settings(new Listener(), uiRoot);
+    settings = new Settings(new SettingsListener(), uiRoot);
     manager  = new OutputManager(settings);
+    listener = new PositionableElementListener();
   });
 
   teardown(function() {
+    settings.destroy();
     chromeMock.release();
     releaseAppendedFixtures();
   });
 
   function buildPositionableElement(className) {
     el = appendBox(className);
-    return new PositionableElement(el);
+    return new PositionableElement(listener, el);
   }
 
   function setupBox(className) {
@@ -31,7 +35,7 @@ describe('OutputManager', function(uiRoot) {
 
   function setupNestedBox(className, parentClassName) {
     el = appendNestedBox(className, parentClassName);
-    element = new PositionableElement(el);
+    element = new PositionableElement(listener, el);
   }
 
   function setupMultipleElements(className1, className2) {
@@ -831,10 +835,9 @@ describe('OutputManager', function(uiRoot) {
   });
 
   it('should not output empty spaces for multiple elements', function() {
-    var el1 = buildPositionableElement();
-    var el2 = buildPositionableElement();
+    setupMultipleElements();
     settings.set(Settings.OUTPUT_CHANGED_ONLY, true);
-    assert.equal(manager.getStyles([el1, el2]), '');
+    assert.equal(manager.getStyles(els), '');
   });
 
 });

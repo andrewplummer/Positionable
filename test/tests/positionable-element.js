@@ -79,7 +79,7 @@ describe('PositionableElement', function() {
 
   function setupBox(className) {
     el = appendBox(className);
-    element = new PositionableElement(el, listener);
+    element = new PositionableElement(listener, el);
   }
 
   it('should set initial state from stylesheet', function() {
@@ -105,7 +105,7 @@ describe('PositionableElement', function() {
     el.style.height = '100px';
     el.style.zIndex = '5';
     el.style.transform = 'translate(100px, 100px) rotate(45deg)';
-    element = new PositionableElement(el, listener);
+    element = new PositionableElement(listener, el);
     assert.equal(element.cssBox.cssH.px, 100);
     assert.equal(element.cssBox.cssV.px, 100);
     assert.equal(element.cssBox.cssWidth.px, 100);
@@ -201,7 +201,7 @@ describe('PositionableElement', function() {
   it('should update rotation', function() {
     el = appendBox();
     el.style.transform = 'rotate(45deg)';
-    element = new PositionableElement(el, listener);
+    element = new PositionableElement(listener, el);
     element.pushState();
     element.rotate(45);
     assert.equal(el.style.transform, 'rotate(90deg)');
@@ -210,7 +210,7 @@ describe('PositionableElement', function() {
   it('should constrain rotation', function() {
     el = appendBox();
     el.style.transform = 'rotate(30deg)';
-    element = new PositionableElement(el, listener);
+    element = new PositionableElement(listener, el);
     element.pushState();
     element.rotate(55, true);
     assert.equal(el.style.transform, 'rotate(75deg)');
@@ -530,14 +530,14 @@ describe('PositionableElement', function() {
   it('should not error on unsupported values', function() {
     el = appendBox();
     el.style.width = 'max-content';
-    element = new PositionableElement(el, listener);
+    element = new PositionableElement(listener, el);
     assert.equal(element.cssBox.cssWidth.px, 0);
   });
 
   it('should not error on unsupported units', function() {
     el = appendBox();
     el.style.width = '3cm';
-    element = new PositionableElement(el, listener);
+    element = new PositionableElement(listener, el);
     assert.equal(element.cssBox.cssWidth.px, 0);
   });
 

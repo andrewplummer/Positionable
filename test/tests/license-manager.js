@@ -27,7 +27,7 @@ describe('LicenseManager', function() {
         {
           kind: 'chromewebstore#payment',
           itemId: 'ejjblkkckapifkameijedjhnobkjkejn',
-          sku: 'positionable_pro_test',
+          sku: 'positionable_pro',
           createdTime: '1509447490638',
           state: 'ACTIVE'
         }
@@ -41,7 +41,7 @@ describe('LicenseManager', function() {
         {
           kind: 'chromewebstore#payment',
           itemId: 'ejjblkkckapifkameijedjhnobkjkejn',
-          sku: 'positionable_pro_test',
+          sku: 'positionable_pro',
           createdTime: '1509447490638',
           state: 'PENDING'
         }

@@ -39,7 +39,7 @@ describe('PositionHandle', function() {
   });
 
   it('should have drag events', function() {
-    var handle = new PositionHandle(fragment, listener);
+    var handle = new PositionHandle(listener, fragment);
     dragElement(handle.el, 0, 0, 50, 50);
     assert.equal(listener.lastEventDrag.x, 50);
   });
@@ -47,7 +47,7 @@ describe('PositionHandle', function() {
   it('drag events should be relative to the page', function() {
 
     whileFakeScrolled(500, () => {
-      var handle = new PositionHandle(fragment, listener);
+      var handle = new PositionHandle(listener, fragment);
       fireMouseDown(handle.el, 50, 50);
       handle.onScroll();
       handle.onScroll();

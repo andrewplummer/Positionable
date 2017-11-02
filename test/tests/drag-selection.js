@@ -1,7 +1,7 @@
 
 describe('DragSelection', function(uiRoot) {
 
-  var drag, listener;
+  var dragSelection, listener;
 
   mockGetBoundingClientRect(uiRoot.getElementById('drag-selection'));
 
@@ -28,8 +28,8 @@ describe('DragSelection', function(uiRoot) {
   }
 
   setup(function() {
-    listener = new Listener();
-    drag = new DragSelection(uiRoot, listener);
+    listener      = new Listener();
+    dragSelection = new DragSelection(listener, uiRoot);
   });
 
   teardown(function() {
@@ -45,7 +45,7 @@ describe('DragSelection', function(uiRoot) {
     return el;
   }
 
-  function dragSelection(startX, startY, endX, endY) {
+  function dragDocument(startX, startY, endX, endY) {
     fireMouseDown(document.documentElement, startX, startY);
     fireDocumentMouseMove(startX, startY);
     fireDocumentMouseMove(endX, endY);
@@ -54,7 +54,7 @@ describe('DragSelection', function(uiRoot) {
 
   it('should render', function() {
     var ui =  getUiElement(document.documentElement, '#drag-selection');
-    dragSelection(100, 100, 1000, 1000);
+    dragDocument(100, 100, 1000, 1000);
     assert.equal(ui.style.left,   '100px');
     assert.equal(ui.style.top,    '100px');
     assert.equal(ui.style.width,  '900px');
@@ -62,11 +62,11 @@ describe('DragSelection', function(uiRoot) {
   });
 
   it('should report elements it contains', function() {
-    dragSelection(100, 100, 1000, 1000);
+    dragDocument(100, 100, 1000, 1000);
     var el1 = setupPositionedElement('100px', '100px', '100px', '100px');
     var el2 = setupPositionedElement('1000px', '1000px', '100px', '100px');
-    assert.equal(drag.contains(el1), true);
-    assert.equal(drag.contains(el2), false);
+    assert.equal(dragSelection.contains(el1), true);
+    assert.equal(dragSelection.contains(el2), false);
   });
 
   it('should fire drag selection clear events', function() {

@@ -40,8 +40,7 @@ describe('Settings', function(uiRoot) {
   });
 
   teardown(function() {
-    settings.form.removeAllListeners();
-    settings.form.el.reset();
+    settings.destroy();
     chromeMock.release();
     promiseMock.release();
     setTimeoutMock.release();

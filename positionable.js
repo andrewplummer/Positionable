@@ -6,11 +6,6 @@
  *
  * ---------------------------- */
 
-// - TODO: todos!
-// - TODO: release!
-
-/*-------------------------] AppController [--------------------------*/
-
 class AppController {
 
   static get PLATFORM_IS_MAC() { return /mac/i.test(navigator.platform); }
@@ -382,7 +377,9 @@ class AppController {
   }
 
   onDragSelectionMove(selection) {
-    this.elementManager.setFocused(element => selection.contains(element.el));
+    this.elementManager.setFocused(element => {
+      return this.dragSelection.contains(element.el);
+    });
   }
 
   onDragSelectionStop() {
@@ -409,11 +406,11 @@ class AppController {
 
   setupInterface(uiRoot) {
     this.settings         = new Settings(this, uiRoot);
-    this.controlPanel     = new ControlPanel(uiRoot, this, AppController.PLATFORM_IS_MAC);
+    this.controlPanel     = new ControlPanel(this, uiRoot, AppController.PLATFORM_IS_MAC);
+    this.dragSelection    = new DragSelection(this, uiRoot);
+    this.copyAnimation    = new CopyAnimation(this, uiRoot);
+    this.loadingAnimation = new LoadingAnimation(this, uiRoot);
     this.cursorManager    = new CursorManager(ShadowDomInjector.getBasePath());
-    this.loadingAnimation = new LoadingAnimation(uiRoot, this);
-    this.copyAnimation    = new CopyAnimation(uiRoot, this);
-    new DragSelection(uiRoot, this);
   }
 
   setupPayment() {
@@ -752,9 +749,8 @@ class ChromeStorageManager {
 class LicenseManager {
 
   // API Constants
-  // TODO: change for production!
-  static get SKU()         { return 'positionable_pro_test'; }
-  static get ENVIRONMENT() { return 'prod';                  }
+  static get SKU()         { return 'positionable_pro'; }
+  static get ENVIRONMENT() { return 'prod';             }
 
   // Purchase States
   static get STATE_ACTIVE()  { return 'ACTIVE';  }
@@ -811,7 +807,7 @@ class LicenseManager {
 
   onStorageDataFetched(data) {
     this.checkStoredActivatedDate(data);
-    // TODO: Commenting out this line to force checking the payments api for testing
+    // TODO: Comment out this line to force checking the payments api for testing
     this.checkStoredStatus(data);
 
     if (!this.status) {
@@ -2273,7 +2269,7 @@ class PositionableElementManager {
 
     for(let i = 0, el; el = els[i]; i++) {
       if (includeSelector || this.canAutoAddElement(el)) {
-        this.elements.push(new PositionableElement(el, this));
+        this.elements.push(new PositionableElement(this, el));
       }
     }
 
@@ -2913,10 +2909,10 @@ class DraggableElement extends DragTarget {
 
 class DragSelection extends DragTarget {
 
-  constructor(root, listener) {
+  constructor(listener, uiRoot) {
     super(document.documentElement);
     this.listener = listener;
-    this.setupInterface(root);
+    this.setupInterface(uiRoot);
   }
 
   contains(el) {
@@ -2937,7 +2933,7 @@ class DragSelection extends DragTarget {
     super.onDragStart(evt);
     this.dragStartBox = CSSBox.fromPixelValues(evt.clientX, evt.clientY, 0, 0);
     this.ui.show();
-    this.listener.onDragSelectionStart(this);
+    this.listener.onDragSelectionStart();
   }
 
   onDragMove(evt) {
@@ -2945,13 +2941,13 @@ class DragSelection extends DragTarget {
     this.cssBox = this.dragStartBox.clone();
     this.cssBox.resize(evt.drag.x, evt.drag.y, 'se');
     this.render();
-    this.listener.onDragSelectionMove(this);
+    this.listener.onDragSelectionMove();
   }
 
   onDragStop(evt) {
     super.onDragStop(evt);
     this.ui.hide();
-    this.listener.onDragSelectionStop(this);
+    this.listener.onDragSelectionStop();
   }
 
   onClick() {
@@ -2962,8 +2958,8 @@ class DragSelection extends DragTarget {
   // === Private ===
 
 
-  setupInterface(root) {
-    this.ui = new Element(root.getElementById('drag-selection'));
+  setupInterface(uiRoot) {
+    this.ui = new Element(uiRoot.getElementById('drag-selection'));
   }
 
   render() {
@@ -2979,10 +2975,10 @@ class ControlPanel extends DraggableElement {
   static get ACTIVE_CLASS()  { return 'control-panel--active'; }
   static get WINDOWS_CLASS() { return 'control-panel--win';    }
 
-  constructor(root, listener, isMac) {
-    super(root.getElementById('control-panel'), true);
+  constructor(listener, uiRoot, isMac) {
+    super(uiRoot.getElementById('control-panel'), true);
     this.listener = listener;
-    this.setup(root, isMac);
+    this.setup(uiRoot, isMac);
   }
 
   activate() {
@@ -3088,11 +3084,11 @@ class ControlPanel extends DraggableElement {
   // === Private ===
 
 
-  setup(root, isMac) {
+  setup(uiRoot, isMac) {
     this.setupDimensions();
-    this.setupAreas(root);
-    this.setupButtons(root);
-    this.setupModeIndicator(root);
+    this.setupAreas(uiRoot);
+    this.setupButtons(uiRoot);
+    this.setupModeIndicator(uiRoot);
     this.setupWindowsKeys(isMac);
     this.setupInteractiveElements();
     this.setupDoubleClick();
@@ -3105,21 +3101,21 @@ class ControlPanel extends DraggableElement {
     this.cssHeight = new CSSPixelValue(0);
   }
 
-  setupAreas(root) {
-    this.defaultArea    = new ControlPanelDefaultArea(root, this, this.listener);
-    this.elementArea    = new ControlPanelElementArea(root, this, this.listener);
-    this.multipleArea   = new ControlPanelMultipleArea(root, this, this.listener);
-    this.settingsArea   = new ControlPanelSettingsArea(root, this, this.listener);
-    this.quickstartArea = new ControlPanelQuickstartArea(root, this, this.listener);
+  setupAreas(uiRoot) {
+    this.defaultArea    = new ControlPanelDefaultArea(this, uiRoot);
+    this.elementArea    = new ControlPanelElementArea(this, uiRoot);
+    this.multipleArea   = new ControlPanelMultipleArea(this, uiRoot);
+    this.settingsArea   = new ControlPanelSettingsArea(this, uiRoot);
+    this.quickstartArea = new ControlPanelQuickstartArea(this, uiRoot);
   }
 
-  setupButtons(root) {
-    var el = root.getElementById('control-panel-settings-button');
+  setupButtons(uiRoot) {
+    var el = uiRoot.getElementById('control-panel-settings-button');
     el.addEventListener('click', this.onSettingsClick.bind(this));
   }
 
-  setupModeIndicator(root) {
-    this.modeIndicator = new ControlPanelModeIndicator(root);
+  setupModeIndicator(uiRoot) {
+    this.modeIndicator = new ControlPanelModeIndicator(uiRoot);
   }
 
   setupWindowsKeys(isMac) {
@@ -3190,10 +3186,9 @@ class ControlPanelArea extends Element {
 
   static get ACTIVE_CLASS() { return 'control-panel-area--active'; }
 
-  constructor(root, name, panel, listener, sizes) {
-    super(root.getElementById(name + '-area'));
+  constructor(panel, uiRoot, name, sizes) {
+    super(uiRoot.getElementById(name + '-area'));
     this.panel    = panel;
-    this.listener = listener;
     this.sizes    = sizes;
     this.size     = sizes.default;
   }
@@ -3218,8 +3213,8 @@ class ControlPanelArea extends Element {
   // === Protected ===
 
 
-  setupButton(root, id, handler) {
-    var el = root.getElementById(id);
+  setupButton(uiRoot, id, handler) {
+    var el = uiRoot.getElementById(id);
     el.addEventListener('click', handler.bind(this));
   }
 
@@ -3269,10 +3264,10 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     };
   }
 
-  constructor(root, panel, listener) {
-    super(root, 'settings', panel, listener, ControlPanelSettingsArea.SIZES);
-    this.setupElements(root);
-    this.setupButtons(root);
+  constructor(panel, uiRoot) {
+    super(panel, uiRoot, 'settings', ControlPanelSettingsArea.SIZES);
+    this.setupElements(uiRoot);
+    this.setupButtons(uiRoot);
     this.setBasicMode();
   }
 
@@ -3297,18 +3292,18 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   // === Private ===
 
 
-  setupElements(root) {
-    this.form = new Element(root.getElementById('settings-form'));
-    this.proBadge      = new Element(root.getElementById('pro-badge'));
-    this.upgradeTime   = new Element(root.getElementById('upgrade-time-remaining'));
-    this.upgradePrompt = new Element(root.getElementById('upgrade-prompt'));
+  setupElements(uiRoot) {
+    this.form = new Element(uiRoot.getElementById('settings-form'));
+    this.proBadge      = new Element(uiRoot.getElementById('pro-badge'));
+    this.upgradeTime   = new Element(uiRoot.getElementById('upgrade-time-remaining'));
+    this.upgradePrompt = new Element(uiRoot.getElementById('upgrade-prompt'));
   }
 
-  setupButtons(root) {
-    this.setupButton(root, 'settings-tab-help', this.setHelpMode);
-    this.setupButton(root, 'settings-tab-basic', this.setBasicMode);
-    this.setupButton(root, 'settings-tab-advanced', this.setAdvancedMode);
-    this.setupButton(root, 'upgrade-button', this.onUpgradeButtonClick);
+  setupButtons(uiRoot) {
+    this.setupButton(uiRoot, 'settings-tab-help', this.setHelpMode);
+    this.setupButton(uiRoot, 'settings-tab-basic', this.setBasicMode);
+    this.setupButton(uiRoot, 'settings-tab-advanced', this.setAdvancedMode);
+    this.setupButton(uiRoot, 'upgrade-button', this.onUpgradeButtonClick);
   }
 
   setHelpMode() {
@@ -3319,17 +3314,17 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   setBasicMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_BASIC_CLASS);
     this.setSize(this.sizes.default);
-    this.listener.onBasicSettingsClick();
+    this.panel.listener.onBasicSettingsClick();
   }
 
   setAdvancedMode() {
     this.setExtraClass(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
-    this.listener.onAdvancedSettingsClick();
+    this.panel.listener.onAdvancedSettingsClick();
   }
 
   onUpgradeButtonClick() {
-    this.listener.onUpgradeClick();
+    this.panel.listener.onUpgradeClick();
   }
 
   getTimeRemainingInWords(ms) {
@@ -3371,9 +3366,9 @@ class ControlPanelElementArea extends ControlPanelArea {
     };
   }
 
-  constructor(root, panel, listener) {
-    super(root, 'element', panel, listener, ControlPanelElementArea.SIZES);
-    this.setupElements(root);
+  constructor(panel, uiRoot) {
+    super(panel, uiRoot, 'element', ControlPanelElementArea.SIZES);
+    this.setupElements(uiRoot);
   }
 
   usesModeIndicator() {
@@ -3424,13 +3419,13 @@ class ControlPanelElementArea extends ControlPanelArea {
   // === Private ===
 
 
-  setupElements(root) {
-    this.selector           = new Element(root.getElementById('element-selector'));
-    this.position           = new Element(root.getElementById('element-position'));
-    this.dimensions         = new Element(root.getElementById('element-dimensions'));
-    this.zIndex             = new Element(root.getElementById('element-zindex'));
-    this.transform          = new Element(root.getElementById('element-transform'));
-    this.backgroundPosition = new Element(root.getElementById('element-background-position'));
+  setupElements(uiRoot) {
+    this.selector           = new Element(uiRoot.getElementById('element-selector'));
+    this.position           = new Element(uiRoot.getElementById('element-position'));
+    this.dimensions         = new Element(uiRoot.getElementById('element-dimensions'));
+    this.zIndex             = new Element(uiRoot.getElementById('element-zindex'));
+    this.transform          = new Element(uiRoot.getElementById('element-transform'));
+    this.backgroundPosition = new Element(uiRoot.getElementById('element-background-position'));
   }
 
   setSize() {
@@ -3472,9 +3467,9 @@ class ControlPanelMultipleArea extends ControlPanelArea {
     };
   }
 
-  constructor(root, panel, listener) {
-    super(root, 'multiple', panel, listener, ControlPanelMultipleArea.SIZES);
-    this.setupButtons(root);
+  constructor(panel, uiRoot) {
+    super(panel, uiRoot, 'multiple', ControlPanelMultipleArea.SIZES);
+    this.setupButtons(uiRoot);
   }
 
   usesModeIndicator() {
@@ -3503,21 +3498,21 @@ class ControlPanelMultipleArea extends ControlPanelArea {
   // === Private ===
 
 
-  setupButtons(root) {
+  setupButtons(uiRoot) {
     // UI Buttons
-    this.setupButton(root, 'align-top-button',          this.onAlignTopClick);
-    this.setupButton(root, 'align-hcenter-button',      this.onAlignHCenterClick);
-    this.setupButton(root, 'align-bottom-button',       this.onAlignBottomClick);
-    this.setupButton(root, 'align-left-button',         this.onAlignLeftClick);
-    this.setupButton(root, 'align-vcenter-button',      this.onAlignVCenterClick);
-    this.setupButton(root, 'align-right-button',        this.onAlignRightClick);
-    this.setupButton(root, 'distribute-hcenter-button', this.onDistributeHCenterClick);
-    this.setupButton(root, 'distribute-vcenter-button', this.onDistributeVCenterClick);
+    this.setupButton(uiRoot, 'align-top-button',          this.onAlignTopClick);
+    this.setupButton(uiRoot, 'align-hcenter-button',      this.onAlignHCenterClick);
+    this.setupButton(uiRoot, 'align-bottom-button',       this.onAlignBottomClick);
+    this.setupButton(uiRoot, 'align-left-button',         this.onAlignLeftClick);
+    this.setupButton(uiRoot, 'align-vcenter-button',      this.onAlignVCenterClick);
+    this.setupButton(uiRoot, 'align-right-button',        this.onAlignRightClick);
+    this.setupButton(uiRoot, 'distribute-hcenter-button', this.onDistributeHCenterClick);
+    this.setupButton(uiRoot, 'distribute-vcenter-button', this.onDistributeVCenterClick);
 
     // Elements
-    this.header            = new Element(root.getElementById('multiple-header'));
-    this.distributeButtons = new Element(root.getElementById('distribute-buttons'));
-    this.highlightButtons  = new BrowserEventTarget(root.getElementById('highlight-buttons'));
+    this.header            = new Element(uiRoot.getElementById('multiple-header'));
+    this.distributeButtons = new Element(uiRoot.getElementById('distribute-buttons'));
+    this.highlightButtons  = new BrowserEventTarget(uiRoot.getElementById('highlight-buttons'));
 
     // Highlights
     this.setupHighlightButtons();
@@ -3532,35 +3527,35 @@ class ControlPanelMultipleArea extends ControlPanelArea {
   // --- Events
 
   onAlignTopClick() {
-    this.listener.onAlignButtonClick('top');
+    this.panel.listener.onAlignButtonClick('top');
   }
 
   onAlignHCenterClick() {
-    this.listener.onAlignButtonClick('hcenter');
+    this.panel.listener.onAlignButtonClick('hcenter');
   }
 
   onAlignBottomClick() {
-    this.listener.onAlignButtonClick('bottom');
+    this.panel.listener.onAlignButtonClick('bottom');
   }
 
   onAlignLeftClick() {
-    this.listener.onAlignButtonClick('left');
+    this.panel.listener.onAlignButtonClick('left');
   }
 
   onAlignVCenterClick() {
-    this.listener.onAlignButtonClick('vcenter');
+    this.panel.listener.onAlignButtonClick('vcenter');
   }
 
   onAlignRightClick() {
-    this.listener.onAlignButtonClick('right');
+    this.panel.listener.onAlignButtonClick('right');
   }
 
   onDistributeHCenterClick() {
-    this.listener.onDistributeButtonClick('hcenter');
+    this.panel.listener.onDistributeButtonClick('hcenter');
   }
 
   onDistributeVCenterClick() {
-    this.listener.onDistributeButtonClick('vcenter');
+    this.panel.listener.onDistributeButtonClick('vcenter');
   }
 
   onHighlightButtonMouseOver(evt) {
@@ -3581,7 +3576,7 @@ class ControlPanelMultipleArea extends ControlPanelArea {
   fireFromHighlightEvent(evt, name) {
     var index = evt.target.dataset.index;
     if (index && this.activeArea === this.multipleArea) {
-      this.listener[name](index);
+      this.panel.listener[name](index);
     }
   }
 
@@ -3623,23 +3618,23 @@ class ControlPanelQuickstartArea extends ControlPanelArea {
     };
   }
 
-  constructor(root, panel, listener) {
-    super(root, 'quickstart', panel, listener, ControlPanelQuickstartArea.SIZES);
-    this.setupButtons(root);
+  constructor(panel, uiRoot) {
+    super(panel, uiRoot, 'quickstart', ControlPanelQuickstartArea.SIZES);
+    this.setupButtons(uiRoot);
   }
 
 
   // === Private ===
 
 
-  setupButtons(root) {
-    this.setupButton(root, 'quickstart-skip-link', this.onSkipClick);
+  setupButtons(uiRoot) {
+    this.setupButton(uiRoot, 'quickstart-skip-link', this.onSkipClick);
   }
 
   // --- Events
 
   onSkipClick() {
-    this.listener.onQuickstartSkip();
+    this.panel.listener.onQuickstartSkip();
   }
 
 }
@@ -3654,8 +3649,8 @@ class ControlPanelDefaultArea extends ControlPanelArea {
     };
   }
 
-  constructor(root, panel, listener) {
-    super(root, 'default', panel, listener, ControlPanelDefaultArea.SIZES);
+  constructor(panel, uiRoot) {
+    super(panel, uiRoot, 'default', ControlPanelDefaultArea.SIZES);
   }
 
 }
@@ -3666,9 +3661,9 @@ class ControlPanelModeIndicator extends Element {
 
   static get ACTIVE_CLASS() { return 'mode-indicator--active'; }
 
-  constructor(root) {
-    super(root.getElementById('mode-indicator'));
-    this.setupElements(root);
+  constructor(uiRoot) {
+    super(uiRoot.getElementById('mode-indicator'));
+    this.setupElements(uiRoot);
   }
 
   show() {
@@ -3692,14 +3687,14 @@ class ControlPanelModeIndicator extends Element {
   // === Private ===
 
 
-  setupElements(root) {
-    this.position   = new Element(root.getElementById('mode-position'));
-    this.seResize   = new Element(root.getElementById('mode-resize-se'));
-    this.nwResize   = new Element(root.getElementById('mode-resize-nw'));
-    this.resize     = new Element(root.getElementById('mode-resize'));
-    this.rotate     = new Element(root.getElementById('mode-rotate'));
-    this.zIndex     = new Element(root.getElementById('mode-z-index'));
-    this.background = new Element(root.getElementById('mode-background'));
+  setupElements(uiRoot) {
+    this.position   = new Element(uiRoot.getElementById('mode-position'));
+    this.seResize   = new Element(uiRoot.getElementById('mode-resize-se'));
+    this.nwResize   = new Element(uiRoot.getElementById('mode-resize-nw'));
+    this.resize     = new Element(uiRoot.getElementById('mode-resize'));
+    this.rotate     = new Element(uiRoot.getElementById('mode-rotate'));
+    this.zIndex     = new Element(uiRoot.getElementById('mode-z-index'));
+    this.background = new Element(uiRoot.getElementById('mode-background'));
   }
 
   getElementForMode(mode) {
@@ -3787,9 +3782,9 @@ class Settings {
     ];
   }
 
-  constructor(listener, root) {
+  constructor(listener, uiRoot) {
     this.listener = listener;
-    this.setup(root);
+    this.setup(uiRoot);
     this.fetchSettings();
   }
 
@@ -3858,15 +3853,15 @@ class Settings {
 
   // === Private ===
 
-  setup(root) {
+  setup(uiRoot) {
     this.advancedFeatures = true;
-    this.setupForm(root);
+    this.setupForm(uiRoot);
     this.setupStorage();
     this.defaultData = this.form.getData();
   }
 
-  setupForm(root) {
-    this.form = new SettingsForm(root.getElementById('settings-form'), this);
+  setupForm(uiRoot) {
+    this.form = new SettingsForm(this, uiRoot.getElementById('settings-form'));
 
     this.isValidQuery         = this.isValidQuery.bind(this);
     this.isValidSnap          = this.isValidSnap.bind(this);
@@ -3879,8 +3874,8 @@ class Settings {
     this.form.addValidation(Settings.GROUPING_MAP_CONTROLS, this.isValidGroupingMap, Settings.GROUPING_MAP_FIELD);
     this.form.addTransform(Settings.GROUPING_MAP, this.parseGroupingMap, this.stringifyGroupingMap);
 
-    this.selectorLinkedSelect = new LinkedSelect(root.getElementById('output-selector'));
-    this.groupingLinkedSelect = new LinkedSelect(root.getElementById('output-grouping'));
+    this.selectorLinkedSelect = new LinkedSelect(uiRoot.getElementById('output-selector'));
+    this.groupingLinkedSelect = new LinkedSelect(uiRoot.getElementById('output-grouping'));
   }
 
   setupStorage() {
@@ -4009,6 +4004,12 @@ class Settings {
     });
   }
 
+  // --- Other
+
+  destroy() {
+    this.form.destroy();
+  }
+
 }
 
 /*-------------------------] SettingsForm [--------------------------*/
@@ -4032,7 +4033,7 @@ class SettingsForm extends BrowserEventTarget {
   static get INPUT_TYPES()     { return ['input', 'select', 'textarea']; }
   static get CONFIRM_MESSAGE() { return 'Really clear all settings?';    }
 
-  constructor(el, listener) {
+  constructor(listener, el) {
     super(el);
     this.listener = listener;
     this.bindEvent('submit', this.onSubmit);
@@ -4232,6 +4233,11 @@ class SettingsForm extends BrowserEventTarget {
     }
   }
 
+  destroy() {
+    this.removeAllListeners();
+    this.el.reset();
+  }
+
 }
 
 /*-------------------------] LinkedSelect [--------------------------*/
@@ -4302,10 +4308,10 @@ class Animation {
 
   static get NO_TRANSITION_CLASS() { return 'animation--no-transition'; }
 
-  constructor(el, activeClass, listener, expectedTransitionEvents) {
-    this.target      = new BrowserEventTarget(el);
-    this.activeClass = activeClass;
+  constructor(listener, uiRoot, id, activeClass, expectedTransitionEvents) {
     this.listener    = listener;
+    this.target      = new BrowserEventTarget(uiRoot.getElementById(id));
+    this.activeClass = activeClass;
     this.expectedTransitionEvents = expectedTransitionEvents || 1;
   }
 
@@ -4375,8 +4381,8 @@ class LoadingAnimation extends Animation {
   static get ID()           { return 'loading-animation';         }
   static get ACTIVE_CLASS() { return 'loading-animation--active'; }
 
-  constructor(uiRoot, listener) {
-    super(uiRoot.getElementById(LoadingAnimation.ID), LoadingAnimation.ACTIVE_CLASS, listener);
+  constructor(listener, uiRoot) {
+    super(listener, uiRoot, LoadingAnimation.ID, LoadingAnimation.ACTIVE_CLASS);
   }
 
 
@@ -4400,8 +4406,8 @@ class CopyAnimation extends Animation {
   static get COPIED_ID()    { return 'copy-animation-copied';    }
   static get NO_STYLES_ID() { return 'copy-animation-no-styles'; }
 
-  constructor(uiRoot, listener) {
-    super(uiRoot.getElementById(CopyAnimation.ID), CopyAnimation.ACTIVE_CLASS, listener, 2);
+  constructor(listener, uiRoot) {
+    super(listener, uiRoot, CopyAnimation.ID, CopyAnimation.ACTIVE_CLASS, 2);
     this.copied   = new Element(uiRoot.getElementById(CopyAnimation.COPIED_ID));
     this.noStyles = new Element(uiRoot.getElementById(CopyAnimation.NO_STYLES_ID));
   }
@@ -4437,7 +4443,7 @@ class PositionableElement extends BrowserEventTarget {
   static get ROTATION_SNAPPING()  { return 22.5;            }
   static get TOP_Z_INDEX()        { return 9999995;         }
 
-  constructor(el, listener) {
+  constructor(listener, el) {
     super(el);
     this.listener = listener;
     this.states   = [];
@@ -4654,23 +4660,22 @@ class PositionableElement extends BrowserEventTarget {
     this.injector.run(this.onInterfaceInjected.bind(this));
   }
 
-  onInterfaceInjected(root) {
-    this.ui = new Element(root.getElementById('ui'));
-    this.setupHandles(root);
+  onInterfaceInjected(uiRoot) {
+    this.ui = new Element(uiRoot.getElementById('ui'));
+    this.setupHandles(uiRoot);
   }
 
-  setupHandles(root) {
-    // TODO: consolidate order of listener in arguments?
-    new ResizeHandle(root, 'n',  this);
-    new ResizeHandle(root, 'e',  this);
-    new ResizeHandle(root, 's',  this);
-    new ResizeHandle(root, 'w',  this);
-    new ResizeHandle(root, 'ne', this);
-    new ResizeHandle(root, 'se', this);
-    new ResizeHandle(root, 'sw', this);
-    new ResizeHandle(root, 'nw', this);
-    new PositionHandle(root, this);
-    new RotationHandle(root, this);
+  setupHandles(uiRoot) {
+    new ResizeHandle(this, uiRoot, 'n');
+    new ResizeHandle(this, uiRoot, 'e');
+    new ResizeHandle(this, uiRoot, 's');
+    new ResizeHandle(this, uiRoot, 'w');
+    new ResizeHandle(this, uiRoot, 'ne');
+    new ResizeHandle(this, uiRoot, 'se');
+    new ResizeHandle(this, uiRoot, 'sw');
+    new ResizeHandle(this, uiRoot, 'nw');
+    new PositionHandle(this, uiRoot);
+    new RotationHandle(this, uiRoot);
   }
 
   // --- Events
@@ -5029,9 +5034,8 @@ class PositionHandle extends DragTarget {
 
   static get CURSOR() { return 'move'; }
 
-  // TODO: arg order?
-  constructor(root, listener) {
-    super(root.getElementById('position-handle'));
+  constructor(listener, uiRoot) {
+    super(uiRoot.getElementById('position-handle'));
     this.listener = listener;
 
     this.setupDoubleClick();
@@ -5088,11 +5092,10 @@ class ResizeHandle extends DragTarget {
   static get CORNERS() { return ['se','s','sw','w','nw','n','ne','e'];             }
   static get CURSORS() { return ['nwse','ns','nesw','ew','nwse','ns','nesw','ew']; }
 
-  // TODO: arg order?
-  constructor(root, corner, listener) {
-    super(root.getElementById('resize-handle-' + corner));
-    this.corner   = corner;
+  constructor(listener, uiRoot, corner) {
+    super(uiRoot.getElementById('resize-handle-' + corner));
     this.listener = listener;
+    this.corner   = corner;
 
     this.setupDoubleClick();
     this.setupDragIntents();
@@ -5153,8 +5156,8 @@ class RotationHandle extends DragTarget {
   static get TURN_THRESHOLD()   { return 180; }
   static get GRADS_PER_CURSOR() { return 16;  }
 
-  constructor(root, listener) {
-    super(root.getElementById('rotation-handle'));
+  constructor(listener, uiRoot) {
+    super(uiRoot.getElementById('rotation-handle'));
     this.listener = listener;
 
     this.setupDragIntents();

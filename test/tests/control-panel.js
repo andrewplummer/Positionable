@@ -16,7 +16,7 @@ describe('ControlPanel', function(uiRoot) {
 
   setup(function() {
     listener = new Listener();
-    panel = new ControlPanel(uiRoot, listener, true);
+    panel = new ControlPanel(listener, uiRoot, true);
   });
 
   teardown(function() {

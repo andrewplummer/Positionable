@@ -1,23 +1,26 @@
 
 describe('AlignmentManager', function() {
 
-  var els, manager;
+  var els, listener, manager;
 
   setup(function() {
     setupElements();
-    manager = new AlignmentManager();
+    listener = new Listener();
+    manager  = new AlignmentManager();
   });
 
   teardown(function() {
     releaseAppendedFixtures();
   });
 
+  class Listener {}
+
   function setupElements() {
     els = [];
-    els.push(new PositionableElement(appendBox('align-box-1')));
-    els.push(new PositionableElement(appendBox('align-box-2')));
-    els.push(new PositionableElement(appendBox('align-box-3')));
-    els.push(new PositionableElement(appendBox('align-box-4')));
+    els.push(new PositionableElement(listener, appendBox('align-box-1')));
+    els.push(new PositionableElement(listener, appendBox('align-box-2')));
+    els.push(new PositionableElement(listener, appendBox('align-box-3')));
+    els.push(new PositionableElement(listener, appendBox('align-box-4')));
   }
 
   // --- Align
@@ -73,7 +76,6 @@ describe('AlignmentManager', function() {
   // --- Distribute
 
   it('should distribute boxes by horizontal center', function() {
-    // todo: visually test!
     manager.distribute(els, 'hcenter');
     assert.equal(els[0].el.style.left, '');
     assert.equal(els[1].el.style.left, '430px');

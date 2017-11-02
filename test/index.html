@@ -8,59 +8,65 @@
     <link rel="stylesheet" href="styles/elements.css">
   </head>
   <body>
-
     <div id="ui-fixtures" class="test-fixtures"></div>
     <div id="element-fixtures" class="test-fixtures"></div>
     <script src="suite/simple-test.js"></script>
     <script src="../positionable.js"></script>
-    <script>
-    </script>
-    <!-- TODO: clean up helpers and sort tests -->
-    <script src="helpers/fixtures.js"></script>
-    <script src="helpers/events.js"></script>
+
+    <!-- Helpers -->
     <script src="helpers/ui.js"></script>
-    <script src="mocks/document-fragment.js"></script>
-    <script src="mocks/window-dialogue.js"></script>
+    <script src="helpers/events.js"></script>
+    <script src="helpers/fixtures.js"></script>
+
+    <!-- Mocks -->
+    <script src="mocks/image.js"></script>
     <script src="mocks/props.js"></script>
+    <script src="mocks/chrome.js"></script>
+    <script src="mocks/console.js"></script>
+    <script src="mocks/promise.js"></script>
+    <script src="mocks/viewport.js"></script>
     <script src="mocks/scrolling.js"></script>
-    <script src="mocks/local-storage.js"></script>
-    <script src="mocks/get-bounding-client-rect.js"></script>
+    <script src="mocks/set-timeout.js"></script>
     <script src="mocks/create-element.js"></script>
     <script src="mocks/google-payments.js"></script>
+    <script src="mocks/window-dialogue.js"></script>
     <script src="mocks/css-rule-matcher.js"></script>
-    <script src="mocks/set-timeout.js"></script>
-    <script src="mocks/image.js"></script>
-    <script src="mocks/console.js"></script>
-    <script src="mocks/viewport.js"></script>
-    <script src="mocks/promise.js"></script>
-    <script src="mocks/chrome.js"></script>
-    <script src="tests/settings.js"></script>
-    <script src="tests/positionable-element.js"></script>
-    <script src="tests/positionable-element-manager.js"></script>
-    <script src="tests/output-manager.js"></script>
-    <script src="tests/alignment-manager.js"></script>
-    <script src="tests/control-panel.js"></script>
-    <script src="tests/chrome-storage-manager.js"></script>
-    <script src="tests/position-handle.js"></script>
-    <script src="tests/rotation-handle.js"></script>
-    <script src="tests/resize-handle.js"></script>
-    <script src="tests/cursor-manager.js"></script>
-    <script src="tests/drag-target.js"></script>
+    <script src="mocks/document-fragment.js"></script>
+    <script src="mocks/get-bounding-client-rect.js"></script>
+
+    <!-- Managers -->
     <script src="tests/key-manager.js"></script>
     <script src="tests/nudge-manager.js"></script>
-    <script src="tests/drag-selection.js"></script>
+    <script src="tests/cursor-manager.js"></script>
+    <script src="tests/output-manager.js"></script>
     <script src="tests/license-manager.js"></script>
-    <script src="tests/draggable-element.js"></script>
+    <script src="tests/alignment-manager.js"></script>
+    <script src="tests/chrome-storage-manager.js"></script>
+    <script src="tests/positionable-element-manager.js"></script>
+
+    <!-- UI -->
     <script src="tests/browser-event-target.js"></script>
+    <script src="tests/drag-target.js"></script>
+    <script src="tests/draggable-element.js"></script>
+    <script src="tests/resize-handle.js"></script>
+    <script src="tests/position-handle.js"></script>
+    <script src="tests/rotation-handle.js"></script>
     <script src="tests/sprite-recognizer.js"></script>
+    <script src="tests/positionable-element.js"></script>
+    <script src="tests/settings.js"></script>
+    <script src="tests/control-panel.js"></script>
+    <script src="tests/drag-selection.js"></script>
+
+    <!-- CSS -->
     <script src="tests/css-box.js"></script>
     <script src="tests/css-property.js"></script>
-    <script src="tests/css-rule-matcher.js"></script>
-    <script src="tests/css-positioning-property.js"></script>
-    <script src="tests/css-background-image.js"></script>
     <script src="tests/css-transform.js"></script>
-    <script src="tests/css-transform-function.js"></script>
+    <script src="tests/css-rule-matcher.js"></script>
+    <script src="tests/css-background-image.js"></script>
     <script src="tests/css-transform-origin.js"></script>
+    <script src="tests/css-transform-function.js"></script>
+    <script src="tests/css-positioning-property.js"></script>
+
     <script>
 
       ShadowDomInjector.setBasePath('../');

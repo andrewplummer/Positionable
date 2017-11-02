@@ -17,6 +17,8 @@
     release() {
       window.confirm = nativeConfirm;
       window.prompt  = nativePrompt;
+      confirmCalls = 0;
+      promptCalls  = 0;
     }
 
     getConfirmCalls() {

@@ -37,7 +37,7 @@ describe('RotationHandle', function() {
   setup(function() {
     listener = new Listener();
     fragment = new MockDocumentFragment();
-    handle   = new RotationHandle(fragment, listener);
+    handle   = new RotationHandle(listener, fragment);
   });
 
   function assertCursor(grad, expected) {

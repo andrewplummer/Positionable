@@ -38,7 +38,7 @@ describe('ResizeHandle', function() {
   });
 
   function createHandle(corner) {
-    return new ResizeHandle(fragment, corner, listener);
+    return new ResizeHandle(listener, fragment, corner);
   }
 
   function assertCursor(corner, rotation, expected) {
