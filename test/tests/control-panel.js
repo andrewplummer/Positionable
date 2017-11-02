@@ -22,6 +22,7 @@ describe('ControlPanel', function(uiRoot) {
   teardown(function() {
     panel.el.style.left = '';
     panel.el.style.bottom = '';
+    panel.clearState();
   });
 
   function getPanelElement(selector) {
@@ -50,6 +51,18 @@ describe('ControlPanel', function(uiRoot) {
 
   function assertAreaActive(name) {
     assertPanelElementClass('#' + name + '-area', 'control-panel-area--active');
+  }
+
+  function assertUpgradeState(state) {
+    var selector = '#upgrade-prompt';
+    assertPanelElementClass(selector, 'upgrade-prompt--' + state);
+    assert.equal(getPanelElement(selector).classList.length, 2);
+  }
+
+  function assertProBadgeVisible(expected) {
+    var el = getPanelElement('#pro-badge');
+    var display = window.getComputedStyle(el).display;
+    assert.equal(display === 'block', expected);
   }
 
   // --- Helpers
@@ -210,13 +223,15 @@ describe('ControlPanel', function(uiRoot) {
 
   it('should render the upgrade form for a pro user', function() {
     panel.renderUpgradeStatus(true, 24 * 60 * 60 * 1000);
-    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--pro');
+    assert.equal(getPanelElement('#upgrade-prompt').classList.length, 1);
+    assertProBadgeVisible(true);
   });
 
   it('should render the upgrade form for a user on free trial', function() {
     panel.renderUpgradeStatus(false, 10 * 24 * 60 * 60 * 1000);
-    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--trial-active');
+    assertUpgradeState('trial-active');
     assertPanelElementText('#upgrade-time-remaining', '10 days');
+    assertProBadgeVisible(false);
   });
 
   it('should render various free trial times', function() {
@@ -232,7 +247,14 @@ describe('ControlPanel', function(uiRoot) {
 
   it('should render the upgrade form for a user whose trial has expired', function() {
     panel.renderUpgradeStatus(false, 0);
-    assertPanelElementClass('#upgrade-prompt', 'upgrade-prompt--trial-expired');
+    assertUpgradeState('trial-expired');
+    assertProBadgeVisible(false);
+  });
+
+  it('should render the thank you message after rendering trial status', function() {
+    panel.renderUpgradeStatus(false, 0);
+    panel.renderUpgradeThankYou();
+    assertUpgradeState('thank-you');
   });
 
 });

@@ -745,9 +745,9 @@ code {
 .pro-badge {
   position: absolute;
   right: 0;
-  display: none;
   opacity: .22;
   cursor: url(chrome-extension://__MSG_@@extension_id__/images/cursors/thumbs-up.png) 12 0, pointer;
+  display: none;
 }
 
 /*---------------------------] Upgrade Area [-----------------------*/
@@ -763,6 +763,7 @@ code {
   overflow: hidden;
   max-height: 3.8em;
   transition: max-height 300ms cubic-bezier(.645, .045, .355, 1.000) 6s;
+  display: none;
 }
 
 .upgrade-container {
@@ -779,7 +780,7 @@ code {
   line-height: 1;
 }
 
-/* All states start off hidden */
+/* All sub-states start off hidden */
 
 .upgrade-trial,
 .upgrade-thank-you,
@@ -788,16 +789,17 @@ code {
   display: none;
 }
 
-/* Pro State */
+/* All states are activated when class exists */
 
-.upgrade-prompt--pro {
-  display: none;
+.upgrade-prompt--thank-you,
+.upgrade-prompt--trial-active,
+.upgrade-prompt--trial-expired {
+  display: block;
 }
 
 /* Thank You State */
 
 .upgrade-prompt--thank-you {
-  display: block;
   color: #4d864d;
   background: #9ee69f;
   max-height: 0;

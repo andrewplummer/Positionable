@@ -237,7 +237,6 @@ describe('LicenseManager', function() {
     setupLicenseManager();
 
     googlePaymentsMock.queueSuccessResponse(BUY_SUCCESS_RESPONSE);
-    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
     manager.purchase();
 
     assertCorrectBuyOptions();
@@ -297,7 +296,6 @@ describe('LicenseManager', function() {
     setupLicenseManager();
 
     googlePaymentsMock.queueSuccessResponse(BUY_SUCCESS_RESPONSE);
-    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
     manager.purchase();
 
     assert.equal(listener.licenseUpdatedEvents,   2);
@@ -319,7 +317,6 @@ describe('LicenseManager', function() {
     setupLicenseManager();
 
     googlePaymentsMock.queueFailureResponse(BUY_FAILURE_BUG_RESPONSE);
-    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_ACTIVE_RESPONSE);
     manager.purchase();
 
     assertProLicense(true);

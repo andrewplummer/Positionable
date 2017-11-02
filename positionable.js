@@ -931,7 +931,13 @@ class LicenseManager {
   onBuySuccess(data) {
     // TODO: remove on release!
     console.info('Buy succeeded with', data);
-    this.checkPurchases();
+    // Note that it seems new purchases are not always reflected
+    // in the getPurchases API, so don't check them at this point
+    // but instead immediately grant the license. This may cause
+    // some issues with canceling, but the default will be to grant
+    // the license, which is the better fallback.
+    this.resolveStatus(LicenseManager.STATUS_PRO);
+    this.saveStatus();
   }
 
   onBuyFailure(data) {
@@ -2469,6 +2475,32 @@ class Element {
 
 }
 
+/*-------------------------] ElementWithState [--------------------------*/
+
+class ElementWithState extends Element {
+
+  constructor(el) {
+    super(el);
+  }
+
+  clearState() {
+    if (this.currentClassName) {
+      this.removeClass(this.currentClassName);
+    }
+    this.currentClassName = null;
+  }
+
+  setState(className) {
+    if (this.currentClassName) {
+      this.replaceClass(this.currentClassName, className);
+    } else {
+      this.addClass(className);
+    }
+    this.currentClassName = className;
+  }
+
+}
+
 /*-------------------------] BrowserEventTarget [--------------------------*/
 
 class BrowserEventTarget extends Element {
@@ -2990,6 +3022,10 @@ class ControlPanel extends DraggableElement {
     this.addClass(ControlPanel.ACTIVE_CLASS);
   }
 
+  clearState() {
+    this.clearAreaStates();
+  }
+
   // --- Areas
 
   showDefaultArea() {
@@ -3146,6 +3182,14 @@ class ControlPanel extends DraggableElement {
     }
   }
 
+  clearAreaStates() {
+    this.defaultArea.clearState();
+    this.elementArea.clearState();
+    this.multipleArea.clearState();
+    this.settingsArea.clearState();
+    this.quickstartArea.clearState();
+  }
+
   // --- Events
 
   onDoubleClick() {
@@ -3186,7 +3230,7 @@ class ControlPanel extends DraggableElement {
 
 /*-------------------------] ControlPanelArea [--------------------------*/
 
-class ControlPanelArea extends Element {
+class ControlPanelArea extends ElementWithState {
 
   static get ACTIVE_CLASS() { return 'control-panel-area--active'; }
 
@@ -3229,20 +3273,6 @@ class ControlPanelArea extends Element {
     }
   }
 
-  setExtraClass(className) {
-    if (this.currentExtraClass) {
-      this.replaceClass(this.currentExtraClass, className);
-    } else {
-      this.addClass(className);
-    }
-    this.currentExtraClass = className;
-  }
-
-  clearExtraClass() {
-    this.removeClass(this.currentExtraClass);
-    this.currentExtraClass = null;
-  }
-
 }
 
 /*-------------------------] ControlPanelSettingsArea [--------------------------*/
@@ -3253,7 +3283,6 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   static get AREA_BASIC_CLASS()    { return 'settings-area--basic';    }
   static get AREA_ADVANCED_CLASS() { return 'settings-area--advanced'; }
 
-  static get PRO_CLASS()           { return 'upgrade-prompt--pro';           }
   static get THANK_YOU_CLASS()     { return 'upgrade-prompt--thank-you';     }
   static get TRIAL_ACTIVE_CLASS()  { return 'upgrade-prompt--trial-active';  }
   static get TRIAL_EXPIRED_CLASS() { return 'upgrade-prompt--trial-expired'; }
@@ -3277,30 +3306,26 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   renderUpgradeStatus(pro, timeRemaining) {
     if (pro) {
-      this.upgradePrompt.addClass(ControlPanelSettingsArea.PRO_CLASS);
       this.proBadge.show();
-    } else if (timeRemaining <= 0) {
-      this.upgradePrompt.addClass(ControlPanelSettingsArea.TRIAL_EXPIRED_CLASS);
-      this.proBadge.hide();
-    } else {
-      this.upgradePrompt.addClass(ControlPanelSettingsArea.TRIAL_ACTIVE_CLASS);
+    } else if (timeRemaining > 0) {
+      this.upgradePrompt.setState(ControlPanelSettingsArea.TRIAL_ACTIVE_CLASS);
       this.upgradeTime.text(this.getTimeRemainingInWords(timeRemaining));
-      this.proBadge.hide();
+    } else {
+      this.upgradePrompt.setState(ControlPanelSettingsArea.TRIAL_EXPIRED_CLASS);
     }
   }
 
   renderUpgradeThankYou() {
-    this.upgradePrompt.addClass(ControlPanelSettingsArea.THANK_YOU_CLASS);
+    this.upgradePrompt.setState(ControlPanelSettingsArea.THANK_YOU_CLASS);
   }
 
   // === Private ===
 
 
   setupElements(uiRoot) {
-    this.form = new Element(uiRoot.getElementById('settings-form'));
     this.proBadge      = new Element(uiRoot.getElementById('pro-badge'));
     this.upgradeTime   = new Element(uiRoot.getElementById('upgrade-time-remaining'));
-    this.upgradePrompt = new Element(uiRoot.getElementById('upgrade-prompt'));
+    this.upgradePrompt = new ElementWithState(uiRoot.getElementById('upgrade-prompt'));
   }
 
   setupButtons(uiRoot) {
@@ -3311,18 +3336,18 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   }
 
   setHelpMode() {
-    this.setExtraClass(ControlPanelSettingsArea.AREA_HELP_CLASS);
+    this.setState(ControlPanelSettingsArea.AREA_HELP_CLASS);
     this.setSize(this.sizes.help);
   }
 
   setBasicMode() {
-    this.setExtraClass(ControlPanelSettingsArea.AREA_BASIC_CLASS);
+    this.setState(ControlPanelSettingsArea.AREA_BASIC_CLASS);
     this.setSize(this.sizes.default);
     this.panel.listener.onBasicSettingsClick();
   }
 
   setAdvancedMode() {
-    this.setExtraClass(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
+    this.setState(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
     this.panel.listener.onAdvancedSettingsClick();
   }
@@ -3347,6 +3372,12 @@ class ControlPanelSettingsArea extends ControlPanelArea {
       return 'a few minutes';
     }
     return val + ' ' + suffix;
+  }
+
+  clearState() {
+    super.clearState();
+    this.proBadge.hide();
+    this.upgradePrompt.clearState();
   }
 
 }
@@ -3592,16 +3623,16 @@ class ControlPanelMultipleArea extends ControlPanelArea {
     }).join('');
     el.innerHTML = html;
     if (elements.length > ControlPanelMultipleArea.HIGHLIGHT_TONS_THRESHOLD) {
-      this.setExtraClass(ControlPanelMultipleArea.HIGHLIGHT_TONS_CLASS);
+      this.setState(ControlPanelMultipleArea.HIGHLIGHT_TONS_CLASS);
       this.setSize(this.sizes.tons);
     } else if (elements.length > ControlPanelMultipleArea.HIGHLIGHT_LOTS_THRESHOLD) {
-      this.setExtraClass(ControlPanelMultipleArea.HIGHLIGHT_LOTS_CLASS);
+      this.setState(ControlPanelMultipleArea.HIGHLIGHT_LOTS_CLASS);
       this.setSize(this.sizes.lots);
     } else if (elements.length > ControlPanelMultipleArea.HIGHLIGHT_MANY_THRESHOLD) {
-      this.clearExtraClass();
+      this.clearState();
       this.setSize(this.sizes.many);
     } else {
-      this.clearExtraClass();
+      this.clearState();
       this.setSize(this.sizes.default);
     }
   }
