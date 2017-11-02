@@ -744,6 +744,7 @@ code {
 
 .pro-badge {
   position: absolute;
+  top: -1px;
   right: 0;
   opacity: .22;
   cursor: url(chrome-extension://__MSG_@@extension_id__/images/cursors/thumbs-up.png) 12 0, pointer;
