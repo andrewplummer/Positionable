@@ -6,21 +6,26 @@ describe('Settings', function(uiRoot) {
   class Listener {
 
     constructor () {
-      this.settingsUpdatedCount = 0;
-      this.selectorUpdatedCount = 0;
-      this.snapUpdatedCount     = 0;
+      this.settingsSubmittedCount = 0;
+      this.settingsClearedCount   = 0;
+      this.selectorUpdatedCount   = 0;
+      this.snapUpdatedCount       = 0;
     }
 
     onSettingsInitialized() {
       this.settingsInitialized = true;
     }
 
-    onSelectorUpdated() {
-      this.selectorUpdatedCount += 1;
+    onSettingsSubmitted() {
+      this.settingsSubmittedCount += 1;
     }
 
-    onSettingsUpdated() {
-      this.settingsUpdatedCount += 1;
+    onSettingsCleared() {
+      this.settingsClearedCount += 1;
+    }
+
+    onSelectorUpdated() {
+      this.selectorUpdatedCount += 1;
     }
 
     onSnappingUpdated(x, y) {
@@ -94,6 +99,14 @@ describe('Settings', function(uiRoot) {
     assert.isTrue(listener.settingsInitialized);
   });
 
+  it('should not fire change events for non-relevant settings', function() {
+    chromeMock.setStoredData(Settings.INCLUDE_SELECTOR,   'p');
+    setupSettings();
+    settings.set(Settings.SKIP_QUICKSTART, true);
+    assert.equal(listener.selectorUpdatedCount, 0);
+    assert.equal(listener.snapUpdatedCount,     0);
+  });
+
   it('should initialize with default settings', function() {
     setupSettings();
     assert.equal(settings.get(Settings.SAVE_FILENAME),       'styles.css');
@@ -142,7 +155,7 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     form.elements['save-filename'].value = 'foo.css';
     submitForm();
-    assert.equal(listener.settingsUpdatedCount, 1);
+    assert.equal(listener.settingsSubmittedCount, 1);
     assert.equal(chromeMock.getStoredData('save-filename'), 'foo.css');
   });
 
@@ -150,7 +163,7 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     resetForm();
     assert.equal(windowDialogueMock.getConfirmCalls(), 1);
-    assert.equal(listener.settingsUpdatedCount, 1);
+    assert.equal(listener.settingsClearedCount, 1);
     assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
     assert.equal(settings.get(Settings.TAB_STYLE), 'two');
     assert.equal(settings.get(Settings.OUTPUT_SELECTOR), 'auto');
@@ -165,24 +178,24 @@ describe('Settings', function(uiRoot) {
 
     uiRoot.getElementById('include-selector').value = '1234';
     submitForm();
-    assert.equal(listener.settingsUpdatedCount, 0);
-    assert.equal(listener.selectorUpdatedCount, 0);
+    assert.equal(listener.settingsSubmittedCount, 0);
+    assert.equal(listener.selectorUpdatedCount,   0);
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
 
     uiRoot.getElementById('include-selector').value = '';
     uiRoot.getElementById('exclude-selector').value = '1234';
     submitForm();
-    assert.equal(listener.settingsUpdatedCount, 0);
-    assert.equal(listener.selectorUpdatedCount, 0);
+    assert.equal(listener.settingsSubmittedCount, 0);
+    assert.equal(listener.selectorUpdatedCount,   0);
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
 
     uiRoot.getElementById('include-selector').value = 'p';
     uiRoot.getElementById('exclude-selector').value = 'h2';
     submitForm();
-    assert.equal(listener.settingsUpdatedCount, 1);
-    assert.equal(listener.selectorUpdatedCount, 1);
+    assert.equal(listener.settingsSubmittedCount, 1);
+    assert.equal(listener.selectorUpdatedCount,   1);
     assert.equal(settings.get(Settings.INCLUDE_SELECTOR), 'p');
     assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), 'h2');
 
@@ -192,23 +205,24 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     uiRoot.getElementById('include-selector').value = 'div';
     submitForm();
-    assert.equal(listener.settingsUpdatedCount, 1);
-    assert.equal(listener.selectorUpdatedCount, 1);
+    assert.equal(listener.settingsSubmittedCount, 1);
+    assert.equal(listener.selectorUpdatedCount,   1);
   });
 
   it('should fire correct events when the selector did not change', function() {
     setupSettings();
     uiRoot.getElementById('include-selector').value = '';
     submitForm();
-    assert.equal(listener.settingsUpdatedCount, 1);
-    assert.equal(listener.selectorUpdatedCount, 0);
+    assert.equal(listener.settingsSubmittedCount, 1);
+    assert.equal(listener.selectorUpdatedCount,   0);
   });
 
   it('should fire correct events when the default form was cleared', function() {
     setupSettings();
     resetForm();
-    assert.equal(listener.settingsUpdatedCount, 1);
-    assert.equal(listener.selectorUpdatedCount, 0);
+    assert.equal(listener.settingsSubmittedCount, 0);
+    assert.equal(listener.settingsClearedCount,   1);
+    assert.equal(listener.selectorUpdatedCount,   0);
   });
 
   it('should fire correct events when a set form was cleared', function() {
@@ -216,8 +230,24 @@ describe('Settings', function(uiRoot) {
     uiRoot.getElementById('include-selector').value = 'div';
     submitForm();
     resetForm();
-    assert.equal(listener.settingsUpdatedCount, 2);
-    assert.equal(listener.selectorUpdatedCount, 2);
+    assert.equal(listener.settingsSubmittedCount, 1);
+    assert.equal(listener.settingsClearedCount,   1);
+    assert.equal(listener.selectorUpdatedCount,   2);
+  });
+
+  it('should clear previous invalid fields when cleared', function() {
+    var field;
+    setupSettings();
+    uiRoot.getElementById('include-selector').value = '@#$^';
+    submitForm();
+    resetForm();
+    assert.equal(listener.settingsSubmittedCount, 0);
+    assert.equal(listener.settingsClearedCount,   1);
+    assert.equal(listener.selectorUpdatedCount,   0);
+
+    // Note that we can't assert that the invalid fields were
+    // actually cleared as the reset event that actually clears
+    // the form controls can't be mocked.
   });
 
   it('should be able to revert back to defaults', function() {
@@ -357,26 +387,21 @@ describe('Settings', function(uiRoot) {
     assertInputIsDisabled('grouping-map', false);
   });
 
-  it('should remove unset advanced features', function() {
+  it('should remove unset advanced features and fire correct events', function() {
     chromeMock.setStoredData(Settings.SNAP_X, 5);
     chromeMock.setStoredData(Settings.SNAP_Y, 5);
     chromeMock.setStoredData(Settings.OUTPUT_GROUPING, Settings.OUTPUT_GROUPING_MAP);
     chromeMock.setStoredData(Settings.GROUPING_MAP, 'foo:bar');
     setupSettings();
     settings.toggleAdvancedFeatures(false);
+    assert.equal(listener.snapUpdatedCount,       1);
+    assert.equal(listener.selectorUpdatedCount,   0);
+    assert.equal(listener.settingsSubmittedCount, 0);
+    assert.equal(listener.settingsClearedCount,   0);
     assert.equal(settings.get(Settings.SNAP_X), 0);
     assert.equal(settings.get(Settings.SNAP_Y), 0);
     assert.equal(settings.get(Settings.OUTPUT_GROUPING), Settings.OUTPUT_GROUPING_NONE);
     assert.equal(Object.keys(settings.get(Settings.GROUPING_MAP)).length, 0);
-    assert.equal(listener.settingsUpdatedCount, 0);
   });
-
-  it('should not fire a other change events when updating quickstart setting', function() {
-    setupSettings();
-    settings.set(Settings.SKIP_QUICKSTART, true);
-    assert.equal(listener.selectorUpdatedCount, 0);
-    assert.equal(listener.snapUpdatedCount,     0);
-  });
-
 
 });

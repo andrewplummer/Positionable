@@ -27,12 +27,7 @@ class AppController {
       this.settings.get(Settings.INCLUDE_SELECTOR),
       this.settings.get(Settings.EXCLUDE_SELECTOR)
     );
-    this.controlPanel.activate();
-    if (this.settings.get(Settings.SKIP_QUICKSTART)) {
-      this.controlPanel.showDefaultArea();
-    } else {
-      this.controlPanel.showQuickstartArea();
-    }
+    this.checkInitialized();
   }
 
   // --- License Manager Events
@@ -112,7 +107,11 @@ class AppController {
     );
   }
 
-  onSettingsUpdated() {
+  onSettingsSubmitted() {
+    this.renderActiveControlPanel();
+  }
+
+  onSettingsCleared() {
     this.renderActiveControlPanel();
   }
 
@@ -463,6 +462,20 @@ class AppController {
     this.elementManager.addIgnoredClass(ShadowDomInjector.UI_HOST_CLASS_NAME);
   }
 
+  // --- Initializing
+
+  checkInitialized() {
+    if (this.initialized) {
+      return;
+    }
+    this.controlPanel.activate();
+    if (this.settings.get(Settings.SKIP_QUICKSTART)) {
+      this.controlPanel.showDefaultArea();
+    } else {
+      this.controlPanel.showQuickstartArea();
+    }
+    this.initialized = true;
+  }
   // --- Cursors
 
   setHoverCursorForHandle(handle, rotation) {
@@ -831,6 +844,7 @@ class LicenseManager {
   }
 
   onStorageDataSaved() {}
+  onStorageDataRemoved() {}
 
 
   // === Private ===
@@ -3842,7 +3856,7 @@ class Settings {
   constructor(listener, uiRoot) {
     this.listener = listener;
     this.setup(uiRoot);
-    this.fetchSettings();
+    this.fetchStoredSettings();
   }
 
   get(name) {
@@ -3884,13 +3898,8 @@ class Settings {
     this.checkAdvancedFeaturesReset();
   }
 
-  onStorageDataSaved(data) {
-    this.onSettingsUpdated(data);
-  }
-
-  onStorageDataRemoved() {
-    this.onSettingsUpdated(this.defaultData);
-  }
+  onStorageDataSaved() {}
+  onStorageDataRemoved() {}
 
   onFormFocus(evt) {
     this.listener.onSettingsFormFocus(evt);
@@ -3901,11 +3910,16 @@ class Settings {
   }
 
   onFormSubmit(evt, form) {
-    this.saveSettings(form.getData());
+    var data = form.getData();
+    this.saveStoredSettings(data);
+    this.updateData(data);
+    this.listener.onSettingsSubmitted();
   }
 
   onFormReset() {
-    this.clearSettings();
+    this.clearStoredSettings();
+    this.updateData(this.defaultData);
+    this.listener.onSettingsCleared();
   }
 
   // === Private ===
@@ -3939,16 +3953,9 @@ class Settings {
     this.storageManager = new ChromeStorageManager(this);
   }
 
-  // --- Events
+  // --- Updating
 
-  onInitialized() {
-    this.form.setControlsFromData(this.data);
-    this.selectorLinkedSelect.update();
-    this.groupingLinkedSelect.update();
-    this.listener.onSettingsInitialized();
-  }
-
-  onSettingsUpdated(data) {
+  updateData(data) {
     if (this.selectorChanged(data)) {
       this.listener.onSelectorUpdated();
     }
@@ -3959,7 +3966,15 @@ class Settings {
       );
     }
     Object.assign(this.data, data);
-    this.listener.onSettingsUpdated();
+  }
+
+  // --- Events
+
+  onInitialized() {
+    this.form.setControlsFromData(this.data);
+    this.selectorLinkedSelect.update();
+    this.groupingLinkedSelect.update();
+    this.listener.onSettingsInitialized();
   }
 
   selectorChanged(data) {
@@ -3974,15 +3989,15 @@ class Settings {
 
   // --- Storage
 
-  fetchSettings() {
+  fetchStoredSettings() {
     this.storageManager.fetch(Settings.FIELDS);
   }
 
-  saveSettings(data) {
+  saveStoredSettings(data) {
     this.storageManager.save(data);
   }
 
-  clearSettings() {
+  clearStoredSettings() {
     this.storageManager.remove(Settings.FIELDS);
   }
 
@@ -4056,9 +4071,13 @@ class Settings {
   }
 
   resetAdvancedFeatures() {
+    var data = {};
     Settings.ADVANCED_FIELDS.forEach(f => {
-      this.data[f] = this.defaultData[f];
+      data[f] = this.defaultData[f];
     });
+    // Set the data but do not save it to storage
+    // so that it can be accessed again.
+    this.updateData(data);
   }
 
   // --- Other
@@ -4208,7 +4227,15 @@ class SettingsForm extends BrowserEventTarget {
 
   onReset(evt) {
     if (confirm(SettingsForm.CONFIRM_MESSAGE)) {
-      this.listener.onFormReset(evt, this);
+      // Set a bit of a timeout to avoid UI jank after the
+      // confirm dialogue clears. This also lets the form
+      // reset itself so that the validations can be run
+      // as the reset event happens before form controls
+      // are actually cleared.
+      setTimeout(() => {
+        this.runValidations();
+        this.listener.onFormReset(evt, this);
+      }, 100);
       this.blur();
     } else {
       evt.preventDefault();
@@ -4376,17 +4403,20 @@ class Animation {
 
     // Reset all transitions, states, and timeouts.
     clearTimeout(this.timer);
-    this.target.removeAllListeners();
-    this.target.removeClass(this.activeClass);
-    this.target.addClass(Animation.NO_TRANSITION_CLASS);
-
-    this.target.show();
 
     this.defer(() => {
-      this.target.removeClass(Animation.NO_TRANSITION_CLASS);
-      this.target.addClass(this.activeClass);
+      this.target.removeAllListeners();
+      this.target.removeClass(this.activeClass);
+      this.target.addClass(Animation.NO_TRANSITION_CLASS);
+
+      this.target.show();
+
+      this.defer(() => {
+        this.target.removeClass(Animation.NO_TRANSITION_CLASS);
+        this.target.addClass(this.activeClass);
+      });
+      this.awaitTransitionEnd(this.onAnimationEnter);
     });
-    this.awaitTransitionEnd(this.onAnimationEnter);
   }
 
   hide() {
@@ -4411,9 +4441,11 @@ class Animation {
   // --- Timing
 
   defer(fn) {
-    // Allow 1 frame to allow styling to be applied before
-    // adding transition classes. For some reason RAF won't work here.
-    this.timer = setTimeout(fn, 16);
+    // Transitionend events are wonky and can easily get into a
+    // state where they don't fire if the UI is updated too quickly,
+    // so providing a utility method here to defer actions so that
+    // animations don't get stuck.
+    this.timer = setTimeout(fn, 50);
   }
 
   awaitTransitionEnd(fn) {

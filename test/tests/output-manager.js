@@ -4,9 +4,6 @@ describe('OutputManager', function(uiRoot) {
 
   class SettingsListener {
     onSettingsInitialized() {}
-    onSettingsUpdated() {}
-    onSelectorUpdated() {}
-    onSnappingUpdated() {}
   }
 
   class PositionableElementListener {}
