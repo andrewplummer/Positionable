@@ -296,11 +296,11 @@ code {
 /* Highlight Buttons */
 
 .highlight-buttons {
-  margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   max-height: 70px;
   overflow-y: auto;
+  margin: 10px 60px 0 0;
 }
 
 .highlight-button {

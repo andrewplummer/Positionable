@@ -3454,7 +3454,7 @@ class ControlPanelMultipleArea extends ControlPanelArea {
 
   static get HIGHLIGHT_BUTTON_CLASS()   { return 'highlight-button'; }
 
-  static get HIGHLIGHT_MANY_THRESHOLD() { return 18; }
+  static get HIGHLIGHT_MANY_THRESHOLD() { return 16; }
   static get HIGHLIGHT_LOTS_THRESHOLD() { return 36; }
   static get HIGHLIGHT_TONS_THRESHOLD() { return 60; }
   static get HIGHLIGHT_LOTS_CLASS()     { return 'multiple-area--highlight-lots'; }
@@ -3462,10 +3462,10 @@ class ControlPanelMultipleArea extends ControlPanelArea {
 
   static get SIZES() {
     return {
-      default: new Point(480, 150),
-      many:    new Point(480, 165),
-      lots:    new Point(480, 180),
-      tons:    new Point(480, 190)
+      default: new Point(490, 150),
+      many:    new Point(490, 165),
+      lots:    new Point(490, 180),
+      tons:    new Point(490, 190)
     };
   }
 
