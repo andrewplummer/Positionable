@@ -1,3 +1,9 @@
+/*---------------------------] Vars [-----------------------*/
+
+:host {
+  --ease-in-quad:  cubic-bezier(0.550, 0.085, 0.680, 0.530);
+  --ease-in-out-quart: cubic-bezier(0.770, 0.000, 0.175, 1.000);
+}
 
 /*---------------------------] Resets [-----------------------*/
 
@@ -172,7 +178,7 @@ code {
   right: 10px;
   margin-top: -30px;
   opacity: 0;
-  transition: opacity 300ms ease-in-out;
+  transition: opacity 300ms linear;
   pointer-events: none;
 }
 
@@ -231,11 +237,11 @@ code {
   margin-right: 5px;
   margin-left: -20px;
   opacity: 0;
-  transition: opacity 150ms linear 50ms, margin-left 300ms ease-in-out;
+  transition: margin-left 300ms ease-in-out, opacity 100ms linear 50ms;
 }
 
 .element-extra {
-  transition: opacity 150ms linear 50ms, max-height 300ms ease-in-out;
+  transition: max-height 300ms ease-in-out, opacity 100ms linear 50ms;
   opacity: 0;
   max-height: 0;
   overflow: hidden;
@@ -446,7 +452,8 @@ code {
 .settings-form-page-container {
   width: 200%;
   display: flex;
-  transition: transform 300ms cubic-bezier(.645, .045, .355, 1.000);
+  transition: transform 300ms;
+  transition-timing-function: var(--ease-in-out-quart);
 }
 
 .settings-form-page {
@@ -773,7 +780,8 @@ code {
   margin: -12px 0 5px 0;
   overflow: hidden;
   max-height: 3.8em;
-  transition: max-height 300ms cubic-bezier(.645, .045, .355, 1.000) 6s;
+  transition: max-height 500ms 6s;
+  transition-timing-function: var(--ease-in-out-quart);
   display: none;
 }
 
@@ -1006,7 +1014,7 @@ code {
   font-size: 26px;
   color: #333;
   opacity: 0;
-  transition: opacity 500ms linear;
+  transition: opacity 300ms linear;
   font-family: "Open Sans", sans-serif;
   pointer-events: none;
 }
@@ -1023,7 +1031,8 @@ code {
   top: 10px;
   left: 0px;
   opacity: 1;
-  transition: transform 500ms linear 400ms, opacity 500ms linear 400ms;
+  transition: transform 400ms 400ms, opacity 400ms 400ms;
+  transition-timing-function: var(--ease-in-quad);
 }
 
 .copy-animation--active .copy-animation-text {

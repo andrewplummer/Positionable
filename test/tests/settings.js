@@ -236,7 +236,6 @@ describe('Settings', function(uiRoot) {
   });
 
   it('should clear previous invalid fields when cleared', function() {
-    var field;
     setupSettings();
     uiRoot.getElementById('include-selector').value = '@#$^';
     submitForm();
