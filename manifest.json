@@ -2,10 +2,12 @@
 
   "manifest_version": 2,
 
-  "name": "Positionable Test",
+  "name": "Positionable!",
+  "version": "2.0.0",
+
   "short_name": "Positionable",
-  "description": "An extension for spriting and positioning elements.",
-  "version": "0.0.7",
+  "description": "An extension for visually manipulating elements in the browser.",
+  "offline_enabled": true,
 
   "icons": {
     "16":  "images/app/16.png",
