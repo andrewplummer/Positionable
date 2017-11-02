@@ -323,4 +323,22 @@ describe('LicenseManager', function() {
     assertStorageLicenseStatus(PRO_LICENSE);
   });
 
+  // --- Debug Mode
+
+  it('should set to debug mode and directly check the payments API', function() {
+    setStorageLicenseStatus(NORMAL_LICENSE);
+    consoleMock.apply();
+    setupLicenseManager();
+
+    googlePaymentsMock.queueSuccessResponse(GET_PURCHASES_NONE_RESPONSE);
+    manager.setDebugMode();
+    assert.equal(consoleMock.getLogCount(), 2);
+
+    googlePaymentsMock.queueSuccessResponse(BUY_SUCCESS_RESPONSE);
+    manager.purchase();
+    assert.equal(consoleMock.getLogCount(), 3);
+
+    consoleMock.release();
+  });
+
 });

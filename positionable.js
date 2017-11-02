@@ -72,6 +72,10 @@ class AppController {
     this.licenseManager.purchase();
   }
 
+  onDebugClick() {
+    this.licenseManager.setDebugMode();
+  }
+
   onControlPanelDragStart() {
     this.cursorManager.setDragCursor('move');
   }
@@ -784,6 +788,7 @@ class LicenseManager {
 
     this.status    = null;
     this.activated = null;
+    this.debugMode = false;
 
     this.setup();
     this.fetchStoredLicenseData();
@@ -803,13 +808,19 @@ class LicenseManager {
     this.beginPurchaseTransaction();
   }
 
+  setDebugMode() {
+    this.debugMode = true;
+    console.log('Payments debug mode on');
+    this.checkPurchases();
+  }
+
 
   // === Protected ===
 
 
   onStorageDataFetched(data) {
     this.checkStoredActivatedDate(data);
-    // TODO: Comment out this line to force checking the payments api for testing
+    // Note: Comment out this line to force checking the payments api for testing
     this.checkStoredStatus(data);
 
     if (!this.status) {
@@ -900,14 +911,14 @@ class LicenseManager {
   }
 
   onGetPurchasesSuccess(data) {
-    // TODO: remove on release!
-    console.info('Get purchases succeeded with', data);
+    this.logDebug('Get purchases succeded with', data);
     var status = this.getStatusFromPurchaseData(data);
     this.resolveStatus(status);
     this.saveStatus();
   }
 
   onGetPurchasesFailure(data) {
+    this.logDebug('Get purchases failed with', data);
     console.error('Could not retreive purchases: ' + data.response.errorType, data);
   }
 
@@ -929,8 +940,7 @@ class LicenseManager {
   }
 
   onBuySuccess(data) {
-    // TODO: remove on release!
-    console.info('Buy succeeded with', data);
+    this.logDebug('Buy succeded with', data);
     // Note that it seems new purchases are not always reflected
     // in the getPurchases API, so don't check them at this point
     // but instead immediately grant the license. This may cause
@@ -941,6 +951,7 @@ class LicenseManager {
   }
 
   onBuyFailure(data) {
+    this.logDebug('Buy failed with', data);
     if (data[LicenseManager.CHECKOUT_ORDER_ID]) {
       // It seems that this may be an inapp payements bug
       // where it returns a checkoutOrderId in the failure
@@ -979,6 +990,11 @@ class LicenseManager {
     };
   }
 
+  logDebug(message, data) {
+    if (this.debugMode) {
+      console.log(message, data);
+    }
+  }
 }
 
 /*-------------------------] AlignmentManager [--------------------------*/
@@ -3261,9 +3277,10 @@ class ControlPanelArea extends ElementWithState {
   // === Protected ===
 
 
-  setupButton(uiRoot, id, handler) {
+  setupButton(uiRoot, id, handler, double) {
     var el = uiRoot.getElementById(id);
-    el.addEventListener('click', handler.bind(this));
+    var eventName = double ? 'dblclick' : 'click';
+    el.addEventListener(eventName, handler.bind(this));
   }
 
   setSize(size) {
@@ -3333,6 +3350,7 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     this.setupButton(uiRoot, 'settings-tab-basic', this.setBasicMode);
     this.setupButton(uiRoot, 'settings-tab-advanced', this.setAdvancedMode);
     this.setupButton(uiRoot, 'upgrade-button', this.onUpgradeButtonClick);
+    this.setupButton(uiRoot, 'payment-debug', this.onDebugButtonClick, true);
   }
 
   setHelpMode() {
@@ -3354,6 +3372,10 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   onUpgradeButtonClick() {
     this.panel.listener.onUpgradeClick();
+  }
+
+  onDebugButtonClick() {
+    this.panel.listener.onDebugClick();
   }
 
   getTimeRemainingInWords(ms) {
