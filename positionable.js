@@ -623,9 +623,10 @@ class ShadowDomInjector {
     }
   }
 
-  constructor(parent, expand) {
+  constructor(parent, expand, zIndex) {
     this.parent = parent;
     this.expand = expand;
+    this.zIndex = zIndex;
     this.fetchTemplate    = this.fetchTemplate.bind(this);
     this.injectStylesheet = this.injectStylesheet.bind(this);
     this.injectShadowDom  = this.injectShadowDom.bind(this);
@@ -679,6 +680,7 @@ class ShadowDomInjector {
   injectShadowDom(templateHtml) {
     var container = document.createElement('div');
     container.style.position = 'absolute';
+    container.style.zIndex   = this.zIndex || '9999999';
     if (this.expand) {
       container.style.top    = '0';
       container.style.left   = '0';
@@ -4656,7 +4658,7 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   injectInterface() {
-    this.injector = new ShadowDomInjector(this.el, true);
+    this.injector = new ShadowDomInjector(this.el, true, 1);
     this.injector.setTemplate('element.html');
     this.injector.setStylesheet('element.css');
     this.injector.run(this.onInterfaceInjected.bind(this));
