@@ -4658,7 +4658,14 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   injectInterface() {
-    this.injector = new ShadowDomInjector(this.el, true, 1);
+    // As the UI is injected before any other elements, placing it at the
+    // top level means that nested positionable elements will override it
+    // with other positioned elements (hopefully, as long as they are less
+    // than the top defined here) being underneath. However this also means
+    // that positionable elements inside normal elements may be inaccessible,
+    // but this is a tradeoff and can be worked around with the drag select
+    // or highlighting functions.
+    this.injector = new ShadowDomInjector(this.el, true, PositionableElement.TOP_Z_INDEX);
     this.injector.setTemplate('element.html');
     this.injector.setStylesheet('element.css');
     this.injector.run(this.onInterfaceInjected.bind(this));
