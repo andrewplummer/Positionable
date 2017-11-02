@@ -3919,6 +3919,7 @@ class Settings {
   onFormReset() {
     this.clearStoredSettings();
     this.updateData(this.defaultData);
+    this.updateLinkedSelects();
     this.listener.onSettingsCleared();
   }
 
@@ -3972,8 +3973,7 @@ class Settings {
 
   onInitialized() {
     this.form.setControlsFromData(this.data);
-    this.selectorLinkedSelect.update();
-    this.groupingLinkedSelect.update();
+    this.updateLinkedSelects();
     this.listener.onSettingsInitialized();
   }
 
@@ -4052,6 +4052,13 @@ class Settings {
     return Object.keys(obj).map(key => {
       return key + ': ' + obj[key];
     }).join('\n');
+  }
+
+  // --- Linked Selects
+
+  updateLinkedSelects() {
+    this.selectorLinkedSelect.update();
+    this.groupingLinkedSelect.update();
   }
 
   // --- Advanced Features
