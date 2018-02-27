@@ -5501,12 +5501,17 @@ class CSSRuleMatcher {
 
 
   getMatchedRules(el) {
-    // Note: This API is deprecated and may be removed.
-    try {
-      return window.getMatchedCSSRules(el);
-    } catch (e) {
-      return null;
+    let sheets = el.getRootNode().styleSheets, matched = [];
+    for (let i = 0; i < sheets.length; i++) {
+      let rules = sheets[i].rules;
+        for (let j = 0; j < rules.length; j++) {
+          let rule = rules[j];
+          if (el.matches(rule.selectorText)) {
+            matched.push(rule);
+          }
+        }
     }
+    return matched;
   }
 
   getMatchedValue(name) {
