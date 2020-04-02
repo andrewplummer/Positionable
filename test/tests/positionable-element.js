@@ -564,7 +564,7 @@ describe('PositionableElement', function() {
     setupBox('animation-box');
     element.pushState();
     element.resize(100, 100, 'se');
-    assert.equal(el.style.animation, 'none');
+    assert.equal(el.style.animation, '0s ease 0s 1 normal none running none');
     element.destroy();
     assert.equal(el.style.animation, '');
   });

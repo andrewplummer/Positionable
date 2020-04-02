@@ -708,10 +708,9 @@ class ShadowDomInjector {
     }
     container.className = ShadowDomInjector.UI_HOST_CLASS_NAME;
 
-    // Note that changing this to attachShadow was causing some weird
-    // issues with eventing (window copy event was not firing) in both
-    // open and closed modes, so going back to createShadowRoot.
-    var root = container.createShadowRoot();
+    var root = container.attachShadow({
+      mode: 'open'
+    });
 
     // Relative extension paths don't seem to be supported in HTML template
     // files, so manually swap out these tokens for the extension path.

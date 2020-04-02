@@ -12,6 +12,12 @@
     }, opt);
     var evt = new MouseEvent(type, opt);
     el.dispatchEvent(evt);
+
+    // Simulate bubbling outside the shadow DOM.
+    const hostElement = getHostElement(el);
+    if (hostElement) {
+      fireMouseEvent(type, hostElement, x, y, opt);
+    }
   }
 
   function fireMouseDown(el, x, y, opt) {
@@ -122,6 +128,7 @@
   // --- Private
 
   function executeElementDrag(el, points) {
+
     var x, y, opt;
     for (let i = 0, point; point = points[i]; i++) {
       checkDragKeysChanged(point[2], opt);
@@ -139,6 +146,13 @@
       fireContextMenu(el, x, y, opt);
     }
     fireMouseOut(el, x, y, opt);
+  }
+
+  function getHostElement(el) {
+    const root = el.getRootNode();
+    if (root instanceof ShadowRoot) {
+      return root.host;
+    }
   }
 
   function checkDragKeysChanged(opt, lastOpt) {
