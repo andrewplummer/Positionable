@@ -5502,13 +5502,18 @@ class CSSRuleMatcher {
   getMatchedRules(el) {
     let sheets = el.getRootNode().styleSheets, matched = [];
     for (let i = 0; i < sheets.length; i++) {
-      let rules = sheets[i].rules;
+      try {
+        let rules = sheets[i].rules;
         for (let j = 0; j < rules.length; j++) {
           let rule = rules[j];
           if (el.matches(rule.selectorText)) {
             matched.push(rule);
           }
         }
+      } catch (err) {
+        // Cross-origin issues may throw an error here.
+        continue;
+      }
     }
     return matched;
   }
