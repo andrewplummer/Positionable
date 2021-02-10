@@ -6331,9 +6331,12 @@ class CSSBackgroundImage {
     if (url) {
       img = new Image();
       url = url.match(CSSBackgroundImage.URL_REG)[1];
-      this.fetchDomainSafeUrl(url).then(url => {
-        img.src = url;
-      });
+      this.fetchDomainSafeUrl(url)
+        .then(url => {
+          img.src = url;
+        }).catch(() => {
+          console.warn('Image URL could not be loaded. Sprite detection may be disabled.');
+        });
       spriteRecognizer = new SpriteRecognizer(img);
     }
 
@@ -6359,23 +6362,14 @@ class CSSBackgroundImage {
     return [cssLeft, cssTop];
   }
 
-  static fetchDomainSafeUrl(url) {
+  static async fetchDomainSafeUrl(url) {
     if (this.isDomainSafeUrl(url)) {
       // URL is domain safe, so return immediately.
-      return Promise.resolve(url);
+      return url;
     } else {
-      return new Promise((resolve, reject) => {
-        // The background tab is the only context in which pixel data from X-Domain
-        // images can be loaded, so send a message requesting a conversion to a data URI.
-        var message = { message: 'convert_image_url_to_data_url', url: url };
-        chrome.runtime.sendMessage(message, response => {
-          if (response.success) {
-            resolve(response.data);
-          } else {
-            reject(response.url);
-          }
-        });
-      });
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
     }
   }
 

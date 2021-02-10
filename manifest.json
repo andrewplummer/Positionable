@@ -6,9 +6,9 @@
   "description": "An extension for visually manipulating elements in the browser.",
   "offline_enabled": true,
   "icons": {
-    "16":  "images/app/16.png",
-    "32":  "images/app/32.png",
-    "48":  "images/app/48.png",
+    "16": "images/app/16.png",
+    "32": "images/app/32.png",
+    "48": "images/app/48.png",
     "128": "images/app/128.png"
   },
   "permissions": [
@@ -24,7 +24,8 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["*.html",
+      "resources": [
+        "*.html",
         "*.css",
         "images/*"
       ],
