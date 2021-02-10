@@ -2,7 +2,7 @@
  *  Positionable Chrome Extension
  *
  *  Freely distributable and licensed under the MIT-style license.
- *  Copyright (c) 2017 Andrew Plummer
+ *  Copyright (c) 2020 Andrew Plummer
  *
  * ---------------------------- */
 
@@ -13,7 +13,6 @@ class AppController {
   constructor(uiRoot) {
     this.uiRoot = uiRoot;
     this.setupInterface(uiRoot);
-    this.setupPayment();
     this.setupKeyManager();
     this.setupSupportManagers();
     this.setupElementManager();
@@ -28,20 +27,6 @@ class AppController {
       this.settings.get(Settings.EXCLUDE_SELECTOR)
     );
     this.checkInitialized();
-  }
-
-  // --- License Manager Events
-
-  onLicensePurchased() {
-    this.controlPanel.renderUpgradeThankYou();
-    this.settings.toggleAdvancedFeatures(true);
-  }
-
-  onLicenseUpdated() {
-    var pro  = this.licenseManager.hasProLicense();
-    var time = this.licenseManager.freeTimeRemaining();
-    this.controlPanel.renderUpgradeStatus(pro, time);
-    this.settings.toggleAdvancedFeatures(pro || time);
   }
 
   // --- Control Panel Events
@@ -61,14 +46,6 @@ class AppController {
 
   onAdvancedSettingsClick() {
     this.settings.setAdvanced();
-  }
-
-  onUpgradeClick() {
-    this.licenseManager.purchase();
-  }
-
-  onDebugClick() {
-    this.licenseManager.setDebugMode();
   }
 
   onControlPanelDragStart() {
@@ -416,10 +393,6 @@ class AppController {
     this.cursorManager    = new CursorManager(ShadowDomInjector.getBasePath());
   }
 
-  setupPayment() {
-    this.licenseManager = new LicenseManager(this);
-  }
-
   setupKeyManager() {
     this.keyManager = new KeyManager(this, AppController.PLATFORM_IS_MAC);
 
@@ -762,254 +735,6 @@ class ChromeStorageManager {
     });
   }
 
-}
-
-/*-------------------------] LicenseManager [--------------------------*/
-
-class LicenseManager {
-
-  // API Constants
-  static get SKU()         { return 'positionable_pro'; }
-  static get ENVIRONMENT() { return 'prod';             }
-
-  // Purchase States
-  static get STATE_ACTIVE()  { return 'ACTIVE';  }
-  static get STATE_PENDING() { return 'PENDING'; }
-
-  // Error Types
-  static get PURCHASE_CANCELED() { return 'PURCHASE_CANCELED'; }
-
-  // License Statuses
-  static get STATUS_NORMAL() { return 'normal'; }
-  static get STATUS_PRO()    { return 'pro';    }
-
-  // Storage Keys
-  static get STORAGE_KEY_STATUS()    { return 'license-status';    }
-  static get STORAGE_KEY_UPDATED()   { return 'license-updated';   }
-  static get STORAGE_KEY_ACTIVATED() { return 'license-activated'; }
-
-  // Free trial period (30 days)
-  static get FREE_TRIAL_PERIOD() { return 30 * 24 * 60 * 60 * 1000; }
-
-  // Time before re-checking purchases
-  static get MAX_AGE() { return 7 * 24 * 60 * 60 * 1000;  }
-
-  // Other
-  static get CHECKOUT_ORDER_ID() { return 'checkoutOrderId'; }
-
-  constructor(listener) {
-    this.listener = listener;
-
-    this.status    = null;
-    this.activated = null;
-    this.debugMode = false;
-
-    this.setup();
-    this.fetchStoredLicenseData();
-  }
-
-  hasProLicense() {
-    return this.status === LicenseManager.STATUS_PRO;
-  }
-
-  freeTimeRemaining() {
-    var period  = LicenseManager.FREE_TRIAL_PERIOD;
-    var elapsed = Date.now() - this.activated;
-    return Math.max(0, period - elapsed);
-  }
-
-  purchase() {
-    this.beginPurchaseTransaction();
-  }
-
-  setDebugMode() {
-    this.debugMode = true;
-    console.log('Payments debug mode on');
-    this.checkPurchases();
-  }
-
-
-  // === Protected ===
-
-
-  onStorageDataFetched(data) {
-    this.checkStoredActivatedDate(data);
-    // Note: Comment out this line to force checking the payments api for testing
-    this.checkStoredStatus(data);
-
-    if (!this.status) {
-      // If there is no stored license status, then go to the
-      // in-app payments API to check for an active purchase.
-      this.checkPurchases();
-    }
-  }
-
-  onStorageDataSaved() {}
-  onStorageDataRemoved() {}
-
-
-  // === Private ===
-
-
-  setup() {
-    this.storageManager      = new ChromeStorageManager(this);
-    this.buyOptions          = this.getBuyOptions();
-    this.getPurchasesOptions = this.getGetPurchasesOptions();
-  }
-
-  // --- Storage
-
-  fetchStoredLicenseData() {
-    this.storageManager.fetch([
-      LicenseManager.STORAGE_KEY_STATUS,
-      LicenseManager.STORAGE_KEY_UPDATED,
-      LicenseManager.STORAGE_KEY_ACTIVATED
-    ]);
-  }
-
-  saveStatus() {
-    var data = {
-      [LicenseManager.STORAGE_KEY_STATUS]: this.status,
-      [LicenseManager.STORAGE_KEY_UPDATED]: Date.now()
-    };
-    this.storageManager.save(data);
-  }
-
-  resolveStatus(status) {
-    var purchased = this.licenseWasPurchased(status);
-    this.status = status;
-    if (purchased) {
-      this.listener.onLicensePurchased();
-    }
-    this.listener.onLicenseUpdated();
-  }
-
-  licenseWasPurchased(status) {
-    // If the previous status was normal and the new status
-    // is pro, then the user has just purchased a license.
-   return status === LicenseManager.STATUS_PRO &&
-          this.status === LicenseManager.STATUS_NORMAL;
-  }
-
-  checkStoredActivatedDate(data) {
-    var storageKey, activated;
-
-    storageKey = LicenseManager.STORAGE_KEY_ACTIVATED;
-    activated  = data[storageKey];
-
-    if (!activated) {
-      activated = Date.now();
-      this.storageManager.save(storageKey, activated);
-    }
-
-    this.activated = activated;
-  }
-
-  checkStoredStatus(data) {
-    var status = data[LicenseManager.STORAGE_KEY_STATUS];
-    if (status && !this.storageNeedsUpdate(data)) {
-      this.resolveStatus(status);
-    }
-  }
-
-  storageNeedsUpdate(data) {
-    var maxAge  = LicenseManager.MAX_AGE;
-    var updated = data[LicenseManager.STORAGE_KEY_UPDATED] || maxAge;
-    var age     = Date.now() - updated;
-    return age >= maxAge;
-  }
-
-  // --- Checking Purchases
-
-  checkPurchases() {
-    google.payments.inapp.getPurchases(this.getPurchasesOptions);
-  }
-
-  onGetPurchasesSuccess(data) {
-    this.logDebug('Get purchases succeded with', data);
-    var status = this.getStatusFromPurchaseData(data);
-    this.resolveStatus(status);
-    this.saveStatus();
-  }
-
-  onGetPurchasesFailure(data) {
-    this.logDebug('Get purchases failed with', data);
-    console.error('Could not retreive purchases: ' + data.response.errorType, data);
-  }
-
-  getStatusFromPurchaseData(data) {
-    var activePurchase = data.response.details.some(d => {
-      return d.sku   === LicenseManager.SKU &&
-            (d.state === LicenseManager.STATE_ACTIVE ||
-             d.state === LicenseManager.STATE_PENDING);
-    });
-    return activePurchase ?
-      LicenseManager.STATUS_PRO :
-      LicenseManager.STATUS_NORMAL;
-  }
-
-  // --- Making Purchase
-
-  beginPurchaseTransaction() {
-    google.payments.inapp.buy(this.buyOptions);
-  }
-
-  onBuySuccess(data) {
-    this.logDebug('Buy succeded with', data);
-    // Note that it seems new purchases are not always reflected
-    // in the getPurchases API, so don't check them at this point
-    // but instead immediately grant the license. This may cause
-    // some issues with canceling, but the default will be to grant
-    // the license, which is the better fallback.
-    this.resolveStatus(LicenseManager.STATUS_PRO);
-    this.saveStatus();
-  }
-
-  onBuyFailure(data) {
-    this.logDebug('Buy failed with', data);
-    if (data[LicenseManager.CHECKOUT_ORDER_ID]) {
-      // It seems that this may be an inapp payements bug
-      // where it returns a checkoutOrderId in the failure
-      // callback. Still not 100% why this is happening but
-      // it may have to do with multiple Chrome logins. It
-      // appears that the charges go through, however, so
-      // grant the user pro status here.
-      this.onBuySuccess(data);
-    } else if (data.response && data.response.errorType !== LicenseManager.PURCHASE_CANCELED) {
-      console.error('Could not complete purchase: ' + data.response);
-    }
-  }
-
-  // --- Other
-
-  getGetPurchasesOptions() {
-    return Object.assign(this.getDefaultOptions(), {
-      'success': this.onGetPurchasesSuccess.bind(this),
-      'failure': this.onGetPurchasesFailure.bind(this)
-    });
-  }
-
-  getBuyOptions() {
-    return Object.assign(this.getDefaultOptions(), {
-      'sku':     LicenseManager.SKU,
-      'success': this.onBuySuccess.bind(this),
-      'failure': this.onBuyFailure.bind(this)
-    });
-  }
-
-  getDefaultOptions() {
-    return {
-      'parameters': {
-        'env': LicenseManager.ENVIRONMENT
-      }
-    };
-  }
-
-  logDebug(message, data) {
-    if (this.debugMode) {
-      console.log(message, data);
-    }
-  }
 }
 
 /*-------------------------] AlignmentManager [--------------------------*/
@@ -3118,14 +2843,6 @@ class ControlPanel extends DraggableElement {
     this.elementArea.renderBackgroundPosition(backgroundPosition);
   }
 
-  renderUpgradeStatus(pro, timeRemaining) {
-    this.settingsArea.renderUpgradeStatus(pro, timeRemaining);
-  }
-
-  renderUpgradeThankYou() {
-    this.settingsArea.renderUpgradeThankYou();
-  }
-
   // --- Other
 
   setNudgeMode(mode) {
@@ -3320,10 +3037,6 @@ class ControlPanelSettingsArea extends ControlPanelArea {
   static get AREA_BASIC_CLASS()    { return 'settings-area--basic';    }
   static get AREA_ADVANCED_CLASS() { return 'settings-area--advanced'; }
 
-  static get THANK_YOU_CLASS()     { return 'upgrade-prompt--thank-you';     }
-  static get TRIAL_ACTIVE_CLASS()  { return 'upgrade-prompt--trial-active';  }
-  static get TRIAL_EXPIRED_CLASS() { return 'upgrade-prompt--trial-expired'; }
-
   static get ONE_DAY()  { return 24 * 60 * 60 * 1000; }
   static get ONE_HOUR() { return 60 * 60 * 1000;      }
 
@@ -3336,41 +3049,16 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   constructor(panel, uiRoot) {
     super(panel, uiRoot, 'settings', ControlPanelSettingsArea.SIZES);
-    this.setupElements(uiRoot);
     this.setupButtons(uiRoot);
     this.setBasicMode();
   }
 
-  renderUpgradeStatus(pro, timeRemaining) {
-    if (pro) {
-      this.proBadge.show();
-    } else if (timeRemaining > 0) {
-      this.upgradePrompt.setState(ControlPanelSettingsArea.TRIAL_ACTIVE_CLASS);
-      this.upgradeTime.text(this.getTimeRemainingInWords(timeRemaining));
-    } else {
-      this.upgradePrompt.setState(ControlPanelSettingsArea.TRIAL_EXPIRED_CLASS);
-    }
-  }
-
-  renderUpgradeThankYou() {
-    this.upgradePrompt.setState(ControlPanelSettingsArea.THANK_YOU_CLASS);
-  }
-
   // === Private ===
-
-
-  setupElements(uiRoot) {
-    this.proBadge      = new Element(uiRoot.getElementById('pro-badge'));
-    this.upgradeTime   = new Element(uiRoot.getElementById('upgrade-time-remaining'));
-    this.upgradePrompt = new ElementWithState(uiRoot.getElementById('upgrade-prompt'));
-  }
 
   setupButtons(uiRoot) {
     this.setupButton(uiRoot, 'settings-tab-help', this.setHelpMode);
     this.setupButton(uiRoot, 'settings-tab-basic', this.setBasicMode);
     this.setupButton(uiRoot, 'settings-tab-advanced', this.setAdvancedMode);
-    this.setupButton(uiRoot, 'upgrade-button', this.onUpgradeButtonClick);
-    this.setupButton(uiRoot, 'payment-debug', this.onDebugButtonClick, true);
   }
 
   setHelpMode() {
@@ -3388,14 +3076,6 @@ class ControlPanelSettingsArea extends ControlPanelArea {
     this.setState(ControlPanelSettingsArea.AREA_ADVANCED_CLASS);
     this.setSize(this.sizes.default);
     this.panel.listener.onAdvancedSettingsClick();
-  }
-
-  onUpgradeButtonClick() {
-    this.panel.listener.onUpgradeClick();
-  }
-
-  onDebugButtonClick() {
-    this.panel.listener.onDebugClick();
   }
 
   getTimeRemainingInWords(ms) {
@@ -3418,8 +3098,6 @@ class ControlPanelSettingsArea extends ControlPanelArea {
 
   clearState() {
     super.clearState();
-    this.proBadge.hide();
-    this.upgradePrompt.clearState();
   }
 
 }
