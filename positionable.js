@@ -1355,12 +1355,17 @@ class OutputManager {
   getSelectorFromElement(element, fallback) {
     var el, type, selector;
 
-    el       = element.el;
+    el       = element.getTargetElement();
     type     = this.getSelectorType(el);
     selector = this.getSelectorForType(type, el);
 
     if (!selector && (fallback || type !== Settings.OUTPUT_SELECTOR_NONE)) {
-      selector = el.tagName.toLowerCase();
+      let tag = el.tagName.toLowerCase();
+      if (tag === 'input') {
+        selector = `input[type="${el.type}"]`;
+      } else {
+        selector = tag;
+      }
     }
     return selector;
   }
@@ -2308,7 +2313,7 @@ class PositionableElementManager {
       els = [];
     }
 
-    for(let i = 0, el; el = els[i]; i++) {
+    for (let el of els) {
       if (includeSelector || this.canAutoAddElement(el)) {
         this.elements.push(new PositionableElement(this, el));
       }
@@ -2612,7 +2617,7 @@ class DragTarget extends BrowserEventTarget {
 
   setupInteractiveElements() {
     var els = this.el.querySelectorAll(DragTarget.INTERACTIVE_ELEMENTS_SELECTOR);
-    for (let i = 0, el; el = els[i]; i++) {
+    for (let el of els) {
       var element = new BrowserEventTarget(el);
       element.stopPropagation('mousedown');
       element.stopPropagation('click');
@@ -4036,7 +4041,7 @@ class Settings {
   parseGroupingMap(str) {
     var lines = str.split('\n'), data = {};
     lines = lines.filter(l => l);
-    for (let i = 0, line; line = lines[i]; i++) {
+    for (let line of lines) {
       var match, key, val;
       match = line.match(/\s*([^:]+):\s*([^;]+)/);
       if (!match) {
@@ -4192,7 +4197,7 @@ class SettingsForm extends BrowserEventTarget {
       if (val) {
         switch (control.type) {
           case SettingsForm.SELECT_ONE:
-            for (var i = 0, option; option = control.options[i]; i++) {
+            for (let option of control.options) {
               if (option.value === val) {
                 option.selected = true;
               }
@@ -4303,7 +4308,7 @@ class SettingsForm extends BrowserEventTarget {
 
   getFirstControl() {
     var els = this.el.elements;
-    for (var i = 0, control; control = els[i]; i++) {
+    for (let control of els) {
       if (control.id) {
         return control;
       }
@@ -4312,7 +4317,7 @@ class SettingsForm extends BrowserEventTarget {
 
   forEachControl(fn) {
     var els = this.el.elements;
-    for (var i = 0, control; control = els[i]; i++) {
+    for (let control of els) {
       if (control.id) {
         fn(control);
       }
@@ -4355,7 +4360,7 @@ class LinkedSelect extends BrowserEventTarget {
   setup() {
     this.linked = {};
     var els = this.el.parentNode.querySelectorAll('[data-linked-option]');
-    for (var i = 0, el; el = els[i]; i++) {
+    for (let el of els) {
       this.linked[el.dataset.linkedOption] = new Element(el);
     }
     this.bindEvent('change', this.onChange);
@@ -4532,6 +4537,23 @@ class CopyAnimation extends Animation {
 
 /*-------------------------] PositionableElement [--------------------------*/
 
+const EMPTY_ELEMENT_TAGS = [
+  'AREA',
+  'BASE',
+  'BR',
+  'COL',
+  'EMBED',
+  'HR',
+  'IMG',
+  'INPUT',
+  'LINK',
+  'META',
+  'PARAM',
+  'SOURCE',
+  'TRACK',
+  'WBR',
+];
+
 class PositionableElement extends BrowserEventTarget {
 
   static get UI_FOCUSED_CLASS()   { return 'ui--focused';   }
@@ -4546,6 +4568,8 @@ class PositionableElement extends BrowserEventTarget {
     this.states   = [];
 
     this.setup();
+
+    return this.linkedInterface || this;
   }
 
   // --- Manipulation
@@ -4630,6 +4654,10 @@ class PositionableElement extends BrowserEventTarget {
   }
 
   // --- Other
+
+  getTargetElement() {
+    return this.linkedEl || this.el;
+  }
 
   getRotation() {
     return this.cssTransform.getRotation();
@@ -4733,7 +4761,11 @@ class PositionableElement extends BrowserEventTarget {
   setup() {
     this.setupEvents();
     this.setupInitialState();
-    this.injectInterface();
+    if (this.isEmptyElement()) {
+      this.createLinkedInterface();
+    } else {
+      this.injectInterface();
+    }
   }
 
   setupEvents() {
@@ -4748,6 +4780,28 @@ class PositionableElement extends BrowserEventTarget {
     this.cssZIndex = CSSZIndex.fromMatcher(matcher);
     this.cssTransform = CSSTransform.fromMatcher(matcher);
     this.cssBackgroundImage = CSSBackgroundImage.fromMatcher(matcher);
+  }
+
+  isEmptyElement() {
+    return EMPTY_ELEMENT_TAGS.includes(this.el.tagName);
+  }
+
+  createLinkedInterface() {
+    const { el } = this;
+    var style = window.getComputedStyle(el);
+    var div = document.createElement('div');
+    el.parentNode.append(div);
+    div.style.position = style.position;
+    div.style.top = style.top;
+    div.style.left = style.left;
+    div.style.width = style.width;
+    div.style.height = style.height;
+    div.style.margin = style.margin;
+    div.style.padding = style.padding;
+    div.style.border = style.border;
+    div.style.borderColor = 'transparent';
+    this.linkedInterface = new PositionableElement(this.listener, div);
+    this.linkedInterface.linkedEl = this.el;
   }
 
   injectInterface() {
@@ -5078,6 +5132,9 @@ class PositionableElement extends BrowserEventTarget {
 
   renderBox() {
     this.cssBox.render(this.el.style);
+    if (this.linkedEl) {
+      this.cssBox.render(this.linkedEl.style);
+    }
     if (this.isPeeking) {
       var p = this.getPeekDimensions();
       this.el.style.width  = p.x + 'px';
@@ -5087,6 +5144,9 @@ class PositionableElement extends BrowserEventTarget {
 
   renderTransform() {
     this.cssTransform.render(this.el.style);
+    if (this.linkedEl) {
+      this.cssTransform.render(this.linkedEl.style);
+    }
   }
 
   renderBackgroundPosition() {
@@ -7345,6 +7405,5 @@ function roundWithPrecision(n, precision) {
   var mult = Math.pow(10, precision);
   return Math.round(n * mult) / mult;
 }
-
 
 window.AppController = AppController;
