@@ -16,6 +16,7 @@
   },
   "globals": {
     "chrome": "readonly",
-    "google": "readonly"
+    "AppController": "readonly",
+    "ShadowDomInjector": "readonly"
   }
 }
