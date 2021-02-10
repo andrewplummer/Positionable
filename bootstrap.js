@@ -1,4 +1,4 @@
-(function() {
+(() => {
 
   if (window.appController) {
     window.appController.destroy();
@@ -6,13 +6,13 @@
     return;
   }
 
-  ShadowDomInjector.setBasePath(chrome.extension.getURL(''));
+  ShadowDomInjector.setBasePath(chrome.runtime.getURL(''));
   ShadowDomInjector.preload('element.html', 'element.css');
 
-  var injector = new ShadowDomInjector(document.body);
+  const injector = new ShadowDomInjector(document.body);
   injector.setTemplate('ui.html');
   injector.setStylesheet('ui.css');
-  injector.run(function(uiRoot) {
+  injector.run((uiRoot) => {
     window.appController = new AppController(uiRoot);
   });
 

@@ -1,40 +1,35 @@
 {
-
-  "manifest_version": 2,
-
+  "manifest_version": 3,
   "name": "Positionable!",
-  "version": "2.0.3",
-
+  "version": "2.0.4",
   "short_name": "Positionable",
   "description": "An extension for visually manipulating elements in the browser.",
   "offline_enabled": true,
-
   "icons": {
     "16":  "images/app/16.png",
     "32":  "images/app/32.png",
     "48":  "images/app/48.png",
     "128": "images/app/128.png"
   },
-
   "permissions": [
     "activeTab",
     "storage"
   ],
-
   "background": {
-    "persistent": false,
-    "scripts": ["background.js"]
+    "service_worker": "worker.js"
   },
-
-  "browser_action": {
+  "action": {
     "default_icon": "images/app/16.png",
     "default_title": "Positionable!"
   },
-
   "web_accessible_resources": [
-    "*.html",
-    "*.css",
-    "images/*"
+    {
+      "resources": ["*.html",
+        "*.css",
+        "images/*"
+      ],
+      "matches": [],
+      "extension_ids": []
+    }
   ]
-
 }

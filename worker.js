@@ -1,10 +1,9 @@
-
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.message == 'convert_image_url_to_data_url') {
-    var canvas = document.createElement('canvas');
-    var img = new Image();
-    img.addEventListener('load', function() {
-      var data;
+    const canvas = document.createElement('canvas');
+    const img = new Image();
+    img.addEventListener('load', () => {
+      let data;
       canvas.setAttribute('width', img.width);
       canvas.setAttribute('height', img.height);
       canvas.getContext('2d').drawImage(img, 0, 0);
@@ -16,7 +15,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       }
       sendResponse({ success: true, data: data });
     });
-    img.addEventListener('error', function() {
+    img.addEventListener('error', () => {
       sendResponse({ success: false, url: request.url });
     });
     img.src = request.url;
@@ -24,7 +23,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   return true;
 });
 
-chrome.browserAction.onClicked.addListener(function() {
+chrome.action.onClicked.addListener(() => {
   chrome.tabs.executeScript(null, {
     file: 'libs/buy.js'
   });
@@ -35,4 +34,3 @@ chrome.browserAction.onClicked.addListener(function() {
     file: 'bootstrap.js'
   });
 });
-
