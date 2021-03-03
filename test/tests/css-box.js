@@ -35,38 +35,38 @@ describe('CSSBox', function() {
 
   function assertDimensions(x, y) {
     var dim = box.getDimensions();
-    assert.equal(dim.x, x);
-    assert.equal(dim.y, y);
+    assertEqual(dim.x, x);
+    assertEqual(dim.y, y);
   }
 
   function assertDirectionNormal(x, y) {
     var dir = box.getDirectionNormal();
-    assert.equal(dir.x, x);
-    assert.equal(dir.y, y);
+    assertEqual(dir.x, x);
+    assertEqual(dir.y, y);
   }
 
   function assertCornerNormal(corner, x, y) {
     var normal = box.getCornerNormal(corner);
-    assert.equal(normal.x, x);
-    assert.equal(normal.y, y);
+    assertEqual(normal.x, x);
+    assertEqual(normal.y, y);
   }
 
   function assertAnchorNormal(corner, x, y) {
     var normal = box.getAnchorNormal(corner);
-    assert.equal(normal.x, x);
-    assert.equal(normal.y, y);
+    assertEqual(normal.x, x);
+    assertEqual(normal.y, y);
   }
 
   function assertXYPosition(x, y) {
     var origin = box.getXYPosition();
-    assert.equal(origin.x, x);
-    assert.equal(origin.y, y);
+    assertEqual(origin.x, x);
+    assertEqual(origin.y, y);
   }
 
   function assertAnchorOffset(corner, x, y) {
     var offset = box.getAnchorOffset(corner);
-    assert.equal(offset.x, x);
-    assert.equal(offset.y, y);
+    assertEqual(offset.x, x);
+    assertEqual(offset.y, y);
   }
 
   function assertUnrotatedAnchorPosition(corner, x, y) {
@@ -91,34 +91,34 @@ describe('CSSBox', function() {
 
   function assertRotatedAnchorPosition(corner, rotation, rotationOrigin, x, y) {
     var pos = box.getAnchorPosition(corner, rotation, rotationOrigin);
-    assert.equalWithTolerance(pos.x, x, .5);
-    assert.equalWithTolerance(pos.y, y, .5);
+    assertEqualWithTolerance(pos.x, x, .5);
+    assertEqualWithTolerance(pos.y, y, .5);
   }
 
   function assertConstrain(ratio, corner, offsetX, offsetY, horizontal, vertical, width, height) {
     var newBox = box.clone();
     newBox.resize(offsetX, offsetY, corner);
     newBox.constrain(ratio, corner);
-    assert.equal(newBox.cssH.px,      horizontal);
-    assert.equal(newBox.cssV.px,      vertical);
-    assert.equal(newBox.cssWidth.px,  width);
-    assert.equal(newBox.cssHeight.px, height);
+    assertEqual(newBox.cssH.px,      horizontal);
+    assertEqual(newBox.cssV.px,      vertical);
+    assertEqual(newBox.cssWidth.px,  width);
+    assertEqual(newBox.cssHeight.px, height);
   }
 
   function assertRender(left, top, width, height) {
     box.render(el.style);
-    assert.equal(el.style.left,   left);
-    assert.equal(el.style.top,    top);
-    assert.equal(el.style.width,  width);
-    assert.equal(el.style.height, height);
+    assertEqual(el.style.left,   left);
+    assertEqual(el.style.top,    top);
+    assertEqual(el.style.width,  width);
+    assertEqual(el.style.height, height);
   }
 
   function assertInvertedRender(right, bottom, width, height) {
     box.render(el.style);
-    assert.equal(el.style.right,  right);
-    assert.equal(el.style.bottom, bottom);
-    assert.equal(el.style.width,  width);
-    assert.equal(el.style.height, height);
+    assertEqual(el.style.right,  right);
+    assertEqual(el.style.bottom, bottom);
+    assertEqual(el.style.width,  width);
+    assertEqual(el.style.height, height);
   }
 
   // --- Dimensions
@@ -637,10 +637,10 @@ describe('CSSBox', function() {
     setupBox(100, 100, 150, 150);
     var decs = [];
     box.appendCSSDeclarations(decs);
-    assert.equal(decs[0], 'top: 100px;');
-    assert.equal(decs[1], 'left: 100px;');
-    assert.equal(decs[2], 'width: 150px;');
-    assert.equal(decs[3], 'height: 150px;');
+    assertEqual(decs[0], 'top: 100px;');
+    assertEqual(decs[1], 'left: 100px;');
+    assertEqual(decs[2], 'width: 150px;');
+    assertEqual(decs[3], 'height: 150px;');
   });
 
   // --- Snapping
@@ -648,28 +648,28 @@ describe('CSSBox', function() {
   it('should snap position', function() {
     setupBox(108, 122, 143, 129);
     box.snapPosition(10, 10);
-    assert.equal(box.cssH.px,      110);
-    assert.equal(box.cssV.px,      120);
-    assert.equal(box.cssWidth.px,  143);
-    assert.equal(box.cssHeight.px, 129);
+    assertEqual(box.cssH.px,      110);
+    assertEqual(box.cssV.px,      120);
+    assertEqual(box.cssWidth.px,  143);
+    assertEqual(box.cssHeight.px, 129);
   });
 
   it('should snap dimensions', function() {
     setupBox(108, 122, 143, 129);
     box.snapDimensions(10, 10);
-    assert.equal(box.cssH.px,      108);
-    assert.equal(box.cssV.px,      122);
-    assert.equal(box.cssWidth.px,  140);
-    assert.equal(box.cssHeight.px, 130);
+    assertEqual(box.cssH.px,      108);
+    assertEqual(box.cssV.px,      122);
+    assertEqual(box.cssWidth.px,  140);
+    assertEqual(box.cssHeight.px, 130);
   });
 
   it('should not snap less than 1', function() {
     setupBox(108, 122, 143, 129);
     box.snapDimensions(1, -5);
-    assert.equal(box.cssH.px,      108);
-    assert.equal(box.cssV.px,      122);
-    assert.equal(box.cssWidth.px,  143);
-    assert.equal(box.cssHeight.px, 129);
+    assertEqual(box.cssH.px,      108);
+    assertEqual(box.cssV.px,      122);
+    assertEqual(box.cssWidth.px,  143);
+    assertEqual(box.cssHeight.px, 129);
   });
 
   // --- Other
@@ -677,40 +677,40 @@ describe('CSSBox', function() {
   it('should be able to clone itself', function() {
     setupBox();
     var clone = box.clone();
-    assert.equal(clone.cssH.px,      100);
-    assert.equal(clone.cssV.px,      100);
-    assert.equal(clone.cssWidth.px,  100);
-    assert.equal(clone.cssHeight.px, 100);
+    assertEqual(clone.cssH.px,      100);
+    assertEqual(clone.cssV.px,      100);
+    assertEqual(clone.cssWidth.px,  100);
+    assertEqual(clone.cssHeight.px, 100);
   });
 
   it('should get its ratio', function() {
     setupBox(100, 100, 100, 50);
-    assert.equal(box.getRatio(), 2);
+    assertEqual(box.getRatio(), 2);
   });
 
   it('should get the ratio of an inverted box', function() {
     setupInvertedBox(100, 100, 120, 40);
-    assert.equal(box.getRatio(), 3);
+    assertEqual(box.getRatio(), 3);
   });
 
   it('should not fail to get the ratio when the dimensions are 0', function() {
     setupInvertedBox(100, 100, 0, 0);
-    assert.equal(box.getRatio(), 0);
+    assertEqual(box.getRatio(), 0);
   });
 
   it('should validate a reflected box to become a normal one', function() {
     setupBox(200, 200, -100, -100);
     box.validate();
-    assert.equal(box.cssH.px,      100);
-    assert.equal(box.cssV.px,      100);
-    assert.equal(box.cssWidth.px,  100);
-    assert.equal(box.cssHeight.px, 100);
+    assertEqual(box.cssH.px,      100);
+    assertEqual(box.cssV.px,      100);
+    assertEqual(box.cssWidth.px,  100);
+    assertEqual(box.cssHeight.px, 100);
   });
 
   it('should get its position header', function() {
     setupBox(100, 100, 150, 150);
-    assert.equal(box.getPositionHeader(), '100px, 100px');
-    assert.equal(box.getDimensionsHeader(), '150px, 150px');
+    assertEqual(box.getPositionHeader(), '100px, 100px');
+    assertEqual(box.getDimensionsHeader(), '150px, 150px');
   });
 
 });

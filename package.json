@@ -1,0 +1,7 @@
+{
+  "name": "Positionable!",
+  "author": "Andrew Plummer <plummer.andrew@gmail.com>",
+  "devDependencies": {
+    "ready-test": "^1.1.0"
+  }
+}

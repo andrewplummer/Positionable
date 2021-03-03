@@ -31,7 +31,7 @@ describe('BrowserEventTarget', function() {
     setupDivTarget();
     target.bindEvent('click', target.onClick);
     clickElement(el);
-    assert.equal(target.clicked, true);
+    assertEqual(target.clicked, true);
   });
 
   it('should work with multiple events', function() {
@@ -40,8 +40,8 @@ describe('BrowserEventTarget', function() {
     target.bindEvent('mousedown', target.onMouseDown);
     clickElement(el);
     fireMouseDown(el);
-    assert.equal(target.clicked, true);
-    assert.equal(target.mousedown, true);
+    assertEqual(target.clicked, true);
+    assertEqual(target.mousedown, true);
   });
 
   it('should allow removing all event listeners', function() {
@@ -51,8 +51,8 @@ describe('BrowserEventTarget', function() {
     target.removeAllListeners();
     clickElement(el);
     fireMouseDown(el);
-    assert.equal(target.clicked, false);
-    assert.equal(target.mousedown, false);
+    assertEqual(target.clicked, false);
+    assertEqual(target.mousedown, false);
   });
 
 });

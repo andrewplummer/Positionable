@@ -43,15 +43,15 @@ describe('ResizeHandle', function() {
 
   function assertCursor(corner, rotation, expected) {
     var handle = createHandle(corner);
-    assert.equal(handle.getCursor(rotation), expected);
+    assertEqual(handle.getCursor(rotation), expected);
   }
 
   it('should fire resize handle events', function() {
     var handle = createHandle('se');
     dragElement(handle.el, 200, 200, 300, 250);
-    assert.equal(listener.lastEventDrag.x, 100);
-    assert.equal(listener.lastEventDrag.y, 50);
-    assert.equal(listener.lastEventHandle.corner, 'se');
+    assertEqual(listener.lastEventDrag.x, 100);
+    assertEqual(listener.lastEventDrag.y, 50);
+    assertEqual(listener.lastEventHandle.corner, 'se');
   });
 
   it('should be able to get the correct cursor for rotation', function() {

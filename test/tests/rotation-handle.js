@@ -47,19 +47,19 @@ describe('RotationHandle', function() {
     }
     // Convert grads to degrees
     deg = grad * 360 / 400;
-    assert.equal(handle.getCursor(deg), expected);
+    assertEqual(handle.getCursor(deg), expected);
   }
 
   it('should fire rotation handle events', function() {
     dragElement(handle.el, 100, 100, 50, 100);
-    assert.equal(listener.lastDragMove.clientX, 50);
-    assert.equal(listener.lastDragMove.clientY, 100);
+    assertEqual(listener.lastDragMove.clientX, 50);
+    assertEqual(listener.lastDragMove.clientY, 100);
   });
 
   it('should fire drag intent events', function() {
     dragElement(handle.el, 100, 100, 50, 100);
-    assert.equal(listener.handleStartIntents, 1);
-    assert.equal(listener.handleStopIntents, 1);
+    assertEqual(listener.handleStartIntents, 1);
+    assertEqual(listener.handleStopIntents, 1);
   });
 
   it('should be able to get the correct cursor for rotation', function() {

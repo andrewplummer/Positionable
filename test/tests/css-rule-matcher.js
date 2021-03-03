@@ -13,11 +13,11 @@ describe('CSSRuleMatcher', function() {
   }
 
   function assertInitial(matcher, prop, val) {
-    assert.equal(matcher.getProperty(prop).isInitial(), val);
+    assertEqual(matcher.getProperty(prop).isInitial(), val);
   }
 
   function assertValue(matcher, prop, val) {
-    assert.equal(matcher.getValue(prop), val);
+    assertEqual(matcher.getValue(prop), val);
   }
 
   it('should be able to get basic values', function() {

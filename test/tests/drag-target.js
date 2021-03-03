@@ -77,10 +77,10 @@ describe('DragTarget', function() {
     setupStatic();
     dragElement(el, 50, 100, 250, 350);
 
-    assert.equal(target.lastDragEvent.drag.x, 200);
-    assert.equal(target.lastDragEvent.drag.y, 250);
-    assert.equal(target.lastDragEvent.drag.origin.clientX, 50);
-    assert.equal(target.lastDragEvent.drag.origin.clientY, 100);
+    assertEqual(target.lastDragEvent.drag.x, 200);
+    assertEqual(target.lastDragEvent.drag.y, 250);
+    assertEqual(target.lastDragEvent.drag.origin.clientX, 50);
+    assertEqual(target.lastDragEvent.drag.origin.clientY, 100);
   });
 
   it('should trigger click if no drag detected', function() {
@@ -88,8 +88,8 @@ describe('DragTarget', function() {
     fireMouseDown(el, 50, 100);
     fireDocumentMouseUp(50, 100);
 
-    assert.isUndefined(target.lastDragEvent);
-    assert.equal(target.clicked, true);
+    assertUndefined(target.lastDragEvent);
+    assertEqual(target.clicked, true);
   });
 
   it('should correctly set origin event data while scrolled', function() {
@@ -97,12 +97,12 @@ describe('DragTarget', function() {
     whileScrolled(500, () => {
       setupAbsolute();
       dragElement(el, 50, 50, 50, 100);
-      assert.equal(target.lastDragEvent.drag.x, 0);
-      assert.equal(target.lastDragEvent.drag.y, 50);
-      assert.equal(target.lastDragEvent.drag.origin.pageX, 50);
-      assert.equal(target.lastDragEvent.drag.origin.pageY, 550);
-      assert.equal(target.lastDragEvent.drag.origin.clientX, 50);
-      assert.equal(target.lastDragEvent.drag.origin.clientY, 50);
+      assertEqual(target.lastDragEvent.drag.x, 0);
+      assertEqual(target.lastDragEvent.drag.y, 50);
+      assertEqual(target.lastDragEvent.drag.origin.pageX, 50);
+      assertEqual(target.lastDragEvent.drag.origin.pageY, 550);
+      assertEqual(target.lastDragEvent.drag.origin.clientX, 50);
+      assertEqual(target.lastDragEvent.drag.origin.clientY, 50);
     });
 
   });
@@ -116,15 +116,15 @@ describe('DragTarget', function() {
       target.onScroll();
     });
     fireDocumentMouseUp(50, 50);
-    assert.equal(target.lastDragEvent.drag.x, 0);
-    assert.equal(target.lastDragEvent.drag.y, 500);
+    assertEqual(target.lastDragEvent.drag.x, 0);
+    assertEqual(target.lastDragEvent.drag.y, 500);
 
   });
 
   it('should set dragging to false before firing onDragStop', function() {
     setupStatic();
     target.onDragStop = () => {
-      assert.equal(target.dragging, false);
+      assertEqual(target.dragging, false);
     };
     dragElement(el, 50, 50, 100, 100);
   });
@@ -133,11 +133,11 @@ describe('DragTarget', function() {
     setupStatic();
 
     fireMouseOver(el);
-    assert.equal(target.startIntents, 1);
-    assert.equal(target.stopIntents, 0);
+    assertEqual(target.startIntents, 1);
+    assertEqual(target.stopIntents, 0);
     fireMouseOut(el);
-    assert.equal(target.startIntents, 1);
-    assert.equal(target.stopIntents, 1);
+    assertEqual(target.startIntents, 1);
+    assertEqual(target.stopIntents, 1);
 
   });
 
@@ -173,14 +173,14 @@ describe('DragTarget', function() {
     // 1 stop event fired here.
     fireDocumentMouseUp(300, 300);
 
-    assert.equal(target.startIntents, 3);
-    assert.equal(target.stopIntents, 3);
+    assertEqual(target.startIntents, 3);
+    assertEqual(target.stopIntents, 3);
   });
 
   it('should not follow links on click', function() {
     setupLink('#foo');
     clickElement(el);
-    assert.equal(window.location.hash, '');
+    assertEqual(window.location.hash, '');
   });
 
   it('should not allow dragging from text or form controls', function() {
@@ -220,18 +220,18 @@ describe('DragTarget', function() {
     dragElement(label,  0, 0, 50, 50);
     dragElement(select, 0, 0, 50, 50);
 
-    assert.isUndefined(target.lastDragEvent);
+    assertUndefined(target.lastDragEvent);
   });
 
   it('should disable user selection on mousedown and throughout drag', function() {
     setupAbsolute();
-    assert.equal(document.documentElement.style.userSelect, '');
+    assertEqual(document.documentElement.style.userSelect, '');
     fireMouseDown(el, 50, 50);
-    assert.equal(document.documentElement.style.userSelect, 'none');
+    assertEqual(document.documentElement.style.userSelect, 'none');
     fireDocumentMouseMove(50, 100);
-    assert.equal(document.documentElement.style.userSelect, 'none');
+    assertEqual(document.documentElement.style.userSelect, 'none');
     fireDocumentMouseUp(50, 100);
-    assert.equal(document.documentElement.style.userSelect, '');
+    assertEqual(document.documentElement.style.userSelect, '');
   });
 
   it('should reset the drag when ctrl key depressed', function() {
@@ -246,8 +246,8 @@ describe('DragTarget', function() {
       [50, 100, true]
     ]);
 
-    assert.equal(target.dragStarts, 2);
-    assert.equal(target.dragStops, 2);
+    assertEqual(target.dragStarts, 2);
+    assertEqual(target.dragStops, 2);
   });
 
   it('should reset the drag when meta key depressed', function() {
@@ -262,8 +262,8 @@ describe('DragTarget', function() {
       [50, 100, true]
     ]);
 
-    assert.equal(target.dragStarts, 2);
-    assert.equal(target.dragStops, 2);
+    assertEqual(target.dragStarts, 2);
+    assertEqual(target.dragStops, 2);
   });
 
   it('should reset the drag when meta key depressed after scroll', function() {
@@ -278,15 +278,15 @@ describe('DragTarget', function() {
     fireDocumentMetaMouseMove(100, 600);
     fireDocumentMetaMouseUp(100, 600);
 
-    assert.equal(target.lastDragEvent.drag.x, 50);
-    assert.equal(target.lastDragEvent.drag.y, 50);
+    assertEqual(target.lastDragEvent.drag.x, 50);
+    assertEqual(target.lastDragEvent.drag.y, 50);
   });
 
   it('should trigger double click', function() {
     setupStatic();
     target.setupDoubleClick();
     fireDoubleClick(el, 100, 100);
-    assert.equal(target.doubleClicked, true);
+    assertEqual(target.doubleClicked, true);
   });
 
   it('should trigger double click with ctrl key', function() {
@@ -294,7 +294,7 @@ describe('DragTarget', function() {
     target.setupDoubleClick();
     ctrlClickElement(el, 100, 100);
     ctrlClickElement(el, 100, 100);
-    assert.equal(target.doubleClicked, true);
+    assertEqual(target.doubleClicked, true);
   });
 
   it('should not trigger double click after drag started', function() {
@@ -302,7 +302,7 @@ describe('DragTarget', function() {
     target.setupDoubleClick();
     ctrlDragElement(el, 100, 100, 200, 200);
     ctrlDragElement(el, 100, 100, 200, 200);
-    assert.equal(target.doubleClicked, false);
+    assertEqual(target.doubleClicked, false);
   });
 
 });

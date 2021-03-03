@@ -5148,9 +5148,7 @@ class SpriteRecognizer {
     context = canvas.getContext('2d');
     context.drawImage(img, 0, 0);
     this.pixelData = context.getImageData(0, 0, img.width, img.height).data;
-    this.width  = img.width;
-    this.height = img.height;
-    this.map = new Array(this.width * this.height);
+    this.map = new Array(img.width * img.height);
   }
 
   // --- Testing Pixels
@@ -5179,12 +5177,12 @@ class SpriteRecognizer {
   }
 
   isValidPixel(pixel) {
-    return pixel.x >= 0 && pixel.x < this.width &&
-           pixel.y >= 0 && pixel.y < this.height;
+    return pixel.x >= 0 && pixel.x < this.img.width &&
+           pixel.y >= 0 && pixel.y < this.img.height;
   }
 
   getAlphaForPixel(pixel) {
-    return this.pixelData[(this.width * pixel.y + pixel.x) * 4 + 3];
+    return this.pixelData[(this.img.width * pixel.y + pixel.x) * 4 + 3];
   }
 
   // --- Pixel Map
@@ -5202,7 +5200,7 @@ class SpriteRecognizer {
   }
 
   getPixelIndex(pixel) {
-    return this.width * pixel.y + pixel.x;
+    return this.img.width * pixel.y + pixel.x;
   }
 
 }

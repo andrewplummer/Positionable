@@ -84,17 +84,17 @@ describe('PositionableElement', function() {
 
   it('should set initial state from stylesheet', function() {
     setupBox();
-    assert.equal(element.cssBox.cssH.px, 100);
-    assert.equal(element.cssBox.cssV.px, 100);
-    assert.equal(element.cssBox.cssWidth.px, 100);
-    assert.equal(element.cssBox.cssHeight.px, 100);
-    assert.equal(element.cssZIndex.cssValue.val, 0);
-    assert.equal(element.getRotation(), 0);
+    assertEqual(element.cssBox.cssH.px, 100);
+    assertEqual(element.cssBox.cssV.px, 100);
+    assertEqual(element.cssBox.cssWidth.px, 100);
+    assertEqual(element.cssBox.cssHeight.px, 100);
+    assertEqual(element.cssZIndex.cssValue.val, 0);
+    assertEqual(element.getRotation(), 0);
   });
 
   it('more specific styles should take precedence', function() {
     setupBox('z-box');
-    assert.equal(element.cssZIndex.cssValue.val, 400);
+    assertEqual(element.cssZIndex.cssValue.val, 400);
   });
 
   it('inline styles should take precedence', function() {
@@ -106,21 +106,21 @@ describe('PositionableElement', function() {
     el.style.zIndex = '5';
     el.style.transform = 'translate(100px, 100px) rotate(45deg)';
     element = new PositionableElement(listener, el);
-    assert.equal(element.cssBox.cssH.px, 100);
-    assert.equal(element.cssBox.cssV.px, 100);
-    assert.equal(element.cssBox.cssWidth.px, 100);
-    assert.equal(element.cssBox.cssHeight.px, 100);
-    assert.equal(element.cssZIndex.cssValue.val, 5);
-    assert.equal(element.getRotation(), 45);
-    assert.equal(element.cssTransform.getTranslation().x, 100);
-    assert.equal(element.cssTransform.getTranslation().y, 100);
+    assertEqual(element.cssBox.cssH.px, 100);
+    assertEqual(element.cssBox.cssV.px, 100);
+    assertEqual(element.cssBox.cssWidth.px, 100);
+    assertEqual(element.cssBox.cssHeight.px, 100);
+    assertEqual(element.cssZIndex.cssValue.val, 5);
+    assertEqual(element.getRotation(), 45);
+    assertEqual(element.cssTransform.getTranslation().x, 100);
+    assertEqual(element.cssTransform.getTranslation().y, 100);
   });
 
   it('should force static elements to relative on init', function() {
     setupBox('static-box');
-    assert.equal(el.style.position, 'relative');
+    assertEqual(el.style.position, 'relative');
     element.destroy();
-    assert.equal(el.style.position, '');
+    assertEqual(el.style.position, '');
   });
 
   // --- Moving
@@ -129,16 +129,16 @@ describe('PositionableElement', function() {
     setupBox();
     element.pushState();
     element.move(100, 100);
-    assert.equal(el.style.left, '200px');
-    assert.equal(el.style.top, '200px');
+    assertEqual(el.style.left, '200px');
+    assertEqual(el.style.top, '200px');
   });
 
   it('should constrain position', function() {
     setupBox();
     element.pushState();
     element.move(100, 60, true);
-    assert.equal(el.style.left, '200px');
-    assert.equal(el.style.top, '100px');
+    assertEqual(el.style.left, '200px');
+    assertEqual(el.style.top, '100px');
   });
 
   // --- Background Moving
@@ -147,14 +147,14 @@ describe('PositionableElement', function() {
     setupBox('background-box');
     element.pushState();
     element.moveBackground(200, 200);
-    assert.equal(el.style.backgroundPosition,  '220px 240px');
+    assertEqual(el.style.backgroundPosition,  '220px 240px');
   });
 
   it('should be able to move the background image on a rotated box', function() {
     setupBox('background-box rotate-box');
     element.pushState();
     element.moveBackground(100, 100);
-    assert.equal(el.style.backgroundPosition,  '161px 40px');
+    assertEqual(el.style.backgroundPosition,  '161px 40px');
   });
 
   // --- Resizing
@@ -163,37 +163,37 @@ describe('PositionableElement', function() {
     setupBox();
     element.pushState();
     element.resize(30, 80, 'se');
-    assert.equal(el.style.left,   '100px');
-    assert.equal(el.style.top,    '100px');
-    assert.equal(el.style.width,  '130px');
-    assert.equal(el.style.height, '180px');
+    assertEqual(el.style.left,   '100px');
+    assertEqual(el.style.top,    '100px');
+    assertEqual(el.style.width,  '130px');
+    assertEqual(el.style.height, '180px');
   });
 
   it('should resize by positioned edges', function() {
     setupBox();
     element.pushState();
     element.resize(30, 80, 'nw');
-    assert.equal(el.style.left,   '130px');
-    assert.equal(el.style.top,    '180px');
-    assert.equal(el.style.width,  '70px');
-    assert.equal(el.style.height, '20px');
+    assertEqual(el.style.left,   '130px');
+    assertEqual(el.style.top,    '180px');
+    assertEqual(el.style.width,  '70px');
+    assertEqual(el.style.height, '20px');
   });
 
   it('should constrain resize', function() {
     setupBox();
     element.pushState();
     element.resize(200, 100, 'se', true);
-    assert.equal(el.style.left,   '100px');
-    assert.equal(el.style.top,    '100px');
-    assert.equal(el.style.width,  '200px');
-    assert.equal(el.style.height, '200px');
+    assertEqual(el.style.left,   '100px');
+    assertEqual(el.style.top,    '100px');
+    assertEqual(el.style.width,  '200px');
+    assertEqual(el.style.height, '200px');
   });
 
   it('should receive correct resize events', function() {
     setupBox();
     dragElement(getUiElement(el, '.resize-handle-sw'), 200, 200, 300, 300);
-    assert.equal(listener.lastEventResizeDrag.x, 100);
-    assert.equal(listener.lastEventResizeDrag.y, 100);
+    assertEqual(listener.lastEventResizeDrag.x, 100);
+    assertEqual(listener.lastEventResizeDrag.y, 100);
   });
 
   // --- Rotating
@@ -204,7 +204,7 @@ describe('PositionableElement', function() {
     element = new PositionableElement(listener, el);
     element.pushState();
     element.rotate(45);
-    assert.equal(el.style.transform, 'rotate(90deg)');
+    assertEqual(el.style.transform, 'rotate(90deg)');
   });
 
   it('should constrain rotation', function() {
@@ -213,7 +213,7 @@ describe('PositionableElement', function() {
     element = new PositionableElement(listener, el);
     element.pushState();
     element.rotate(55, true);
-    assert.equal(el.style.transform, 'rotate(75deg)');
+    assertEqual(el.style.transform, 'rotate(75deg)');
   });
 
   // --- Undo
@@ -238,51 +238,51 @@ describe('PositionableElement', function() {
     element.move(100, 100);
 
     // Check state 5 (last)
-    assert.equal(el.style.top,  '300px');
-    assert.equal(el.style.left, '300px');
-    assert.equal(el.style.width, '130px');
-    assert.equal(el.style.height, '180px');
-    assert.equal(el.style.transform, 'rotate(45deg)');
+    assertEqual(el.style.top,  '300px');
+    assertEqual(el.style.left, '300px');
+    assertEqual(el.style.width, '130px');
+    assertEqual(el.style.height, '180px');
+    assertEqual(el.style.transform, 'rotate(45deg)');
 
     // Undo and check state 4
     element.undo();
-    assert.equal(el.style.top,  '200px');
-    assert.equal(el.style.left, '200px');
-    assert.equal(el.style.width, '130px');
-    assert.equal(el.style.height, '180px');
-    assert.equal(el.style.transform, 'rotate(45deg)');
+    assertEqual(el.style.top,  '200px');
+    assertEqual(el.style.left, '200px');
+    assertEqual(el.style.width, '130px');
+    assertEqual(el.style.height, '180px');
+    assertEqual(el.style.transform, 'rotate(45deg)');
 
     // Undo and check state 3
     element.undo();
-    assert.equal(el.style.top,  '200px');
-    assert.equal(el.style.left, '200px');
-    assert.equal(el.style.width, '130px');
-    assert.equal(el.style.height, '180px');
-    assert.equal(el.style.transform, '');
+    assertEqual(el.style.top,  '200px');
+    assertEqual(el.style.left, '200px');
+    assertEqual(el.style.width, '130px');
+    assertEqual(el.style.height, '180px');
+    assertEqual(el.style.transform, '');
 
     // Undo and check state 2
     element.undo();
-    assert.equal(el.style.top,  '200px');
-    assert.equal(el.style.left, '200px');
-    assert.equal(el.style.width, '100px');
-    assert.equal(el.style.height, '100px');
-    assert.equal(el.style.transform, '');
+    assertEqual(el.style.top,  '200px');
+    assertEqual(el.style.left, '200px');
+    assertEqual(el.style.width, '100px');
+    assertEqual(el.style.height, '100px');
+    assertEqual(el.style.transform, '');
 
     // Undo and check state 1
     element.undo();
-    assert.equal(el.style.top,  '100px');
-    assert.equal(el.style.left, '100px');
-    assert.equal(el.style.width, '100px');
-    assert.equal(el.style.height, '100px');
-    assert.equal(el.style.transform, '');
+    assertEqual(el.style.top,  '100px');
+    assertEqual(el.style.left, '100px');
+    assertEqual(el.style.width, '100px');
+    assertEqual(el.style.height, '100px');
+    assertEqual(el.style.transform, '');
 
     // First state reached, check no operation
     element.undo();
-    assert.equal(el.style.top,  '100px');
-    assert.equal(el.style.left, '100px');
-    assert.equal(el.style.width, '100px');
-    assert.equal(el.style.height, '100px');
-    assert.equal(el.style.transform, '');
+    assertEqual(el.style.top,  '100px');
+    assertEqual(el.style.left, '100px');
+    assertEqual(el.style.width, '100px');
+    assertEqual(el.style.height, '100px');
+    assertEqual(el.style.transform, '');
 
   });
 
@@ -291,10 +291,10 @@ describe('PositionableElement', function() {
 
     element.pushState();
     element.moveBackground(200, 200);
-    assert.equal(el.style.backgroundPosition,  '220px 240px');
+    assertEqual(el.style.backgroundPosition,  '220px 240px');
 
     element.undo();
-    assert.equal(el.style.backgroundPosition,  '20px 40px');
+    assertEqual(el.style.backgroundPosition,  '20px 40px');
 
   });
 
@@ -303,25 +303,25 @@ describe('PositionableElement', function() {
 
     element.pushState();
     element.rotate(45);
-    assert.equal(el.style.transform,  'rotate(45deg)');
+    assertEqual(el.style.transform,  'rotate(45deg)');
 
     element.pushState();
     element.resize(20, 20, 'nw');
-    assert.equal(el.style.transform,  'translate(-10px, 4.14px) rotate(45deg)');
-    assert.equal(el.style.top,  '120px');
-    assert.equal(el.style.left, '120px');
-    assert.equal(el.style.width, '80px');
-    assert.equal(el.style.height, '80px');
+    assertEqual(el.style.transform,  'translate(-10px, 4.14px) rotate(45deg)');
+    assertEqual(el.style.top,  '120px');
+    assertEqual(el.style.left, '120px');
+    assertEqual(el.style.width, '80px');
+    assertEqual(el.style.height, '80px');
 
     element.undo();
-    assert.equal(el.style.transform,  'rotate(45deg)');
-    assert.equal(el.style.top,  '100px');
-    assert.equal(el.style.left, '100px');
-    assert.equal(el.style.width, '100px');
-    assert.equal(el.style.height, '100px');
+    assertEqual(el.style.transform,  'rotate(45deg)');
+    assertEqual(el.style.top,  '100px');
+    assertEqual(el.style.left, '100px');
+    assertEqual(el.style.width, '100px');
+    assertEqual(el.style.height, '100px');
 
     element.undo();
-    assert.equal(el.style.transform,  '');
+    assertEqual(el.style.transform,  '');
 
   });
 
@@ -331,10 +331,10 @@ describe('PositionableElement', function() {
     setupBox('background-box');
 
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
-    assert.equal(el.style.top,    '141px');
-    assert.equal(el.style.left,   '121px');
-    assert.equal(el.style.width,  '2px');
-    assert.equal(el.style.height, '2px');
+    assertEqual(el.style.top,    '141px');
+    assertEqual(el.style.left,   '121px');
+    assertEqual(el.style.width,  '2px');
+    assertEqual(el.style.height, '2px');
   });
 
   // --- Peeking
@@ -342,15 +342,15 @@ describe('PositionableElement', function() {
   it('should allow peeking on an element with a background', function() {
     setupBox('background-box');
     element.setPeekMode(true);
-    assert.equal(el.style.width, '500px');
-    assert.equal(el.style.height, '500px');
+    assertEqual(el.style.width, '500px');
+    assertEqual(el.style.height, '500px');
   });
 
   it('should not allow peeking on an element with no background', function() {
     setupBox();
     element.setPeekMode(true);
-    assert.equal(el.style.width, '');
-    assert.equal(el.style.height, '');
+    assertEqual(el.style.width, '');
+    assertEqual(el.style.height, '');
   });
 
   it('should be able to move while peeking', function() {
@@ -358,28 +358,28 @@ describe('PositionableElement', function() {
 
     element.pushState();
     element.move(100, 100);
-    assert.equal(el.style.top,    '200px');
-    assert.equal(el.style.left,   '200px');
+    assertEqual(el.style.top,    '200px');
+    assertEqual(el.style.left,   '200px');
 
     element.setPeekMode(true);
-    assert.equal(el.style.width,  '500px');
-    assert.equal(el.style.height, '500px');
+    assertEqual(el.style.width,  '500px');
+    assertEqual(el.style.height, '500px');
 
     element.setPeekMode(false);
-    assert.equal(el.style.width,  '100px');
-    assert.equal(el.style.height, '100px');
+    assertEqual(el.style.width,  '100px');
+    assertEqual(el.style.height, '100px');
 
     element.setPeekMode(true);
-    assert.equal(el.style.width,  '500px');
-    assert.equal(el.style.height, '500px');
+    assertEqual(el.style.width,  '500px');
+    assertEqual(el.style.height, '500px');
 
     element.move(200, 200);
     element.setPeekMode(false);
 
-    assert.equal(el.style.top,    '300px');
-    assert.equal(el.style.left,   '300px');
-    assert.equal(el.style.width,  '100px');
-    assert.equal(el.style.height, '100px');
+    assertEqual(el.style.top,    '300px');
+    assertEqual(el.style.left,   '300px');
+    assertEqual(el.style.width,  '100px');
+    assertEqual(el.style.height, '100px');
   });
 
   it('should be able to resize while peeking', function() {
@@ -391,10 +391,10 @@ describe('PositionableElement', function() {
     element.resize(30, 80, 'se');
     element.setPeekMode(false);
 
-    assert.equal(el.style.left,   '100px');
-    assert.equal(el.style.top,    '100px');
-    assert.equal(el.style.width,  '530px');
-    assert.equal(el.style.height, '580px');
+    assertEqual(el.style.left,   '100px');
+    assertEqual(el.style.top,    '100px');
+    assertEqual(el.style.width,  '530px');
+    assertEqual(el.style.height, '580px');
   });
 
   it('should be able to snap while peeking', function() {
@@ -404,10 +404,10 @@ describe('PositionableElement', function() {
     fireDoubleClick(getUiElement(el, '.position-handle'), 121, 141);
     element.setPeekMode(false);
 
-    assert.equal(el.style.top,    '141px');
-    assert.equal(el.style.left,   '121px');
-    assert.equal(el.style.width,  '2px');
-    assert.equal(el.style.height, '2px');
+    assertEqual(el.style.top,    '141px');
+    assertEqual(el.style.left,   '121px');
+    assertEqual(el.style.width,  '2px');
+    assertEqual(el.style.height, '2px');
   });
 
   it('should be able to get back to initial state after peeking', function() {
@@ -419,16 +419,16 @@ describe('PositionableElement', function() {
     element.resize(30, 80, 'se');
 
     element.undo();
-    assert.equal(el.style.top,    '100px');
-    assert.equal(el.style.left,   '100px');
-    assert.equal(el.style.width,  '500px');
-    assert.equal(el.style.height, '500px');
+    assertEqual(el.style.top,    '100px');
+    assertEqual(el.style.left,   '100px');
+    assertEqual(el.style.width,  '500px');
+    assertEqual(el.style.height, '500px');
 
     element.undo();
-    assert.equal(el.style.top,    '100px');
-    assert.equal(el.style.left,   '100px');
-    assert.equal(el.style.width,  '100px');
-    assert.equal(el.style.height, '100px');
+    assertEqual(el.style.top,    '100px');
+    assertEqual(el.style.left,   '100px');
+    assertEqual(el.style.width,  '100px');
+    assertEqual(el.style.height, '100px');
 
   });
 
@@ -437,25 +437,25 @@ describe('PositionableElement', function() {
   it('should get its CSS declarations', function() {
     setupBox();
     var decs = element.getCSSDeclarations();
-    assert.equal(decs[0], 'top: 100px;');
-    assert.equal(decs[1], 'left: 100px;');
-    assert.equal(decs[2], 'width: 100px;');
-    assert.equal(decs[3], 'height: 100px;');
-    assert.equal(decs.length, 4);
+    assertEqual(decs[0], 'top: 100px;');
+    assertEqual(decs[1], 'left: 100px;');
+    assertEqual(decs[2], 'width: 100px;');
+    assertEqual(decs[3], 'height: 100px;');
+    assertEqual(decs.length, 4);
   });
 
   it('should get its CSS declarations for complex box', function() {
     setupBox('complex-box');
 
     var decs = element.getCSSDeclarations();
-    assert.equal(decs[0], 'bottom: 100px;');
-    assert.equal(decs[1], 'right: 100px;');
-    assert.equal(decs[2], 'width: 100px;');
-    assert.equal(decs[3], 'height: 100px;');
-    assert.equal(decs[4], 'z-index: 400;');
-    assert.equal(decs[5], 'background-position: 20px 40px;');
-    assert.equal(decs[6], 'transform: rotate(45deg) translate(20px, 30px);');
-    assert.equal(decs.length, 7);
+    assertEqual(decs[0], 'bottom: 100px;');
+    assertEqual(decs[1], 'right: 100px;');
+    assertEqual(decs[2], 'width: 100px;');
+    assertEqual(decs[3], 'height: 100px;');
+    assertEqual(decs[4], 'z-index: 400;');
+    assertEqual(decs[5], 'background-position: 20px 40px;');
+    assertEqual(decs[6], 'transform: rotate(45deg) translate(20px, 30px);');
+    assertEqual(decs.length, 7);
   });
 
   it('should get only changed CSS declarations', function() {
@@ -465,16 +465,16 @@ describe('PositionableElement', function() {
     element.move(-50, -50);
 
     var decs = element.getChangedCSSDeclarations();
-    assert.equal(decs[0], 'bottom: 150px;');
-    assert.equal(decs[1], 'right: 150px;');
-    assert.equal(decs.length, 2);
+    assertEqual(decs[0], 'bottom: 150px;');
+    assertEqual(decs[1], 'right: 150px;');
+    assertEqual(decs.length, 2);
   });
 
   it('should append a relative declaration if it was forced relative', function() {
     setupBox('static-box');
     var decs = element.getCSSDeclarations();
-    assert.equal(decs[0], 'position: relative;');
-    assert.equal(decs.length, 5);
+    assertEqual(decs[0], 'position: relative;');
+    assertEqual(decs.length, 5);
   });
 
   // --- Anchors
@@ -483,21 +483,21 @@ describe('PositionableElement', function() {
     setupBox();
     element.pushState();
     element.move(100, 100);
-    assert.equal(el.style.transform, '');
+    assertEqual(el.style.transform, '');
   });
 
   it('should not have transform after basic resize', function() {
     setupBox();
     element.pushState();
     element.resize(100, 100, 'se');
-    assert.equal(el.style.transform, '');
+    assertEqual(el.style.transform, '');
   });
 
   it('should have tranform after rotated resize', function() {
     setupBox('rotate-box');
     element.pushState();
     element.resize(100, 100, 'se');
-    assert.equal(el.style.transform, 'translate(-50px, 20.71px) rotate(45deg)');
+    assertEqual(el.style.transform, 'translate(-50px, 20.71px) rotate(45deg)');
   });
 
   // --- Other
@@ -507,86 +507,86 @@ describe('PositionableElement', function() {
     element.pushState();
     element.move(100, 100);
     dragElement(getUiElement(el, '.rotation-handle'), 300, 300, 250, 300);
-    assert.equalWithTolerance(listener.lastEventRotation.abs, 45, .01);
+    assertEqualWithTolerance(listener.lastEventRotation.abs, 45, .01);
   });
 
   it('should not remove the ui only on destroy', function() {
     setupBox();
     element.destroy();
-    assert.isTrue(!!el.parentNode);
-    assert.equal(Object.keys(element.listeners).length, 0);
-    assert.equal(el.querySelector('.positionable-extension-ui'), null);
+    assertTrue(!!el.parentNode);
+    assertEqual(Object.keys(element.listeners).length, 0);
+    assertEqual(el.querySelector('.positionable-extension-ui'), null);
   });
 
   it('should not fail on a box using CSS variables', function() {
     setupBox('var-box');
     element.renderBox();
-    assert.equal(el.style.top,    '100%');
-    assert.equal(el.style.left,   '100%');
-    assert.equal(el.style.width,  '100%');
-    assert.equal(el.style.height, '100%');
+    assertEqual(el.style.top,    '100%');
+    assertEqual(el.style.left,   '100%');
+    assertEqual(el.style.width,  '100%');
+    assertEqual(el.style.height, '100%');
   });
 
   it('should not error on unsupported values', function() {
     el = appendBox();
     el.style.width = 'max-content';
     element = new PositionableElement(listener, el);
-    assert.equal(element.cssBox.cssWidth.px, 0);
+    assertEqual(element.cssBox.cssWidth.px, 0);
   });
 
   it('should not error on unsupported units', function() {
     el = appendBox();
     el.style.width = '3cm';
     element = new PositionableElement(listener, el);
-    assert.equal(element.cssBox.cssWidth.px, 0);
+    assertEqual(element.cssBox.cssWidth.px, 0);
   });
 
   it('should use computed properties on an incomplete box', function() {
     setupBox('incomplete-box');
-    assert.equal(element.cssBox.cssHeight.px, 0);
+    assertEqual(element.cssBox.cssHeight.px, 0);
   });
 
   it('should not error when positioning values are auto', function() {
     setupBox('hidden-box');
-    assert.equal(element.cssBox.cssWidth.px, 0);
+    assertEqual(element.cssBox.cssWidth.px, 0);
   });
 
   it('should turn off transitions while active', function() {
     setupBox('transition-box');
     element.pushState();
     element.resize(100, 100, 'se');
-    assert.equal(el.style.transitionProperty, 'none');
+    assertEqual(el.style.transitionProperty, 'none');
     element.destroy();
-    assert.equal(el.style.transitionProperty, '');
+    assertEqual(el.style.transitionProperty, '');
   });
 
   it('should turn off animations while active', function() {
     setupBox('animation-box');
     element.pushState();
     element.resize(100, 100, 'se');
-    assert.equal(el.style.animation, '0s ease 0s 1 normal none running none');
+    assertEqual(el.style.animation, '0s ease 0s 1 normal none running none');
     element.destroy();
-    assert.equal(el.style.animation, '');
+    assertEqual(el.style.animation, '');
   });
 
   it('should turn off user select while active', function() {
     setupBox();
-    assert.equal(el.style.userSelect, 'none');
+    assertEqual(el.style.userSelect, 'none');
     element.destroy();
-    assert.equal(el.style.userSelect, '');
+    assertEqual(el.style.userSelect, '');
   });
 
   it('should turn off min/max height while active', function() {
     setupBox();
-    assert.equal(el.style.minWidth,  '0px');
-    assert.equal(el.style.minHeight, '0px');
-    assert.equal(el.style.maxWidth,  'none');
-    assert.equal(el.style.maxHeight, 'none');
+    assertEqual(el.style.minWidth,  '0px');
+    assertEqual(el.style.minHeight, '0px');
+    assertEqual(el.style.maxWidth,  'none');
+    assertEqual(el.style.maxHeight, 'none');
     element.destroy();
-    assert.equal(el.style.minWidth,  '');
-    assert.equal(el.style.minHeight, '');
-    assert.equal(el.style.maxWidth,  '');
-    assert.equal(el.style.maxHeight, '');
+    assertEqual(el.style.minWidth,  '');
+    assertEqual(el.style.minHeight, '');
+    assertEqual(el.style.maxWidth,  '');
+    assertEqual(el.style.maxHeight, '');
   });
 
   it('should not clear all rendered styles when destroyed', function() {
@@ -594,30 +594,30 @@ describe('PositionableElement', function() {
     element.pushState();
     element.resize(100, 100, 'se');
     element.destroy();
-    assert.equal(el.style.top, '100px');
+    assertEqual(el.style.top, '100px');
   });
 
   it('should be able to set a highlight mode', function() {
     setupBox();
     element.setHighlightMode(true);
-    assert.isTrue(getUiElement(el, '#ui').classList.contains('ui--highlight'));
+    assertTrue(getUiElement(el, '#ui').classList.contains('ui--highlight'));
     element.setHighlightMode(false);
-    assert.isFalse(getUiElement(el, '#ui').classList.contains('ui--highlight'));
+    assertFalse(getUiElement(el, '#ui').classList.contains('ui--highlight'));
   });
 
   it('should clear temporary z-index when destroyed', function() {
     setupBox();
     element.focus();
     element.destroy();
-    assert.equal(el.style.zIndex, '');
+    assertEqual(el.style.zIndex, '');
   });
 
   it('should set ui z-index on focus', function() {
     setupBox();
     element.focus();
-    assert.equal(getUiContainer(element.el).style.zIndex, String(PositionableElement.TOP_Z_INDEX));
+    assertEqual(getUiContainer(element.el).style.zIndex, String(PositionableElement.TOP_Z_INDEX));
     element.unfocus();
-    assert.equal(getUiContainer(element.el).style.zIndex, '');
+    assertEqual(getUiContainer(element.el).style.zIndex, '');
   });
 
 });

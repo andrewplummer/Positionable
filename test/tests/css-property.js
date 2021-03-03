@@ -6,15 +6,15 @@ describe('CSSProperty', function() {
   }
 
   function assertValue(prop, matched, computed, expected) {
-    assert.equal(getProperty(prop, matched, computed).getValue(), expected);
+    assertEqual(getProperty(prop, matched, computed).getValue(), expected);
   }
 
   function assertInitial(prop, matched, computed, expected) {
-    assert.equal(getProperty(prop, matched, computed).isInitial(), expected);
+    assertEqual(getProperty(prop, matched, computed).isInitial(), expected);
   }
 
   function assertVertical(prop, matched, computed, expected) {
-    assert.equal(getProperty(prop, matched, computed).isVertical(), expected);
+    assertEqual(getProperty(prop, matched, computed).isVertical(), expected);
   }
 
   it('should correctly get values', function() {

@@ -13,46 +13,46 @@ describe('CSSTransform', function() {
   }
 
   function assertIdentity(className, expected) {
-    assert.equal(getTransform(className).toString(), expected);
+    assertEqual(getTransform(className).toString(), expected);
   }
 
   function assertOrigin(className, x, y) {
     var origin = getTransform(className).getOrigin();
-    assert.equal(origin.x, x);
-    assert.equal(origin.y, y);
+    assertEqual(origin.x, x);
+    assertEqual(origin.y, y);
   }
 
   function assertGetRotation(className, expected) {
-    assert.equal(getTransform(className).getRotation(), expected);
+    assertEqual(getTransform(className).getRotation(), expected);
   }
 
   function assertSetRotation(className, rotation, expected) {
     var transform = getTransform(className);
     transform.setRotation(rotation);
-    assert.equal(transform.toString(), expected);
+    assertEqual(transform.toString(), expected);
   }
 
   function assertGetTranslation(className, x, y) {
     var p = getTransform(className).getTranslation();
-    assert.equal(p.x, x);
-    assert.equal(p.y, y);
+    assertEqual(p.x, x);
+    assertEqual(p.y, y);
   }
 
   function assertSetTranslation(className, x, y, expected) {
     var transform = getTransform(className);
     transform.setTranslation(new Point(x, y));
-    assert.equal(transform.toString(), expected);
+    assertEqual(transform.toString(), expected);
   }
 
   function assertAddTranslation(className, x, y, expected) {
     var transform = getTransform(className);
     transform.addTranslation(new Point(x, y));
-    assert.equal(transform.toString(), expected);
+    assertEqual(transform.toString(), expected);
   }
 
   it('should export correct headers', function() {
     var transform = getTransform('rotate-translate-box');
-    assert.equal(transform.getHeader(), 'r: 45deg | t: 20px, 30px');
+    assertEqual(transform.getHeader(), 'r: 45deg | t: 20px, 30px');
   });
 
   it('should correctly identify element transforms', function() {
@@ -82,13 +82,13 @@ describe('CSSTransform', function() {
   it('should append its CSS declarations', function() {
     var transform = getTransform('rotate-translate-box'), decs = [];
     transform.appendCSSDeclaration(decs);
-    assert.equal(decs.length, 1);
-    assert.equal(decs[0], 'transform: rotate(45deg) translate(20px, 30px);');
+    assertEqual(decs.length, 1);
+    assertEqual(decs[0], 'transform: rotate(45deg) translate(20px, 30px);');
   });
 
   it('should be able to clone itself', function() {
     var transform = getTransform('rotate-translate-box').clone();
-    assert.equal(transform.toString(), 'rotate(45deg) translate(20px, 30px)');
+    assertEqual(transform.toString(), 'rotate(45deg) translate(20px, 30px)');
   });
 
   it('should be able to get the origin', function() {
@@ -177,59 +177,59 @@ describe('CSSTransform', function() {
   it('should prepend translation function on null', function() {
     var transform = getTransform();
     transform.setTranslation(new Point(10, 10));
-    assert.equal(transform.functions.length, 1);
+    assertEqual(transform.functions.length, 1);
   });
 
   it('should prepend translation function on rotated', function() {
     var transform = getTransform('rotate-box');
     transform.setTranslation(new Point(10, 10));
-    assert.equal(transform.functions.length, 2);
+    assertEqual(transform.functions.length, 2);
   });
 
   it('should not prepend translation function on translated', function() {
     var transform = getTransform('translate-box');
     transform.setTranslation(new Point(10, 10));
-    assert.equal(transform.functions.length, 1);
+    assertEqual(transform.functions.length, 1);
   });
 
   it('should prepend translation when rotate preceeds translate', function() {
     var transform = getTransform('rotate-translate-box');
     transform.setTranslation(new Point(10, 10));
-    assert.equal(transform.functions.length, 3);
+    assertEqual(transform.functions.length, 3);
   });
 
   it('should prepend translation on multiple with rotate before translate', function() {
     var transform = getTransform('rotate-translate-box');
     transform.setTranslation(new Point(10, 10));
-    assert.equal(transform.functions.length, 3);
+    assertEqual(transform.functions.length, 3);
   });
 
   it('should not prepend translation on multiple with translate before rotate', function() {
     var transform = getTransform('translate-rotate-box');
     transform.setTranslation(new Point(10, 10));
-    assert.equal(transform.functions.length, 2);
+    assertEqual(transform.functions.length, 2);
   });
 
   it('should allow reporting when the dimensions have changed and get the updated origin', function() {
     var transform = getTransform(), origin;
 
     origin = transform.getOrigin();
-    assert.equal(origin.x, 50);
-    assert.equal(origin.y, 50);
+    assertEqual(origin.x, 50);
+    assertEqual(origin.y, 50);
 
     el.style.width  = '200px';
     el.style.height = '200px';
     transform.update();
 
     origin = transform.getOrigin();
-    assert.equal(origin.x, 100);
-    assert.equal(origin.y, 100);
+    assertEqual(origin.x, 100);
+    assertEqual(origin.y, 100);
 
   });
 
   it('should correctly report if it has percent translation', function() {
-    assert.equal(getTransform().hasPercentTranslation(), false);
-    assert.equal(getTransform('translate-percent-box').hasPercentTranslation(), true);
+    assertEqual(getTransform().hasPercentTranslation(), false);
+    assertEqual(getTransform('translate-percent-box').hasPercentTranslation(), true);
   });
 
 });

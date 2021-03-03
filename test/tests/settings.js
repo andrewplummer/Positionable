@@ -1,5 +1,5 @@
 
-describe('Settings', function(uiRoot) {
+describe('Settings', function() {
 
   var listener, settings;
 
@@ -80,7 +80,7 @@ describe('Settings', function(uiRoot) {
   }
 
   function assertQuery(query, expected) {
-    assert.equal(settings.isValidQuery(query), expected);
+    assertEqual(settings.isValidQuery(query), expected);
   }
 
   function assertValidQuery(query) {
@@ -91,63 +91,63 @@ describe('Settings', function(uiRoot) {
   }
 
   function assertInputIsDisabled(selector, expected) {
-    assert.equal(uiRoot.getElementById(selector).disabled, expected);
+    assertEqual(uiRoot.getElementById(selector).disabled, expected);
   }
 
   it('should fire an event when initialized', function() {
     setupSettings();
-    assert.isTrue(listener.settingsInitialized);
+    assertTrue(listener.settingsInitialized);
   });
 
   it('should not fire change events for non-relevant settings', function() {
     chromeMock.setStoredData(Settings.INCLUDE_SELECTOR,   'p');
     setupSettings();
     settings.set(Settings.SKIP_QUICKSTART, true);
-    assert.equal(listener.selectorUpdatedCount, 0);
-    assert.equal(listener.snapUpdatedCount,     0);
+    assertEqual(listener.selectorUpdatedCount, 0);
+    assertEqual(listener.snapUpdatedCount,     0);
   });
 
   it('should initialize with default settings', function() {
     setupSettings();
-    assert.equal(settings.get(Settings.SAVE_FILENAME),       'styles.css');
-    assert.equal(settings.get(Settings.TAB_STYLE),           'two');
-    assert.equal(settings.get(Settings.OUTPUT_SELECTOR),     'auto');
-    assert.equal(settings.get(Settings.OUTPUT_GROUPING),     'none');
-    assert.equal(settings.get(Settings.INCLUDE_SELECTOR),    '');
-    assert.equal(settings.get(Settings.EXCLUDE_SELECTOR),    '');
-    assert.equal(settings.get(Settings.OUTPUT_CHANGED_ONLY), false);
+    assertEqual(settings.get(Settings.SAVE_FILENAME),       'styles.css');
+    assertEqual(settings.get(Settings.TAB_STYLE),           'two');
+    assertEqual(settings.get(Settings.OUTPUT_SELECTOR),     'auto');
+    assertEqual(settings.get(Settings.OUTPUT_GROUPING),     'none');
+    assertEqual(settings.get(Settings.INCLUDE_SELECTOR),    '');
+    assertEqual(settings.get(Settings.EXCLUDE_SELECTOR),    '');
+    assertEqual(settings.get(Settings.OUTPUT_CHANGED_ONLY), false);
   });
 
   it('should initialize with stored settings', function() {
     setupStorageData();
     setupSettings();
-    assert.equal(settings.get(Settings.SAVE_FILENAME),       'bar.css');
-    assert.equal(settings.get(Settings.TAB_STYLE),           Settings.TABS_FOUR_SPACES);
-    assert.equal(settings.get(Settings.OUTPUT_SELECTOR),     Settings.OUTPUT_SELECTOR_TAG);
-    assert.equal(settings.get(Settings.OUTPUT_GROUPING),     Settings.OUTPUT_GROUPING_AUTO);
-    assert.equal(settings.get(Settings.INCLUDE_SELECTOR),    'p');
-    assert.equal(settings.get(Settings.EXCLUDE_SELECTOR),    'h2');
-    assert.equal(settings.get(Settings.OUTPUT_CHANGED_ONLY), true);
+    assertEqual(settings.get(Settings.SAVE_FILENAME),       'bar.css');
+    assertEqual(settings.get(Settings.TAB_STYLE),           Settings.TABS_FOUR_SPACES);
+    assertEqual(settings.get(Settings.OUTPUT_SELECTOR),     Settings.OUTPUT_SELECTOR_TAG);
+    assertEqual(settings.get(Settings.OUTPUT_GROUPING),     Settings.OUTPUT_GROUPING_AUTO);
+    assertEqual(settings.get(Settings.INCLUDE_SELECTOR),    'p');
+    assertEqual(settings.get(Settings.EXCLUDE_SELECTOR),    'h2');
+    assertEqual(settings.get(Settings.OUTPUT_CHANGED_ONLY), true);
   });
 
   it('should set form fields with stored settings', function() {
     var form = getForm();
     setupStorageData();
     setupSettings();
-    assert.equal(form.elements[Settings.SAVE_FILENAME].value,        'bar.css');
-    assert.equal(form.elements[Settings.TAB_STYLE].value,             Settings.TABS_FOUR_SPACES);
-    assert.equal(form.elements[Settings.OUTPUT_SELECTOR].value,       Settings.OUTPUT_SELECTOR_TAG);
-    assert.equal(form.elements[Settings.OUTPUT_GROUPING].value,       Settings.OUTPUT_GROUPING_AUTO);
-    assert.equal(form.elements[Settings.INCLUDE_SELECTOR].value,     'p');
-    assert.equal(form.elements[Settings.EXCLUDE_SELECTOR].value,     'h2');
-    assert.equal(form.elements[Settings.OUTPUT_CHANGED_ONLY].checked, true);
+    assertEqual(form.elements[Settings.SAVE_FILENAME].value,        'bar.css');
+    assertEqual(form.elements[Settings.TAB_STYLE].value,             Settings.TABS_FOUR_SPACES);
+    assertEqual(form.elements[Settings.OUTPUT_SELECTOR].value,       Settings.OUTPUT_SELECTOR_TAG);
+    assertEqual(form.elements[Settings.OUTPUT_GROUPING].value,       Settings.OUTPUT_GROUPING_AUTO);
+    assertEqual(form.elements[Settings.INCLUDE_SELECTOR].value,     'p');
+    assertEqual(form.elements[Settings.EXCLUDE_SELECTOR].value,     'h2');
+    assertEqual(form.elements[Settings.OUTPUT_CHANGED_ONLY].checked, true);
   });
 
   it('should set boolean fields', function() {
     setupSettings();
     uiRoot.getElementById('output-changed-only').checked = true;
     submitForm();
-    assert.equal(chromeMock.getStoredData('output-changed-only'), true);
+    assertEqual(chromeMock.getStoredData('output-changed-only'), true);
   });
 
   it('should receive submit event', function() {
@@ -155,22 +155,22 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     form.elements['save-filename'].value = 'foo.css';
     submitForm();
-    assert.equal(listener.settingsSubmittedCount, 1);
-    assert.equal(chromeMock.getStoredData('save-filename'), 'foo.css');
+    assertEqual(listener.settingsSubmittedCount, 1);
+    assertEqual(chromeMock.getStoredData('save-filename'), 'foo.css');
   });
 
   it('should reset the form', function() {
     setupSettings();
     resetForm();
-    assert.equal(windowDialogueMock.getConfirmCalls(), 1);
-    assert.equal(listener.settingsClearedCount, 1);
-    assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
-    assert.equal(settings.get(Settings.TAB_STYLE), 'two');
-    assert.equal(settings.get(Settings.OUTPUT_SELECTOR), 'auto');
-    assert.equal(settings.get(Settings.OUTPUT_GROUPING), 'none');
-    assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
-    assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
-    assert.isFalse(settings.get(Settings.OUTPUT_CHANGED_ONLY));
+    assertEqual(windowDialogueMock.getConfirmCalls(), 1);
+    assertEqual(listener.settingsClearedCount, 1);
+    assertEqual(settings.get(Settings.SAVE_FILENAME), 'styles.css');
+    assertEqual(settings.get(Settings.TAB_STYLE), 'two');
+    assertEqual(settings.get(Settings.OUTPUT_SELECTOR), 'auto');
+    assertEqual(settings.get(Settings.OUTPUT_GROUPING), 'none');
+    assertEqual(settings.get(Settings.INCLUDE_SELECTOR), '');
+    assertEqual(settings.get(Settings.EXCLUDE_SELECTOR), '');
+    assertFalse(settings.get(Settings.OUTPUT_CHANGED_ONLY));
   });
 
   it('should validate selectors on submit', function() {
@@ -178,26 +178,26 @@ describe('Settings', function(uiRoot) {
 
     uiRoot.getElementById('include-selector').value = '1234';
     submitForm();
-    assert.equal(listener.settingsSubmittedCount, 0);
-    assert.equal(listener.selectorUpdatedCount,   0);
-    assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
-    assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
+    assertEqual(listener.settingsSubmittedCount, 0);
+    assertEqual(listener.selectorUpdatedCount,   0);
+    assertEqual(settings.get(Settings.INCLUDE_SELECTOR), '');
+    assertEqual(settings.get(Settings.EXCLUDE_SELECTOR), '');
 
     uiRoot.getElementById('include-selector').value = '';
     uiRoot.getElementById('exclude-selector').value = '1234';
     submitForm();
-    assert.equal(listener.settingsSubmittedCount, 0);
-    assert.equal(listener.selectorUpdatedCount,   0);
-    assert.equal(settings.get(Settings.INCLUDE_SELECTOR), '');
-    assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), '');
+    assertEqual(listener.settingsSubmittedCount, 0);
+    assertEqual(listener.selectorUpdatedCount,   0);
+    assertEqual(settings.get(Settings.INCLUDE_SELECTOR), '');
+    assertEqual(settings.get(Settings.EXCLUDE_SELECTOR), '');
 
     uiRoot.getElementById('include-selector').value = 'p';
     uiRoot.getElementById('exclude-selector').value = 'h2';
     submitForm();
-    assert.equal(listener.settingsSubmittedCount, 1);
-    assert.equal(listener.selectorUpdatedCount,   1);
-    assert.equal(settings.get(Settings.INCLUDE_SELECTOR), 'p');
-    assert.equal(settings.get(Settings.EXCLUDE_SELECTOR), 'h2');
+    assertEqual(listener.settingsSubmittedCount, 1);
+    assertEqual(listener.selectorUpdatedCount,   1);
+    assertEqual(settings.get(Settings.INCLUDE_SELECTOR), 'p');
+    assertEqual(settings.get(Settings.EXCLUDE_SELECTOR), 'h2');
 
   });
 
@@ -205,24 +205,24 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     uiRoot.getElementById('include-selector').value = 'div';
     submitForm();
-    assert.equal(listener.settingsSubmittedCount, 1);
-    assert.equal(listener.selectorUpdatedCount,   1);
+    assertEqual(listener.settingsSubmittedCount, 1);
+    assertEqual(listener.selectorUpdatedCount,   1);
   });
 
   it('should fire correct events when the selector did not change', function() {
     setupSettings();
     uiRoot.getElementById('include-selector').value = '';
     submitForm();
-    assert.equal(listener.settingsSubmittedCount, 1);
-    assert.equal(listener.selectorUpdatedCount,   0);
+    assertEqual(listener.settingsSubmittedCount, 1);
+    assertEqual(listener.selectorUpdatedCount,   0);
   });
 
   it('should fire correct events when the default form was cleared', function() {
     setupSettings();
     resetForm();
-    assert.equal(listener.settingsSubmittedCount, 0);
-    assert.equal(listener.settingsClearedCount,   1);
-    assert.equal(listener.selectorUpdatedCount,   0);
+    assertEqual(listener.settingsSubmittedCount, 0);
+    assertEqual(listener.settingsClearedCount,   1);
+    assertEqual(listener.selectorUpdatedCount,   0);
   });
 
   it('should fire correct events when a set form was cleared', function() {
@@ -230,9 +230,9 @@ describe('Settings', function(uiRoot) {
     uiRoot.getElementById('include-selector').value = 'div';
     submitForm();
     resetForm();
-    assert.equal(listener.settingsSubmittedCount, 1);
-    assert.equal(listener.settingsClearedCount,   1);
-    assert.equal(listener.selectorUpdatedCount,   2);
+    assertEqual(listener.settingsSubmittedCount, 1);
+    assertEqual(listener.settingsClearedCount,   1);
+    assertEqual(listener.selectorUpdatedCount,   2);
   });
 
   it('should clear previous invalid fields when cleared', function() {
@@ -240,9 +240,9 @@ describe('Settings', function(uiRoot) {
     uiRoot.getElementById('include-selector').value = '@#$^';
     submitForm();
     resetForm();
-    assert.equal(listener.settingsSubmittedCount, 0);
-    assert.equal(listener.settingsClearedCount,   1);
-    assert.equal(listener.selectorUpdatedCount,   0);
+    assertEqual(listener.settingsSubmittedCount, 0);
+    assertEqual(listener.settingsClearedCount,   1);
+    assertEqual(listener.selectorUpdatedCount,   0);
 
     // Note that we can't assert that the invalid fields were
     // actually cleared as the reset event that actually clears
@@ -253,7 +253,7 @@ describe('Settings', function(uiRoot) {
     chromeMock.setStoredData(Settings.SAVE_FILENAME, 'test.css');
     setupSettings();
     resetForm();
-    assert.equal(settings.get(Settings.SAVE_FILENAME), 'styles.css');
+    assertEqual(settings.get(Settings.SAVE_FILENAME), 'styles.css');
   });
 
   // --- Query Selectors
@@ -308,8 +308,8 @@ describe('Settings', function(uiRoot) {
 
   it('should have valid initial snap data', function() {
     setupSettings();
-    assert.equal(settings.data['snap-x'], 0);
-    assert.equal(settings.data['snap-y'], 0);
+    assertEqual(settings.data['snap-x'], 0);
+    assertEqual(settings.data['snap-y'], 0);
   });
 
   it('should fire correct events snapping changed', function() {
@@ -317,16 +317,16 @@ describe('Settings', function(uiRoot) {
     uiRoot.getElementById('snap-x').value = '7';
     uiRoot.getElementById('snap-y').value = '5';
     submitForm();
-    assert.equal(listener.lastSnapX, 7);
-    assert.equal(listener.lastSnapY, 5);
+    assertEqual(listener.lastSnapX, 7);
+    assertEqual(listener.lastSnapY, 5);
   });
 
   // --- Grouping Map
 
   it('should have valid initial grouping map data', function() {
     setupSettings();
-    assert.equal(typeof settings.data['grouping-map'], 'object');
-    assert.equal(Object.keys(settings.data['grouping-map']).length, 0);
+    assertEqual(typeof settings.data['grouping-map'], 'object');
+    assertEqual(Object.keys(settings.data['grouping-map']).length, 0);
   });
 
   it('should transform the grouping map on submit', function() {
@@ -336,8 +336,8 @@ describe('Settings', function(uiRoot) {
     textarea.value = 'width: $foobar';
     submitForm();
     map = chromeMock.getStoredData('grouping-map');
-    assert.equal(Object.keys(map).length, 1);
-    assert.equal(map.width, '$foobar');
+    assertEqual(Object.keys(map).length, 1);
+    assertEqual(map.width, '$foobar');
   });
 
   it('should strip trailing semicolons in the grouping map', function() {
@@ -347,7 +347,7 @@ describe('Settings', function(uiRoot) {
     textarea.value = 'width: $foobar;';
     submitForm();
     map = chromeMock.getStoredData('grouping-map');
-    assert.equal(map.width, '$foobar');
+    assertEqual(map.width, '$foobar');
   });
 
   it('should validate an unparseable grouping map', function() {
@@ -356,13 +356,13 @@ describe('Settings', function(uiRoot) {
     setupSettings();
     textarea.value = '?#()#$';
     submitForm();
-    assert.isTrue(field.classList.contains('settings-field--invalid'));
+    assertTrue(field.classList.contains('settings-field--invalid'));
   });
 
   it('should correctly set the grouping map control from stored data', function() {
     chromeMock.setStoredData(Settings.GROUPING_MAP, { width: '$foobar' });
     setupSettings();
-    assert.equal(uiRoot.getElementById('grouping-map').value, 'width: $foobar');
+    assertEqual(uiRoot.getElementById('grouping-map').value, 'width: $foobar');
   });
 
   // --- Other
@@ -393,14 +393,14 @@ describe('Settings', function(uiRoot) {
     chromeMock.setStoredData(Settings.GROUPING_MAP, 'foo:bar');
     setupSettings();
     settings.toggleAdvancedFeatures(false);
-    assert.equal(listener.snapUpdatedCount,       1);
-    assert.equal(listener.selectorUpdatedCount,   0);
-    assert.equal(listener.settingsSubmittedCount, 0);
-    assert.equal(listener.settingsClearedCount,   0);
-    assert.equal(settings.get(Settings.SNAP_X), 0);
-    assert.equal(settings.get(Settings.SNAP_Y), 0);
-    assert.equal(settings.get(Settings.OUTPUT_GROUPING), Settings.OUTPUT_GROUPING_NONE);
-    assert.equal(Object.keys(settings.get(Settings.GROUPING_MAP)).length, 0);
+    assertEqual(listener.snapUpdatedCount,       1);
+    assertEqual(listener.selectorUpdatedCount,   0);
+    assertEqual(listener.settingsSubmittedCount, 0);
+    assertEqual(listener.settingsClearedCount,   0);
+    assertEqual(settings.get(Settings.SNAP_X), 0);
+    assertEqual(settings.get(Settings.SNAP_Y), 0);
+    assertEqual(settings.get(Settings.OUTPUT_GROUPING), Settings.OUTPUT_GROUPING_NONE);
+    assertEqual(Object.keys(settings.get(Settings.GROUPING_MAP)).length, 0);
   });
 
 });

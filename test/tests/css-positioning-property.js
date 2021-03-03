@@ -24,10 +24,10 @@ describe('CSSPositioningProperty', function() {
   it('should work on normal properties', function() {
     setupNormal();
 
-    assert.equal(hProp.prop, 'left');
-    assert.equal(vProp.prop, 'top');
-    assert.equal(hProp.px, 100);
-    assert.equal(vProp.px, 100);
+    assertEqual(hProp.prop, 'left');
+    assertEqual(vProp.prop, 'top');
+    assertEqual(hProp.px, 100);
+    assertEqual(vProp.px, 100);
 
     hProp.px = 300;
     vProp.px = 500;
@@ -35,20 +35,20 @@ describe('CSSPositioningProperty', function() {
     hProp.render(el.style);
     vProp.render(el.style);
 
-    assert.equal(el.style.left,   '300px');
-    assert.equal(el.style.top,    '500px');
-    assert.equal(el.style.right,  '');
-    assert.equal(el.style.bottom, '');
+    assertEqual(el.style.left,   '300px');
+    assertEqual(el.style.top,    '500px');
+    assertEqual(el.style.right,  '');
+    assertEqual(el.style.bottom, '');
 
   });
 
   it('should work on inverted properties', function() {
     setupInverted();
 
-    assert.equal(hProp.prop, 'right');
-    assert.equal(vProp.prop, 'bottom');
-    assert.equal(hProp.px, 100);
-    assert.equal(vProp.px, 100);
+    assertEqual(hProp.prop, 'right');
+    assertEqual(vProp.prop, 'bottom');
+    assertEqual(hProp.px, 100);
+    assertEqual(vProp.px, 100);
 
     hProp.px = 20;
     vProp.px = 30;
@@ -56,24 +56,24 @@ describe('CSSPositioningProperty', function() {
     hProp.render(el.style);
     vProp.render(el.style);
 
-    assert.equal(el.style.left,   '');
-    assert.equal(el.style.top,    '');
-    assert.equal(el.style.right,  '20px');
-    assert.equal(el.style.bottom, '30px');
+    assertEqual(el.style.left,   '');
+    assertEqual(el.style.top,    '');
+    assertEqual(el.style.right,  '20px');
+    assertEqual(el.style.bottom, '30px');
 
   });
 
   it('should be able to clone itself', function() {
     setupNormal();
     var clone = hProp.clone();
-    assert.equal(clone.prop, 'left');
-    assert.equal(clone.px, 100);
+    assertEqual(clone.prop, 'left');
+    assertEqual(clone.px, 100);
   });
 
   it('should export its underlying css value when calling toString', function() {
     setupNormal();
-    assert.equal(hProp.toString(), '100px');
-    assert.equal(vProp.toString(), '100px');
+    assertEqual(hProp.toString(), '100px');
+    assertEqual(vProp.toString(), '100px');
   });
 
   // --- CSS Declarations
@@ -83,15 +83,15 @@ describe('CSSPositioningProperty', function() {
     setupNormal();
     hProp.appendCSSDeclaration(decs);
     vProp.appendCSSDeclaration(decs);
-    assert.equal(decs[0], 'left: 100px;');
-    assert.equal(decs[1], 'top: 100px;');
+    assertEqual(decs[0], 'left: 100px;');
+    assertEqual(decs[1], 'top: 100px;');
   });
 
   it('should not append its CSS declaration if initial', function() {
     var decs = [], prop;
     prop = new CSSPositioningProperty(new CSSPixelValue(50, true), 'left');
     prop.appendCSSDeclaration(decs);
-    assert.equal(decs.length, 0);
+    assertEqual(decs.length, 0);
   });
 
 });

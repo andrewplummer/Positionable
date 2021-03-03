@@ -42,33 +42,33 @@ describe('ChromeStorageManager', function() {
   it('should be able to fetch a single value', function() {
     chromeMock.setStoredData('foo', 'bar');
     manager.fetch('foo');
-    assert.equal(listener.fetchEvents, 1);
-    assert.equal(listener.data.foo, 'bar');
+    assertEqual(listener.fetchEvents, 1);
+    assertEqual(listener.data.foo, 'bar');
   });
 
   it('should be able to fetch multiple values', function() {
     chromeMock.setStoredData('foo', 'bar');
     chromeMock.setStoredData('bar', 'baz');
     manager.fetch(['foo', 'bar']);
-    assert.equal(listener.fetchEvents, 1);
-    assert.equal(listener.data.foo, 'bar');
-    assert.equal(listener.data.bar, 'baz');
-    assert.equal(Object.keys(listener.data).length, 2);
+    assertEqual(listener.fetchEvents, 1);
+    assertEqual(listener.data.foo, 'bar');
+    assertEqual(listener.data.bar, 'baz');
+    assertEqual(Object.keys(listener.data).length, 2);
   });
 
   // --- Setting
 
   it('should be able to set a single value', function() {
     manager.save('foo', 'bar');
-    assert.equal(listener.saveEvents, 1);
-    assert.equal(chromeMock.getStoredData('foo'), 'bar');
+    assertEqual(listener.saveEvents, 1);
+    assertEqual(chromeMock.getStoredData('foo'), 'bar');
   });
 
   it('should be able to set multiple values', function() {
     manager.save({ foo: 'bar', bar: 'baz' });
-    assert.equal(listener.saveEvents, 1);
-    assert.equal(chromeMock.getStoredData('foo'), 'bar');
-    assert.equal(chromeMock.getStoredData('bar'), 'baz');
+    assertEqual(listener.saveEvents, 1);
+    assertEqual(chromeMock.getStoredData('foo'), 'bar');
+    assertEqual(chromeMock.getStoredData('bar'), 'baz');
   });
 
   // --- Removing
@@ -76,9 +76,9 @@ describe('ChromeStorageManager', function() {
   it('should be able to remove a single value', function() {
     chromeMock.setStoredData('foo', 'bar');
     manager.remove('foo');
-    assert.equal(listener.removeEvents, 1);
-    assert.equal(chromeMock.getStoredData('foo'), undefined);
-    assert.equal(Object.keys(chromeMock.getStoredData()).length, 0);
+    assertEqual(listener.removeEvents, 1);
+    assertEqual(chromeMock.getStoredData('foo'), undefined);
+    assertEqual(Object.keys(chromeMock.getStoredData()).length, 0);
   });
 
   it('should be able to remove multiple values', function() {
@@ -86,11 +86,11 @@ describe('ChromeStorageManager', function() {
     chromeMock.setStoredData('bar', 'baz');
     chromeMock.setStoredData('boo', 'hoo');
     manager.remove(['foo', 'bar']);
-    assert.equal(listener.removeEvents, 1);
-    assert.equal(chromeMock.getStoredData('foo'), undefined);
-    assert.equal(chromeMock.getStoredData('bar'), undefined);
-    assert.equal(chromeMock.getStoredData('boo'), 'hoo');
-    assert.equal(Object.keys(chromeMock.getStoredData()).length, 1);
+    assertEqual(listener.removeEvents, 1);
+    assertEqual(chromeMock.getStoredData('foo'), undefined);
+    assertEqual(chromeMock.getStoredData('bar'), undefined);
+    assertEqual(chromeMock.getStoredData('boo'), 'hoo');
+    assertEqual(Object.keys(chromeMock.getStoredData()).length, 1);
   });
 
 });

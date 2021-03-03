@@ -22,34 +22,34 @@ describe('CSSTransformFunction', function() {
   }
 
   function assertIdentity(className, expected) {
-    assert.equal(getTransformFunction(className).toString(), expected || name + '(' + values + ')');
+    assertEqual(getTransformFunction(className).toString(), expected || name + '(' + values + ')');
   }
 
   function assertHeader(className, expected) {
-    assert.equal(getTransformFunction(className).getHeader(), expected);
+    assertEqual(getTransformFunction(className).getHeader(), expected);
   }
 
   function assertMutate(className, expected) {
-    assert.equal(getTransformFunction(className).canMutate, expected);
+    assertEqual(getTransformFunction(className).canMutate, expected);
   }
 
   function assertTranslate(className, expected) {
-    assert.equal(getTransformFunction(className).isTranslate(), expected);
+    assertEqual(getTransformFunction(className).isTranslate(), expected);
   }
 
   function assertZRotate(className, expected) {
-    assert.equal(getTransformFunction(className).isZRotate(), expected);
+    assertEqual(getTransformFunction(className).isZRotate(), expected);
   }
 
   function assertMatrix(className, expected) {
-    assert.equal(getTransformFunction(className).isMatrix(), expected);
+    assertEqual(getTransformFunction(className).isMatrix(), expected);
   }
 
   function assertSetTranslation(className, x, y, expected) {
     var func = getTransformFunction(className);
     func.values[0].px = x;
     func.values[1].px = y;
-    assert.equal(func.toString(), expected);
+    assertEqual(func.toString(), expected);
   }
 
   it('should handle percent values in translate as a function of element', function() {
@@ -58,12 +58,12 @@ describe('CSSTransformFunction', function() {
 
   it('should be able to clone mutating functions', function() {
     var func = getTransformFunction('rotate-box', '45deg').clone();
-    assert.equal(func.toString(), 'rotate(45deg)');
+    assertEqual(func.toString(), 'rotate(45deg)');
   });
 
   it('should be able to clone static functions', function() {
     var func = getTransformFunction('scale-box').clone();
-    assert.equal(func.toString(), 'scale(2, 3)');
+    assertEqual(func.toString(), 'scale(2, 3)');
   });
 
   it('should be able to create', function() {
@@ -222,8 +222,8 @@ describe('CSSTransformFunction', function() {
   });
 
   it('should correctly report if it has percent translation', function() {
-    assert.equal(getTransformFunction('translate-box').hasPercentTranslation(), false);
-    assert.equal(getTransformFunction('translate-percent-box').hasPercentTranslation(), true);
+    assertEqual(getTransformFunction('translate-box').hasPercentTranslation(), false);
+    assertEqual(getTransformFunction('translate-percent-box').hasPercentTranslation(), true);
   });
 
 });

@@ -20,8 +20,8 @@ describe('CSSTransformOrigin', function() {
 
   function assertParsed(str, x, y) {
     var origin = getTransformOrigin(str);
-    assert.equal(origin.cssX.px, x);
-    assert.equal(origin.cssY.px, y);
+    assertEqual(origin.cssX.px, x);
+    assertEqual(origin.cssY.px, y);
   }
 
   function assertUpdated(str, updateWidth, updateHeight, x, y) {
@@ -29,8 +29,8 @@ describe('CSSTransformOrigin', function() {
     el.style.width  = updateWidth;
     el.style.height = updateHeight;
     origin.update();
-    assert.equal(origin.cssX.px, x);
-    assert.equal(origin.cssY.px, y);
+    assertEqual(origin.cssX.px, x);
+    assertEqual(origin.cssY.px, y);
   }
 
   // --- Parsing

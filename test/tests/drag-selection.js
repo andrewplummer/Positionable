@@ -1,5 +1,5 @@
 
-describe('DragSelection', function(uiRoot) {
+describe('DragSelection', function() {
 
   var dragSelection, listener;
 
@@ -55,24 +55,24 @@ describe('DragSelection', function(uiRoot) {
   it('should render', function() {
     var ui =  getUiElement(document.documentElement, '#drag-selection');
     dragDocument(100, 100, 1000, 1000);
-    assert.equal(ui.style.left,   '100px');
-    assert.equal(ui.style.top,    '100px');
-    assert.equal(ui.style.width,  '900px');
-    assert.equal(ui.style.height, '900px');
+    assertEqual(ui.style.left,   '100px');
+    assertEqual(ui.style.top,    '100px');
+    assertEqual(ui.style.width,  '900px');
+    assertEqual(ui.style.height, '900px');
   });
 
   it('should report elements it contains', function() {
     dragDocument(100, 100, 1000, 1000);
     var el1 = setupPositionedElement('100px', '100px', '100px', '100px');
     var el2 = setupPositionedElement('1000px', '1000px', '100px', '100px');
-    assert.equal(dragSelection.contains(el1), true);
-    assert.equal(dragSelection.contains(el2), false);
+    assertEqual(dragSelection.contains(el1), true);
+    assertEqual(dragSelection.contains(el2), false);
   });
 
   it('should fire drag selection clear events', function() {
     fireMouseDown(document.documentElement, 0, 0);
     fireDocumentMouseUp(0, 0);
-    assert.equal(listener.dragSelectionClearFired, true);
+    assertEqual(listener.dragSelectionClearFired, true);
   });
 
 });

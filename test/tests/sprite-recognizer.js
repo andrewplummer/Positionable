@@ -28,31 +28,31 @@ describe('SpriteRecognizer', function() {
     var bounds;
     setupElementRecognizer();
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(0, 0));
-    assert.isUndefined(bounds);
+    assertUndefined(bounds);
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(0, 1));
-    assert.isUndefined(bounds);
+    assertUndefined(bounds);
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(1, 0));
-    assert.isUndefined(bounds);
+    assertUndefined(bounds);
   });
 
   it('should recognize close sprite', function() {
     var bounds;
     setupElementRecognizer();
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(1, 1));
-    assert.equal(bounds.left,   1);
-    assert.equal(bounds.top,    1);
-    assert.equal(bounds.right,  3);
-    assert.equal(bounds.bottom, 3);
+    assertEqual(bounds.left,   1);
+    assertEqual(bounds.top,    1);
+    assertEqual(bounds.right,  3);
+    assertEqual(bounds.bottom, 3);
   });
 
   it('should recognize far sprite', function() {
     var bounds;
     setupElementRecognizer();
     bounds = recognizer.getSpriteBoundsForCoordinate(new Point(3, 3));
-    assert.equal(bounds.left,   3);
-    assert.equal(bounds.top,    3);
-    assert.equal(bounds.right,  5);
-    assert.equal(bounds.bottom, 5);
+    assertEqual(bounds.left,   3);
+    assertEqual(bounds.top,    3);
+    assertEqual(bounds.right,  5);
+    assertEqual(bounds.bottom, 5);
   });
 
 });

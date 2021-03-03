@@ -50,50 +50,50 @@ describe('CSSBackgroundImage', function() {
 
   it('should get its correct position string', function() {
     setupBackgroundImage('background-box');
-    assert.equal(backgroundImage.getPositionString(), '20px 40px');
+    assertEqual(backgroundImage.getPositionString(), '20px 40px');
   });
 
   it('should get its correct position header', function() {
     setupBackgroundImage('background-box');
-    assert.equal(backgroundImage.getPositionHeader(), '20px, 40px');
+    assertEqual(backgroundImage.getPositionHeader(), '20px, 40px');
   });
 
   it('should not render a null background position', function() {
     setupBackgroundImage();
     backgroundImage.renderPosition(el.style);
-    assert.equal(el.style.backgroundPosition, '');
+    assertEqual(el.style.backgroundPosition, '');
   });
 
   it('should render a set background position', function() {
     setupBackgroundImage('background-box');
     backgroundImage.renderPosition(el.style);
-    assert.equal(el.style.backgroundPosition, '20px 40px');
+    assertEqual(el.style.backgroundPosition, '20px 40px');
   });
 
   it('should render an initial background position', function() {
     setupBackgroundImage('background-initial-box');
     backgroundImage.renderPosition(el.style);
-    assert.equal(el.style.backgroundPosition, '');
+    assertEqual(el.style.backgroundPosition, '');
   });
 
   it('should move a set background position', function() {
     setupBackgroundImage('background-box');
     backgroundImage.move(100, 100);
     backgroundImage.renderPosition(el.style);
-    assert.equal(el.style.backgroundPosition, '120px 140px');
+    assertEqual(el.style.backgroundPosition, '120px 140px');
   });
 
   it('should get the correct position for a percentage', function() {
     setupBackgroundImage('background-box background-percent-box');
     var p = backgroundImage.getPosition();
-    assert.equal(p.x, 23.5);
-    assert.equal(p.y, 47);
+    assertEqual(p.x, 23.5);
+    assertEqual(p.y, 47);
   });
 
   it('should set the correct position for a percentage', function() {
     setupBackgroundImage('background-box background-percent-box');
     backgroundImage.setPosition(94, 94);
-    assert.equal(backgroundImage.getPositionString(), '100% 100%');
+    assertEqual(backgroundImage.getPositionString(), '100% 100%');
   });
 
   // --- CSS Declarations
@@ -102,7 +102,7 @@ describe('CSSBackgroundImage', function() {
     var decs = [];
     setupBackgroundImage('background-initial-box');
     backgroundImage.appendCSSDeclaration(decs);
-    assert.equal(decs.length, 0);
+    assertEqual(decs.length, 0);
   });
 
   it('should append its CSS declaration if set', function() {
@@ -110,26 +110,26 @@ describe('CSSBackgroundImage', function() {
     setupBackgroundImage('background-box');
     backgroundImage = backgroundImage.clone();
     backgroundImage.appendCSSDeclaration(decs);
-    assert.equal(decs[0], 'background-position: 20px 40px;');
+    assertEqual(decs[0], 'background-position: 20px 40px;');
   });
 
   // --- Other
 
   it('should report if it does not have an image', function() {
     setupBackgroundImage();
-    assert.equal(backgroundImage.hasImage(), false);
+    assertEqual(backgroundImage.hasImage(), false);
   });
 
   it('should report if it does not have an image', function() {
     setupBackgroundImage('background-box');
-    assert.equal(backgroundImage.hasImage(), true);
+    assertEqual(backgroundImage.hasImage(), true);
   });
 
   it('should correctly find the image and position from a single declaration', function() {
     setupBackgroundImage('background-only-box');
-    assert.isTrue(backgroundImage.img.src.match(/^data:image\/png/));
-    assert.equal(backgroundImage.cssLeft.px, 20);
-    assert.equal(backgroundImage.cssTop.px,  20);
+    assertTrue(backgroundImage.img.src.match(/^data:image\/png/));
+    assertEqual(backgroundImage.cssLeft.px, 20);
+    assertEqual(backgroundImage.cssTop.px,  20);
   });
 
   it('should update its position when percentages are used and dimensions have changed', function() {
@@ -139,19 +139,19 @@ describe('CSSBackgroundImage', function() {
     backgroundImage.update();
 
     var p = backgroundImage.getPosition();
-    assert.equal(p.x, 48.5);
-    assert.equal(p.y, 97);
+    assertEqual(p.x, 48.5);
+    assertEqual(p.y, 97);
   });
 
   it('should correctly load a cross domain image', function() {
     setupXDomainBox('https://i.imgur.com/Z82AwNK.gifv');
-    assert.equal(backgroundImage.img.src, 'fake-data-uri');
+    assertEqual(backgroundImage.img.src, 'fake-data-uri');
   });
 
   it('should treat local images as cross domain', function() {
     mockOrigin('file://');
     setupXDomainBox('file:///fake-image.png');
-    assert.equal(backgroundImage.img.src, 'fake-data-uri');
+    assertEqual(backgroundImage.img.src, 'fake-data-uri');
   });
 
 });

@@ -9,7 +9,7 @@ describe('DraggableElement', function() {
     var el = appendBox();
     new DraggableElement(el);
     dragElement(el, 100, 100, 200, 200);
-    assert.equal(el.style.left, '200px');
+    assertEqual(el.style.left, '200px');
   });
 
 });

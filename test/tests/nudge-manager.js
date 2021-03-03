@@ -49,56 +49,56 @@ describe('NudgeManager', function() {
 
   it('should start and stop events when nudging starts', function() {
 
-    assert.equal(listener.nudgeStartEvents, 0);
-    assert.equal(listener.nudgeStopEvents,  0);
+    assertEqual(listener.nudgeStartEvents, 0);
+    assertEqual(listener.nudgeStopEvents,  0);
 
     manager.addDirection('right');
-    assert.equal(listener.nudgeStartEvents, 1);
-    assert.equal(listener.nudgeStopEvents,  0);
+    assertEqual(listener.nudgeStartEvents, 1);
+    assertEqual(listener.nudgeStopEvents,  0);
 
     manager.addDirection('down');
-    assert.equal(listener.nudgeStartEvents, 1);
-    assert.equal(listener.nudgeStopEvents,  0);
+    assertEqual(listener.nudgeStartEvents, 1);
+    assertEqual(listener.nudgeStopEvents,  0);
 
     manager.removeDirection('down');
-    assert.equal(listener.nudgeStartEvents, 1);
-    assert.equal(listener.nudgeStopEvents,  0);
+    assertEqual(listener.nudgeStartEvents, 1);
+    assertEqual(listener.nudgeStopEvents,  0);
 
     manager.removeDirection('right');
-    assert.equal(listener.nudgeStartEvents, 1);
-    assert.equal(listener.nudgeStopEvents,  1);
+    assertEqual(listener.nudgeStartEvents, 1);
+    assertEqual(listener.nudgeStopEvents,  1);
 
   });
 
   it('should receive events when nudge mode changed', function() {
-    assert.equal(listener.nudgeMode, NudgeManager.POSITION_MODE);
+    assertEqual(listener.nudgeMode, NudgeManager.POSITION_MODE);
     manager.toggleResizeMode();
-    assert.equal(listener.nudgeMode, NudgeManager.RESIZE_SE_MODE);
+    assertEqual(listener.nudgeMode, NudgeManager.RESIZE_SE_MODE);
     manager.toggleResizeMode();
-    assert.equal(listener.nudgeMode, NudgeManager.RESIZE_NW_MODE);
+    assertEqual(listener.nudgeMode, NudgeManager.RESIZE_NW_MODE);
     manager.toggleRotateMode();
-    assert.equal(listener.nudgeMode, NudgeManager.ROTATE_MODE);
+    assertEqual(listener.nudgeMode, NudgeManager.ROTATE_MODE);
     manager.toggleBackgroundMode();
-    assert.equal(listener.nudgeMode, NudgeManager.BACKGROUND_MODE);
+    assertEqual(listener.nudgeMode, NudgeManager.BACKGROUND_MODE);
     manager.toggleZIndexMode();
-    assert.equal(listener.nudgeMode, NudgeManager.Z_INDEX_MODE);
+    assertEqual(listener.nudgeMode, NudgeManager.Z_INDEX_MODE);
   });
 
   it('should receive events when nudge direction added', function() {
     manager.addDirection('right');
-    assert.equal(listener.nudgeEvents.position, 1);
+    assertEqual(listener.nudgeEvents.position, 1);
   });
 
   it('should delay after first nudge, then fire every 20ms', function() {
 
     manager.addDirection('right');
-    assert.equal(listener.nudgeEvents.position, 1);
+    assertEqual(listener.nudgeEvents.position, 1);
 
     setTimeoutMock.tick(250);
-    assert.equal(listener.nudgeEvents.position, 2);
+    assertEqual(listener.nudgeEvents.position, 2);
 
     setTimeoutMock.tick(350);
-    assert.equal(listener.nudgeEvents.position, 7);
+    assertEqual(listener.nudgeEvents.position, 7);
 
   });
 
@@ -108,8 +108,8 @@ describe('NudgeManager', function() {
     manager.addDirection('down');
 
     setTimeoutMock.tick(350);
-    assert.equal(listener.positionX, 7);
-    assert.equal(listener.positionY, 6);
+    assertEqual(listener.positionX, 7);
+    assertEqual(listener.positionY, 6);
 
   });
 
@@ -119,13 +119,13 @@ describe('NudgeManager', function() {
     manager.addDirection('down');
 
     setTimeoutMock.tick(300);
-    assert.equal(listener.positionX, 4);
-    assert.equal(listener.positionY, 3);
+    assertEqual(listener.positionX, 4);
+    assertEqual(listener.positionY, 3);
 
     manager.removeDirection('down');
     setTimeoutMock.tick(350);
-    assert.equal(listener.positionX, 7);
-    assert.equal(listener.positionY, 3);
+    assertEqual(listener.positionX, 7);
+    assertEqual(listener.positionY, 3);
 
   });
 
@@ -147,24 +147,24 @@ describe('NudgeManager', function() {
 
     setTimeoutMock.tick(toSlow);
     expectedTicks += 2;
-    assert.equal(listener.positionX, expectedTicks);
-    assert.equal(listener.positionY, expectedTicks - 1);
+    assertEqual(listener.positionX, expectedTicks);
+    assertEqual(listener.positionY, expectedTicks - 1);
 
 
     setTimeoutMock.tick(toMid);
     expectedTicks += Math.floor((toMid - toSlow) / repeatSlow);
-    assert.equal(listener.positionX, expectedTicks);
-    assert.equal(listener.positionY, expectedTicks - 1);
+    assertEqual(listener.positionX, expectedTicks);
+    assertEqual(listener.positionY, expectedTicks - 1);
 
     expectedTicks += Math.floor((toFast - toMid) / repeatMid);
     setTimeoutMock.tick(toFast);
-    assert.equal(listener.positionX, expectedTicks);
-    assert.equal(listener.positionY, expectedTicks - 1);
+    assertEqual(listener.positionX, expectedTicks);
+    assertEqual(listener.positionY, expectedTicks - 1);
 
     expectedTicks += Math.floor((toBeyond - toFast) / repeatFast);
     setTimeoutMock.tick(toBeyond);
-    assert.equal(listener.positionX, expectedTicks);
-    assert.equal(listener.positionY, expectedTicks - 1);
+    assertEqual(listener.positionX, expectedTicks);
+    assertEqual(listener.positionY, expectedTicks - 1);
 
   });
 
@@ -175,8 +175,8 @@ describe('NudgeManager', function() {
     manager.addDirection('down');
 
     setTimeoutMock.tick(350);
-    assert.equal(listener.positionX, 7 * NudgeManager.MULTIPLIER);
-    assert.equal(listener.positionY, 6 * NudgeManager.MULTIPLIER);
+    assertEqual(listener.positionX, 7 * NudgeManager.MULTIPLIER);
+    assertEqual(listener.positionY, 6 * NudgeManager.MULTIPLIER);
 
   });
 
@@ -186,8 +186,8 @@ describe('NudgeManager', function() {
     manager.addDirection('left');
 
     setTimeoutMock.tick(350);
-    assert.equal(listener.positionX, 1);
-    assert.equal(listener.positionY, 0);
+    assertEqual(listener.positionX, 1);
+    assertEqual(listener.positionY, 0);
 
   });
 

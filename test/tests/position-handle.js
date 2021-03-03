@@ -41,7 +41,7 @@ describe('PositionHandle', function() {
   it('should have drag events', function() {
     var handle = new PositionHandle(listener, fragment);
     dragElement(handle.el, 0, 0, 50, 50);
-    assert.equal(listener.lastEventDrag.x, 50);
+    assertEqual(listener.lastEventDrag.x, 50);
   });
 
   it('drag events should be relative to the page', function() {
@@ -51,8 +51,8 @@ describe('PositionHandle', function() {
       fireMouseDown(handle.el, 50, 50);
       handle.onScroll();
       handle.onScroll();
-      assert.equal(listener.lastEventDrag.x, 0);
-      assert.equal(listener.lastEventDrag.y, 500);
+      assertEqual(listener.lastEventDrag.x, 0);
+      assertEqual(listener.lastEventDrag.y, 500);
       fireDocumentMouseUp(50, 50, 500);
     });
 

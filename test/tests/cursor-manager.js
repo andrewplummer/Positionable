@@ -16,43 +16,43 @@ describe('CursorManager', function() {
 
   it('should be able to set a hover cursor', function() {
     manager.setHoverCursor('move');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearHoverCursor();
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
   });
 
   it('should be able to set a priority hover cursor', function() {
     manager.setHoverCursor('ew-resize');
-    assert.equal(getBodyCursor(), 'ew-resize');
+    assertEqual(getBodyCursor(), 'ew-resize');
     manager.setPriorityHoverCursor('move');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearPriorityHoverCursor();
-    assert.equal(getBodyCursor(), 'ew-resize');
+    assertEqual(getBodyCursor(), 'ew-resize');
     manager.setPriorityHoverCursor('move');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearHoverCursor();
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
   });
 
   it('should show the priority hover cursor after the normal one has been set', function() {
     manager.setPriorityHoverCursor('move');
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
     manager.setHoverCursor('ew-resize');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearPriorityHoverCursor();
-    assert.equal(getBodyCursor(), 'ew-resize');
+    assertEqual(getBodyCursor(), 'ew-resize');
     manager.clearHoverCursor();
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
   });
 
   it('should retain the priority hover cursor even when the main hover cursor has been cleared', function() {
     manager.setPriorityHoverCursor('move');
     manager.setHoverCursor('ew-resize');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearHoverCursor();
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
     manager.setHoverCursor('ew-resize');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearPriorityHoverCursor();
     manager.clearHoverCursor();
   });
@@ -61,21 +61,21 @@ describe('CursorManager', function() {
 
   it('should be able to set a drag cursor', function() {
     manager.setDragCursor('move');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
     manager.clearDragCursor();
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
   });
 
   it('should give priority to the drag cursor', function() {
     manager.setDragCursor('ew-resize');
     manager.setHoverCursor('move');
-    assert.equal(getBodyCursor(), 'ew-resize');
+    assertEqual(getBodyCursor(), 'ew-resize');
   });
 
   it('should show the last cursor set of the same type', function() {
     manager.setDragCursor('ew-resize');
     manager.setDragCursor('move');
-    assert.equal(getBodyCursor(), 'move');
+    assertEqual(getBodyCursor(), 'move');
   });
 
   it('should show nothing when both are cleared', function() {
@@ -83,7 +83,7 @@ describe('CursorManager', function() {
     manager.setHoverCursor('move');
     manager.clearDragCursor();
     manager.clearHoverCursor();
-    assert.equal(getBodyCursor(), 'auto');
+    assertEqual(getBodyCursor(), 'auto');
   });
 
   // --- Drag Cursors
@@ -95,7 +95,7 @@ describe('CursorManager', function() {
       cursor = this.getActiveCursor();
     };
     manager.setHoverCursor('foo', true);
-    assert.equal(cursor, `url(${ShadowDomInjector.BASE_PATH}images/cursors/foo.png) 13 13, pointer`);
+    assertEqual(cursor, `url(${ShadowDomInjector.BASE_PATH}images/cursors/foo.png) 13 13, pointer`);
     manager.clearHoverCursor();
   });
 
