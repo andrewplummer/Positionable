@@ -13,6 +13,7 @@
   },
   "permissions": [
     "activeTab",
+    "scripting",
     "storage"
   ],
   "background": {
