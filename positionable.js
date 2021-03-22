@@ -587,13 +587,12 @@ class ShadowDomInjector {
     this.preloadedTemplateTasks.push(this.preloadTemplateAndCache(templatePath, stylesheetPath));
   }
 
-  static preloadTemplateAndCache(templatePath, stylesheetPath) {
+  static async preloadTemplateAndCache(templatePath, stylesheetPath) {
     var injector = new ShadowDomInjector();
     injector.setTemplate(templatePath);
     injector.setStylesheet(stylesheetPath);
-    return injector.fetchTemplate().then(templateHtml => {
-      this.preloadedTemplatesByPath[templatePath] = templateHtml;
-    });
+    const templateHtml = await injector.fetchTemplate();
+    this.preloadedTemplatesByPath[templatePath] = templateHtml;
   }
 
   static resolvePreloadTasks() {
@@ -604,21 +603,20 @@ class ShadowDomInjector {
     return this.preloadedTemplatesByPath && this.preloadedTemplatesByPath[templatePath];
   }
 
-  static getPreloadedTemplateOrFetch(injector, callback) {
+  static async getPreloadedTemplateOrFetch(injector, callback) {
     var html = this.getPreloadedTemplate(injector.templatePath);
     if (html) {
       callback(injector.injectShadowDom(html));
     } else {
-      this.resolvePreloadTasks().then(injector.fetchTemplate).then(injector.injectShadowDom).then(callback);
+      await this.resolvePreloadTasks();
+      const html = await injector.fetchTemplate();
+      callback(injector.injectShadowDom(html));
     }
   }
 
   constructor(parent, expand) {
     this.parent = parent;
     this.expand = expand;
-    this.fetchTemplate    = this.fetchTemplate.bind(this);
-    this.injectStylesheet = this.injectStylesheet.bind(this);
-    this.injectShadowDom  = this.injectShadowDom.bind(this);
   }
 
   setTemplate(templatePath) {
@@ -650,16 +648,16 @@ class ShadowDomInjector {
     return await response.text();
   }
 
-  async fetchTemplate() {
-    await this.fetchFile(this.templatePath);
-    this.injectStylesheet();
+  fetchTemplate = async () => {
+    const templateHtml = await this.fetchFile(this.templatePath);
+    return this.injectStylesheet(templateHtml);
   }
 
   // Shadow DOM seems to have issues with transitions unexpectedly triggering
   // when using an external stylesheet, so manually injecting the stylesheet
   // in <style> tags to prevent this. This can be removed if this issue is
   // fixed.
-  async injectStylesheet(templateHtml) {
+  injectStylesheet = async (templateHtml) => {
     if (!this.stylesheetPath) {
       // Pass through if no stylesheet.
       return Promise.resolve(templateHtml);
@@ -669,7 +667,7 @@ class ShadowDomInjector {
     return styleHtml + templateHtml;
   }
 
-  injectShadowDom(templateHtml) {
+  injectShadowDom = (templateHtml) => {
     var container = document.createElement('div');
     container.style.position = 'absolute';
     if (this.expand) {

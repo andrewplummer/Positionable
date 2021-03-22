@@ -1,11 +1,8 @@
-chrome.action.onClicked.addListener(({ id: tabId }) => {
-  const target = { tabId };
-  chrome.scripting.executeScript({
-    target,
-    files: ['positionable.js']
+chrome.browserAction.onClicked.addListener(() => {
+  chrome.tabs.executeScript(null, {
+    file: 'positionable.js'
   });
-  chrome.scripting.executeScript({
-    target,
-    files: ['bootstrap.js']
+  chrome.tabs.executeScript(null, {
+    file: 'bootstrap.js'
   });
 });
