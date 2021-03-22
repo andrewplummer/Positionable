@@ -645,29 +645,28 @@ class ShadowDomInjector {
     return ShadowDomInjector.getBasePath() + path;
   }
 
-  fetchFile(filePath) {
-    return fetch(this.getUrl(filePath)).then(response => {
-      return response.text();
-    });
+  async fetchFile(filePath) {
+    const response = await fetch(this.getUrl(filePath));
+    return await response.text();
   }
 
-  fetchTemplate() {
-    return this.fetchFile(this.templatePath).then(this.injectStylesheet);
+  async fetchTemplate() {
+    await this.fetchFile(this.templatePath);
+    this.injectStylesheet();
   }
 
   // Shadow DOM seems to have issues with transitions unexpectedly triggering
   // when using an external stylesheet, so manually injecting the stylesheet
   // in <style> tags to prevent this. This can be removed if this issue is
   // fixed.
-  injectStylesheet(templateHtml) {
+  async injectStylesheet(templateHtml) {
     if (!this.stylesheetPath) {
       // Pass through if no stylesheet.
       return Promise.resolve(templateHtml);
     }
-    return this.fetchFile(this.stylesheetPath).then(styles => {
-      var styleHtml = '<style>' + styles + '</style>';
-      return styleHtml + templateHtml;
-    });
+    const styles = await this.fetchFile(this.stylesheetPath);
+    var styleHtml = '<style>' + styles + '</style>';
+    return styleHtml + templateHtml;
   }
 
   injectShadowDom(templateHtml) {
