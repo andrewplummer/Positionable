@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Positionable!",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "short_name": "Positionable",
   "description": "An extension for visually manipulating elements in the browser.",
   "offline_enabled": true,
@@ -12,9 +12,9 @@
     "128": "images/app/128.png"
   },
   "permissions": [
-    "activeTab",
+    "tabs",
     "storage",
-    "tabs"
+    "<all_urls>"
   ],
   "background": {
     "scripts": [
