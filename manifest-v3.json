@@ -30,7 +30,7 @@
         "*.css",
         "images/*"
       ],
-      "matches": [],
+      "matches": ["<all_urls>"],
       "extension_ids": []
     }
   ]
