@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Positionable! Test</title>
+
+    <style type="text/css">
+      input,img,#bg,.whee { position: absolute; }
+      #field1 { top: 0px; }
+      #field2 { top: 50px; }
+      #field3 { top: 100px; }
+      input[type="checkbox"] { top: 150px; }
+      input[type="radio"] { top: 200px; }
+      .whee { top: 500px; }
+      img { top: 300px; width: 100px; }
+      #bg {
+        position: absolute;
+        left: 500px;
+        top: 200px;
+        width: 150px;
+        height: 300px;
+        background: url(https://miro.medium.com/max/810/1*S5EcfZaP7qqZPSTJPduCHg.png) no-repeat;
+        /*background: url(https://i.etsystatic.com/7923986/r/il/d42fca/1450123141/il_570xN.1450123141_fsk1.jpg) no-repeat;*/
+      }
+    </style>
+  </head>
+  <body>
+    <div class="whee">
+      wheeee
+    </div>
+    <div id="bg"></div>
+    <input id="field1" type="text" value="text" />
+    <input id="field2" type="number" value="number" />
+    <input id="field3" type="password" value="password" />
+    <input type="checkbox" value="checkbox" />
+    <input type="radio" value="radio" />
+    <script>
+    </script>
+  </body>
+</html>
